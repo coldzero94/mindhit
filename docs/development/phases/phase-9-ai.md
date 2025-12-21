@@ -4,10 +4,46 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | OpenAI API를 사용한 콘텐츠 요약 및 마인드맵 생성 |
+| **목표** | 다중 AI 프로바이더(OpenAI, Google Gemini, Anthropic Claude)를 지원하는 콘텐츠 요약 및 마인드맵 생성 |
 | **선행 조건** | Phase 6 완료 (스케줄러) |
-| **예상 소요** | 4 Steps |
-| **결과물** | 세션 완료 시 자동 마인드맵 생성 |
+| **예상 소요** | 5 Steps |
+| **결과물** | 세션 완료 시 자동 마인드맵 생성 (AI 프로바이더 선택 가능) |
+
+---
+
+## 아키텍처 개요
+
+```mermaid
+flowchart TB
+    subgraph Service_Layer
+        SS[SummarizeService]
+        MS[MindmapService]
+    end
+
+    subgraph AI_Provider_Layer
+        IF[AIProvider Interface]
+        IF --> OAI[OpenAI Provider]
+        IF --> GEM[Google Gemini Provider]
+        IF --> CLA[Anthropic Claude Provider]
+    end
+
+    subgraph Infrastructure
+        PM[ProviderManager]
+        CFG[Config]
+    end
+
+    SS --> PM
+    MS --> PM
+    PM --> IF
+    CFG --> PM
+```
+
+### 설계 원칙
+
+1. **인터페이스 기반 설계**: 모든 AI 프로바이더는 동일한 인터페이스 구현
+2. **런타임 프로바이더 전환**: 환경변수 또는 설정으로 프로바이더 변경 가능
+3. **Fallback 지원**: 기본 프로바이더 실패 시 대체 프로바이더 사용
+4. **용도별 프로바이더 분리**: 요약과 마인드맵 생성에 다른 모델 사용 가능
 
 ---
 
@@ -15,50 +51,169 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 9.1 | OpenAI 클라이언트 설정 | ⬜ |
-| 9.2 | URL 요약 서비스 | ⬜ |
-| 9.3 | 마인드맵 생성 서비스 | ⬜ |
-| 9.4 | AI 처리 Job 등록 | ⬜ |
+| 9.1 | AI Provider 인터페이스 정의 | ⬜ |
+| 9.2 | 개별 Provider 구현 (OpenAI, Gemini, Claude) | ⬜ |
+| 9.3 | Provider Manager 및 Config | ⬜ |
+| 9.4 | URL 요약 서비스 | ⬜ |
+| 9.5 | 마인드맵 생성 서비스 및 Job 등록 | ⬜ |
 
 ---
 
-## Step 9.1: OpenAI 클라이언트 설정
+## Step 9.1: AI Provider 인터페이스 정의
+
+### 체크리스트
+
+- [ ] **공통 타입 정의**
+  - [ ] `internal/infrastructure/ai/types.go`
+    ```go
+    package ai
+
+    import "context"
+
+    // Message represents a chat message
+    type Message struct {
+        Role    Role   `json:"role"`
+        Content string `json:"content"`
+    }
+
+    // Role defines message roles
+    type Role string
+
+    const (
+        RoleSystem    Role = "system"
+        RoleUser      Role = "user"
+        RoleAssistant Role = "assistant"
+    )
+
+    // ChatOptions contains optional parameters for chat completion
+    type ChatOptions struct {
+        Temperature   float64  `json:"temperature,omitempty"`
+        MaxTokens     int      `json:"max_tokens,omitempty"`
+        TopP          float64  `json:"top_p,omitempty"`
+        StopSequences []string `json:"stop_sequences,omitempty"`
+        JSONMode      bool     `json:"json_mode,omitempty"` // Force JSON output
+    }
+
+    // DefaultChatOptions returns sensible defaults
+    func DefaultChatOptions() ChatOptions {
+        return ChatOptions{
+            Temperature: 0.7,
+            MaxTokens:   4096,
+            TopP:        1.0,
+        }
+    }
+
+    // ChatResponse contains the AI response
+    type ChatResponse struct {
+        Content      string `json:"content"`
+        Model        string `json:"model"`
+        Provider     string `json:"provider"`
+        InputTokens  int    `json:"input_tokens,omitempty"`
+        OutputTokens int    `json:"output_tokens,omitempty"`
+    }
+
+    // ProviderType identifies the AI provider
+    type ProviderType string
+
+    const (
+        ProviderOpenAI    ProviderType = "openai"
+        ProviderGemini    ProviderType = "gemini"
+        ProviderClaude    ProviderType = "claude"
+    )
+
+    // ProviderConfig holds configuration for a single provider
+    type ProviderConfig struct {
+        Type     ProviderType `json:"type"`
+        APIKey   string       `json:"api_key"`
+        Model    string       `json:"model"`
+        Enabled  bool         `json:"enabled"`
+        Priority int          `json:"priority"` // Lower = higher priority for fallback
+    }
+    ```
+
+- [ ] **AIProvider 인터페이스 정의**
+  - [ ] `internal/infrastructure/ai/provider.go`
+    ```go
+    package ai
+
+    import (
+        "context"
+        "errors"
+    )
+
+    var (
+        ErrProviderNotConfigured = errors.New("ai provider not configured")
+        ErrNoResponse            = errors.New("no response from ai provider")
+        ErrRateLimited           = errors.New("rate limited by ai provider")
+        ErrInvalidAPIKey         = errors.New("invalid api key")
+        ErrContextCanceled       = errors.New("context canceled")
+    )
+
+    // AIProvider defines the interface that all AI providers must implement
+    type AIProvider interface {
+        // Chat sends messages and returns a response
+        Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error)
+
+        // ChatWithJSON is a convenience method that forces JSON output
+        ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error)
+
+        // Name returns the provider name for logging/metrics
+        Name() string
+
+        // Type returns the provider type
+        Type() ProviderType
+
+        // Model returns the current model being used
+        Model() string
+
+        // IsHealthy checks if the provider is available
+        IsHealthy(ctx context.Context) bool
+    }
+
+    // BaseProvider contains common functionality for all providers
+    type BaseProvider struct {
+        providerType ProviderType
+        model        string
+    }
+
+    func (b *BaseProvider) Type() ProviderType {
+        return b.providerType
+    }
+
+    func (b *BaseProvider) Model() string {
+        return b.model
+    }
+
+    func (b *BaseProvider) Name() string {
+        return string(b.providerType)
+    }
+    ```
+
+### 검증
+```bash
+go build ./...
+# 컴파일 성공
+```
+
+---
+
+## Step 9.2: 개별 Provider 구현
 
 ### 체크리스트
 
 - [ ] **의존성 추가**
   ```bash
+  # OpenAI
   go get github.com/sashabaranov/go-openai
+
+  # Google Gemini
+  go get github.com/google/generative-ai-go
+
+  # Anthropic Claude
+  go get github.com/anthropics/anthropic-sdk-go
   ```
 
-- [ ] **환경 변수 추가**
-  ```env
-  OPENAI_API_KEY=sk-...
-  OPENAI_MODEL=gpt-4-turbo-preview
-  ```
-
-- [ ] **Config 업데이트**
-  - [ ] `internal/infrastructure/config/config.go`
-    ```go
-    type Config struct {
-        // ... 기존 필드
-
-        // OpenAI
-        OpenAIAPIKey string
-        OpenAIModel  string
-    }
-
-    func Load() *Config {
-        return &Config{
-            // ... 기존 필드
-
-            OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
-            OpenAIModel:  getEnv("OPENAI_MODEL", "gpt-4-turbo-preview"),
-        }
-    }
-    ```
-
-- [ ] **OpenAI 클라이언트 래퍼**
+- [ ] **OpenAI Provider 구현**
   - [ ] `internal/infrastructure/ai/openai.go`
     ```go
     package ai
@@ -70,87 +225,788 @@
         "github.com/sashabaranov/go-openai"
     )
 
-    type OpenAIClient struct {
+    type OpenAIProvider struct {
+        BaseProvider
         client *openai.Client
-        model  string
     }
 
-    func NewOpenAIClient(apiKey, model string) *OpenAIClient {
-        return &OpenAIClient{
+    func NewOpenAIProvider(apiKey, model string) *OpenAIProvider {
+        if model == "" {
+            model = "gpt-4-turbo-preview"
+        }
+        return &OpenAIProvider{
+            BaseProvider: BaseProvider{
+                providerType: ProviderOpenAI,
+                model:        model,
+            },
             client: openai.NewClient(apiKey),
-            model:  model,
         }
     }
 
-    type Message struct {
-        Role    string
-        Content string
-    }
-
-    func (c *OpenAIClient) Chat(ctx context.Context, messages []Message) (string, error) {
+    func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
         chatMessages := make([]openai.ChatCompletionMessage, len(messages))
         for i, msg := range messages {
             chatMessages[i] = openai.ChatCompletionMessage{
-                Role:    msg.Role,
+                Role:    string(msg.Role),
                 Content: msg.Content,
             }
         }
 
-        resp, err := c.client.CreateChatCompletion(
-            ctx,
-            openai.ChatCompletionRequest{
-                Model:    c.model,
-                Messages: chatMessages,
-            },
-        )
+        req := openai.ChatCompletionRequest{
+            Model:       p.model,
+            Messages:    chatMessages,
+            Temperature: float32(opts.Temperature),
+            MaxTokens:   opts.MaxTokens,
+            TopP:        float32(opts.TopP),
+            Stop:        opts.StopSequences,
+        }
+
+        resp, err := p.client.CreateChatCompletion(ctx, req)
         if err != nil {
-            return "", fmt.Errorf("openai chat completion: %w", err)
+            return nil, fmt.Errorf("openai chat: %w", err)
         }
 
         if len(resp.Choices) == 0 {
-            return "", fmt.Errorf("no response from openai")
+            return nil, ErrNoResponse
         }
 
-        return resp.Choices[0].Message.Content, nil
+        return &ChatResponse{
+            Content:      resp.Choices[0].Message.Content,
+            Model:        resp.Model,
+            Provider:     string(ProviderOpenAI),
+            InputTokens:  resp.Usage.PromptTokens,
+            OutputTokens: resp.Usage.CompletionTokens,
+        }, nil
     }
 
-    func (c *OpenAIClient) ChatWithJSON(ctx context.Context, messages []Message) (string, error) {
+    func (p *OpenAIProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
         chatMessages := make([]openai.ChatCompletionMessage, len(messages))
         for i, msg := range messages {
             chatMessages[i] = openai.ChatCompletionMessage{
-                Role:    msg.Role,
+                Role:    string(msg.Role),
                 Content: msg.Content,
             }
         }
 
-        resp, err := c.client.CreateChatCompletion(
-            ctx,
-            openai.ChatCompletionRequest{
-                Model:    c.model,
-                Messages: chatMessages,
-                ResponseFormat: &openai.ChatCompletionResponseFormat{
-                    Type: openai.ChatCompletionResponseFormatTypeJSONObject,
-                },
+        req := openai.ChatCompletionRequest{
+            Model:       p.model,
+            Messages:    chatMessages,
+            Temperature: float32(opts.Temperature),
+            MaxTokens:   opts.MaxTokens,
+            TopP:        float32(opts.TopP),
+            ResponseFormat: &openai.ChatCompletionResponseFormat{
+                Type: openai.ChatCompletionResponseFormatTypeJSONObject,
             },
-        )
+        }
+
+        resp, err := p.client.CreateChatCompletion(ctx, req)
         if err != nil {
-            return "", fmt.Errorf("openai chat completion: %w", err)
+            return nil, fmt.Errorf("openai chat json: %w", err)
         }
 
         if len(resp.Choices) == 0 {
-            return "", fmt.Errorf("no response from openai")
+            return nil, ErrNoResponse
         }
 
-        return resp.Choices[0].Message.Content, nil
+        return &ChatResponse{
+            Content:      resp.Choices[0].Message.Content,
+            Model:        resp.Model,
+            Provider:     string(ProviderOpenAI),
+            InputTokens:  resp.Usage.PromptTokens,
+            OutputTokens: resp.Usage.CompletionTokens,
+        }, nil
+    }
+
+    func (p *OpenAIProvider) IsHealthy(ctx context.Context) bool {
+        // Simple health check with minimal tokens
+        _, err := p.Chat(ctx, []Message{
+            {Role: RoleUser, Content: "ping"},
+        }, ChatOptions{MaxTokens: 5})
+        return err == nil
     }
     ```
 
-- [ ] **main.go에 OpenAI 클라이언트 추가**
+- [ ] **Google Gemini Provider 구현**
+  - [ ] `internal/infrastructure/ai/gemini.go`
+    ```go
+    package ai
+
+    import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "strings"
+
+        "github.com/google/generative-ai-go/genai"
+        "google.golang.org/api/option"
+    )
+
+    type GeminiProvider struct {
+        BaseProvider
+        client *genai.Client
+    }
+
+    func NewGeminiProvider(ctx context.Context, apiKey, model string) (*GeminiProvider, error) {
+        if model == "" {
+            model = "gemini-1.5-pro"
+        }
+
+        client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+        if err != nil {
+            return nil, fmt.Errorf("create gemini client: %w", err)
+        }
+
+        return &GeminiProvider{
+            BaseProvider: BaseProvider{
+                providerType: ProviderGemini,
+                model:        model,
+            },
+            client: client,
+        }, nil
+    }
+
+    func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+        model := p.client.GenerativeModel(p.model)
+
+        // Set generation config
+        model.SetTemperature(float32(opts.Temperature))
+        model.SetMaxOutputTokens(int32(opts.MaxTokens))
+        model.SetTopP(float32(opts.TopP))
+
+        if len(opts.StopSequences) > 0 {
+            model.StopSequences = opts.StopSequences
+        }
+
+        // Convert messages to Gemini format
+        var parts []genai.Part
+        var systemPrompt string
+
+        for _, msg := range messages {
+            switch msg.Role {
+            case RoleSystem:
+                systemPrompt = msg.Content
+            case RoleUser, RoleAssistant:
+                parts = append(parts, genai.Text(msg.Content))
+            }
+        }
+
+        if systemPrompt != "" {
+            model.SystemInstruction = &genai.Content{
+                Parts: []genai.Part{genai.Text(systemPrompt)},
+            }
+        }
+
+        resp, err := model.GenerateContent(ctx, parts...)
+        if err != nil {
+            return nil, fmt.Errorf("gemini generate: %w", err)
+        }
+
+        if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+            return nil, ErrNoResponse
+        }
+
+        // Extract text from response
+        var content strings.Builder
+        for _, part := range resp.Candidates[0].Content.Parts {
+            if text, ok := part.(genai.Text); ok {
+                content.WriteString(string(text))
+            }
+        }
+
+        return &ChatResponse{
+            Content:      content.String(),
+            Model:        p.model,
+            Provider:     string(ProviderGemini),
+            InputTokens:  int(resp.UsageMetadata.PromptTokenCount),
+            OutputTokens: int(resp.UsageMetadata.CandidatesTokenCount),
+        }, nil
+    }
+
+    func (p *GeminiProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+        model := p.client.GenerativeModel(p.model)
+
+        // Set generation config
+        model.SetTemperature(float32(opts.Temperature))
+        model.SetMaxOutputTokens(int32(opts.MaxTokens))
+        model.SetTopP(float32(opts.TopP))
+
+        // Force JSON output
+        model.ResponseMIMEType = "application/json"
+
+        // Convert messages
+        var parts []genai.Part
+        var systemPrompt string
+
+        for _, msg := range messages {
+            switch msg.Role {
+            case RoleSystem:
+                systemPrompt = msg.Content
+            case RoleUser, RoleAssistant:
+                parts = append(parts, genai.Text(msg.Content))
+            }
+        }
+
+        if systemPrompt != "" {
+            model.SystemInstruction = &genai.Content{
+                Parts: []genai.Part{genai.Text(systemPrompt)},
+            }
+        }
+
+        resp, err := model.GenerateContent(ctx, parts...)
+        if err != nil {
+            return nil, fmt.Errorf("gemini generate json: %w", err)
+        }
+
+        if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+            return nil, ErrNoResponse
+        }
+
+        var content strings.Builder
+        for _, part := range resp.Candidates[0].Content.Parts {
+            if text, ok := part.(genai.Text); ok {
+                content.WriteString(string(text))
+            }
+        }
+
+        // Validate JSON
+        var js json.RawMessage
+        if err := json.Unmarshal([]byte(content.String()), &js); err != nil {
+            return nil, fmt.Errorf("invalid json response: %w", err)
+        }
+
+        return &ChatResponse{
+            Content:      content.String(),
+            Model:        p.model,
+            Provider:     string(ProviderGemini),
+            InputTokens:  int(resp.UsageMetadata.PromptTokenCount),
+            OutputTokens: int(resp.UsageMetadata.CandidatesTokenCount),
+        }, nil
+    }
+
+    func (p *GeminiProvider) IsHealthy(ctx context.Context) bool {
+        _, err := p.Chat(ctx, []Message{
+            {Role: RoleUser, Content: "ping"},
+        }, ChatOptions{MaxTokens: 5})
+        return err == nil
+    }
+
+    func (p *GeminiProvider) Close() error {
+        return p.client.Close()
+    }
+    ```
+
+- [ ] **Anthropic Claude Provider 구현**
+  - [ ] `internal/infrastructure/ai/claude.go`
+    ```go
+    package ai
+
+    import (
+        "context"
+        "encoding/json"
+        "fmt"
+
+        "github.com/anthropics/anthropic-sdk-go"
+        "github.com/anthropics/anthropic-sdk-go/option"
+    )
+
+    type ClaudeProvider struct {
+        BaseProvider
+        client *anthropic.Client
+    }
+
+    func NewClaudeProvider(apiKey, model string) *ClaudeProvider {
+        if model == "" {
+            model = "claude-3-5-sonnet-20241022"
+        }
+
+        client := anthropic.NewClient(
+            option.WithAPIKey(apiKey),
+        )
+
+        return &ClaudeProvider{
+            BaseProvider: BaseProvider{
+                providerType: ProviderClaude,
+                model:        model,
+            },
+            client: client,
+        }
+    }
+
+    func (p *ClaudeProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+        // Separate system message from conversation
+        var systemPrompt string
+        var anthropicMessages []anthropic.MessageParam
+
+        for _, msg := range messages {
+            switch msg.Role {
+            case RoleSystem:
+                systemPrompt = msg.Content
+            case RoleUser:
+                anthropicMessages = append(anthropicMessages, anthropic.NewUserMessage(
+                    anthropic.NewTextBlock(msg.Content),
+                ))
+            case RoleAssistant:
+                anthropicMessages = append(anthropicMessages, anthropic.NewAssistantMessage(
+                    anthropic.NewTextBlock(msg.Content),
+                ))
+            }
+        }
+
+        params := anthropic.MessageNewParams{
+            Model:       anthropic.F(p.model),
+            MaxTokens:   anthropic.F(int64(opts.MaxTokens)),
+            Messages:    anthropic.F(anthropicMessages),
+        }
+
+        if systemPrompt != "" {
+            params.System = anthropic.F([]anthropic.TextBlockParam{
+                anthropic.NewTextBlock(systemPrompt),
+            })
+        }
+
+        if opts.Temperature > 0 {
+            params.Temperature = anthropic.F(opts.Temperature)
+        }
+
+        if opts.TopP > 0 && opts.TopP < 1 {
+            params.TopP = anthropic.F(opts.TopP)
+        }
+
+        if len(opts.StopSequences) > 0 {
+            params.StopSequences = anthropic.F(opts.StopSequences)
+        }
+
+        resp, err := p.client.Messages.New(ctx, params)
+        if err != nil {
+            return nil, fmt.Errorf("claude message: %w", err)
+        }
+
+        if len(resp.Content) == 0 {
+            return nil, ErrNoResponse
+        }
+
+        // Extract text content
+        var content string
+        for _, block := range resp.Content {
+            if block.Type == anthropic.ContentBlockTypeText {
+                content += block.Text
+            }
+        }
+
+        return &ChatResponse{
+            Content:      content,
+            Model:        string(resp.Model),
+            Provider:     string(ProviderClaude),
+            InputTokens:  int(resp.Usage.InputTokens),
+            OutputTokens: int(resp.Usage.OutputTokens),
+        }, nil
+    }
+
+    func (p *ClaudeProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+        // Add JSON instruction to the last user message
+        modifiedMessages := make([]Message, len(messages))
+        copy(modifiedMessages, messages)
+
+        for i := len(modifiedMessages) - 1; i >= 0; i-- {
+            if modifiedMessages[i].Role == RoleUser {
+                modifiedMessages[i].Content += "\n\nRespond with valid JSON only. No markdown, no explanation."
+                break
+            }
+        }
+
+        resp, err := p.Chat(ctx, modifiedMessages, opts)
+        if err != nil {
+            return nil, err
+        }
+
+        // Validate JSON
+        var js json.RawMessage
+        if err := json.Unmarshal([]byte(resp.Content), &js); err != nil {
+            return nil, fmt.Errorf("invalid json response: %w", err)
+        }
+
+        return resp, nil
+    }
+
+    func (p *ClaudeProvider) IsHealthy(ctx context.Context) bool {
+        _, err := p.Chat(ctx, []Message{
+            {Role: RoleUser, Content: "ping"},
+        }, ChatOptions{MaxTokens: 5})
+        return err == nil
+    }
+    ```
+
+### 검증
+```bash
+go build ./...
+# 컴파일 성공
+```
+
+---
+
+## Step 9.3: Provider Manager 및 Config
+
+### 체크리스트
+
+- [ ] **환경 변수 설정**
+  ```env
+  # AI Provider 설정
+  AI_DEFAULT_PROVIDER=openai
+  AI_FALLBACK_PROVIDERS=gemini,claude
+
+  # 용도별 프로바이더 (선택적)
+  AI_SUMMARIZE_PROVIDER=gemini
+  AI_MINDMAP_PROVIDER=openai
+
+  # OpenAI
+  OPENAI_API_KEY=sk-...
+  OPENAI_MODEL=gpt-4-turbo-preview
+
+  # Google Gemini
+  GEMINI_API_KEY=...
+  GEMINI_MODEL=gemini-1.5-pro
+
+  # Anthropic Claude
+  CLAUDE_API_KEY=sk-ant-...
+  CLAUDE_MODEL=claude-3-5-sonnet-20241022
+  ```
+
+- [ ] **Config 업데이트**
+  - [ ] `internal/infrastructure/config/config.go`
+    ```go
+    type Config struct {
+        // ... 기존 필드
+
+        // AI Settings
+        AI AIConfig
+    }
+
+    type AIConfig struct {
+        // Default provider for general use
+        DefaultProvider   string   `json:"default_provider"`
+        FallbackProviders []string `json:"fallback_providers"`
+
+        // Task-specific providers (optional override)
+        SummarizeProvider string `json:"summarize_provider"`
+        MindmapProvider   string `json:"mindmap_provider"`
+
+        // Provider configurations
+        OpenAI  OpenAIConfig  `json:"openai"`
+        Gemini  GeminiConfig  `json:"gemini"`
+        Claude  ClaudeConfig  `json:"claude"`
+    }
+
+    type OpenAIConfig struct {
+        APIKey  string `json:"api_key"`
+        Model   string `json:"model"`
+        Enabled bool   `json:"enabled"`
+    }
+
+    type GeminiConfig struct {
+        APIKey  string `json:"api_key"`
+        Model   string `json:"model"`
+        Enabled bool   `json:"enabled"`
+    }
+
+    type ClaudeConfig struct {
+        APIKey  string `json:"api_key"`
+        Model   string `json:"model"`
+        Enabled bool   `json:"enabled"`
+    }
+
+    func Load() *Config {
+        return &Config{
+            // ... 기존 필드
+
+            AI: AIConfig{
+                DefaultProvider:   getEnv("AI_DEFAULT_PROVIDER", "openai"),
+                FallbackProviders: getEnvSlice("AI_FALLBACK_PROVIDERS", []string{}),
+                SummarizeProvider: getEnv("AI_SUMMARIZE_PROVIDER", ""),
+                MindmapProvider:   getEnv("AI_MINDMAP_PROVIDER", ""),
+
+                OpenAI: OpenAIConfig{
+                    APIKey:  getEnv("OPENAI_API_KEY", ""),
+                    Model:   getEnv("OPENAI_MODEL", "gpt-4-turbo-preview"),
+                    Enabled: getEnv("OPENAI_API_KEY", "") != "",
+                },
+                Gemini: GeminiConfig{
+                    APIKey:  getEnv("GEMINI_API_KEY", ""),
+                    Model:   getEnv("GEMINI_MODEL", "gemini-1.5-pro"),
+                    Enabled: getEnv("GEMINI_API_KEY", "") != "",
+                },
+                Claude: ClaudeConfig{
+                    APIKey:  getEnv("CLAUDE_API_KEY", ""),
+                    Model:   getEnv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022"),
+                    Enabled: getEnv("CLAUDE_API_KEY", "") != "",
+                },
+            },
+        }
+    }
+
+    func getEnvSlice(key string, defaultVal []string) []string {
+        val := os.Getenv(key)
+        if val == "" {
+            return defaultVal
+        }
+        return strings.Split(val, ",")
+    }
+    ```
+
+- [ ] **Provider Manager 구현**
+  - [ ] `internal/infrastructure/ai/manager.go`
+    ```go
+    package ai
+
+    import (
+        "context"
+        "fmt"
+        "log/slog"
+        "sync"
+
+        "github.com/mindhit/api/internal/infrastructure/config"
+    )
+
+    // TaskType identifies the AI task for provider selection
+    type TaskType string
+
+    const (
+        TaskSummarize TaskType = "summarize"
+        TaskMindmap   TaskType = "mindmap"
+        TaskGeneral   TaskType = "general"
+    )
+
+    // ProviderManager manages multiple AI providers with fallback support
+    type ProviderManager struct {
+        providers         map[ProviderType]AIProvider
+        defaultProvider   ProviderType
+        fallbackOrder     []ProviderType
+        taskProviders     map[TaskType]ProviderType
+        mu                sync.RWMutex
+    }
+
+    // NewProviderManager creates a new provider manager from config
+    func NewProviderManager(ctx context.Context, cfg config.AIConfig) (*ProviderManager, error) {
+        pm := &ProviderManager{
+            providers:     make(map[ProviderType]AIProvider),
+            taskProviders: make(map[TaskType]ProviderType),
+        }
+
+        // Initialize enabled providers
+        if cfg.OpenAI.Enabled {
+            pm.providers[ProviderOpenAI] = NewOpenAIProvider(cfg.OpenAI.APIKey, cfg.OpenAI.Model)
+            slog.Info("initialized ai provider", "provider", "openai", "model", cfg.OpenAI.Model)
+        }
+
+        if cfg.Gemini.Enabled {
+            gemini, err := NewGeminiProvider(ctx, cfg.Gemini.APIKey, cfg.Gemini.Model)
+            if err != nil {
+                slog.Warn("failed to initialize gemini provider", "error", err)
+            } else {
+                pm.providers[ProviderGemini] = gemini
+                slog.Info("initialized ai provider", "provider", "gemini", "model", cfg.Gemini.Model)
+            }
+        }
+
+        if cfg.Claude.Enabled {
+            pm.providers[ProviderClaude] = NewClaudeProvider(cfg.Claude.APIKey, cfg.Claude.Model)
+            slog.Info("initialized ai provider", "provider", "claude", "model", cfg.Claude.Model)
+        }
+
+        if len(pm.providers) == 0 {
+            return nil, fmt.Errorf("no ai providers configured")
+        }
+
+        // Set default provider
+        pm.defaultProvider = ProviderType(cfg.DefaultProvider)
+        if _, ok := pm.providers[pm.defaultProvider]; !ok {
+            // Fall back to first available provider
+            for pt := range pm.providers {
+                pm.defaultProvider = pt
+                break
+            }
+        }
+
+        // Set fallback order
+        for _, name := range cfg.FallbackProviders {
+            pt := ProviderType(name)
+            if _, ok := pm.providers[pt]; ok {
+                pm.fallbackOrder = append(pm.fallbackOrder, pt)
+            }
+        }
+
+        // Set task-specific providers
+        if cfg.SummarizeProvider != "" {
+            pt := ProviderType(cfg.SummarizeProvider)
+            if _, ok := pm.providers[pt]; ok {
+                pm.taskProviders[TaskSummarize] = pt
+            }
+        }
+
+        if cfg.MindmapProvider != "" {
+            pt := ProviderType(cfg.MindmapProvider)
+            if _, ok := pm.providers[pt]; ok {
+                pm.taskProviders[TaskMindmap] = pt
+            }
+        }
+
+        slog.Info("provider manager initialized",
+            "default", pm.defaultProvider,
+            "fallbacks", pm.fallbackOrder,
+            "task_providers", pm.taskProviders,
+        )
+
+        return pm, nil
+    }
+
+    // GetProvider returns the provider for a specific task
+    func (pm *ProviderManager) GetProvider(task TaskType) AIProvider {
+        pm.mu.RLock()
+        defer pm.mu.RUnlock()
+
+        // Check task-specific provider first
+        if pt, ok := pm.taskProviders[task]; ok {
+            if provider, ok := pm.providers[pt]; ok {
+                return provider
+            }
+        }
+
+        // Return default provider
+        return pm.providers[pm.defaultProvider]
+    }
+
+    // GetProviderByType returns a specific provider by type
+    func (pm *ProviderManager) GetProviderByType(pt ProviderType) (AIProvider, bool) {
+        pm.mu.RLock()
+        defer pm.mu.RUnlock()
+
+        provider, ok := pm.providers[pt]
+        return provider, ok
+    }
+
+    // Chat executes chat with automatic fallback
+    func (pm *ProviderManager) Chat(ctx context.Context, task TaskType, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+        return pm.chatWithFallback(ctx, task, messages, opts, false)
+    }
+
+    // ChatWithJSON executes chat with JSON mode and automatic fallback
+    func (pm *ProviderManager) ChatWithJSON(ctx context.Context, task TaskType, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+        return pm.chatWithFallback(ctx, task, messages, opts, true)
+    }
+
+    func (pm *ProviderManager) chatWithFallback(ctx context.Context, task TaskType, messages []Message, opts ChatOptions, jsonMode bool) (*ChatResponse, error) {
+        pm.mu.RLock()
+        providers := pm.getProvidersInOrder(task)
+        pm.mu.RUnlock()
+
+        var lastErr error
+        for _, provider := range providers {
+            slog.Debug("attempting ai request",
+                "provider", provider.Name(),
+                "model", provider.Model(),
+                "task", task,
+            )
+
+            var resp *ChatResponse
+            var err error
+
+            if jsonMode {
+                resp, err = provider.ChatWithJSON(ctx, messages, opts)
+            } else {
+                resp, err = provider.Chat(ctx, messages, opts)
+            }
+
+            if err == nil {
+                slog.Info("ai request successful",
+                    "provider", provider.Name(),
+                    "model", resp.Model,
+                    "input_tokens", resp.InputTokens,
+                    "output_tokens", resp.OutputTokens,
+                )
+                return resp, nil
+            }
+
+            lastErr = err
+            slog.Warn("ai provider failed, trying fallback",
+                "provider", provider.Name(),
+                "error", err,
+            )
+        }
+
+        return nil, fmt.Errorf("all ai providers failed, last error: %w", lastErr)
+    }
+
+    func (pm *ProviderManager) getProvidersInOrder(task TaskType) []AIProvider {
+        var result []AIProvider
+        seen := make(map[ProviderType]bool)
+
+        // Task-specific provider first
+        if pt, ok := pm.taskProviders[task]; ok {
+            if p, ok := pm.providers[pt]; ok {
+                result = append(result, p)
+                seen[pt] = true
+            }
+        }
+
+        // Default provider
+        if !seen[pm.defaultProvider] {
+            if p, ok := pm.providers[pm.defaultProvider]; ok {
+                result = append(result, p)
+                seen[pm.defaultProvider] = true
+            }
+        }
+
+        // Fallback providers
+        for _, pt := range pm.fallbackOrder {
+            if !seen[pt] {
+                if p, ok := pm.providers[pt]; ok {
+                    result = append(result, p)
+                    seen[pt] = true
+                }
+            }
+        }
+
+        return result
+    }
+
+    // HealthCheck checks all providers
+    func (pm *ProviderManager) HealthCheck(ctx context.Context) map[ProviderType]bool {
+        pm.mu.RLock()
+        defer pm.mu.RUnlock()
+
+        results := make(map[ProviderType]bool)
+        for pt, provider := range pm.providers {
+            results[pt] = provider.IsHealthy(ctx)
+        }
+        return results
+    }
+
+    // Close closes all providers that implement io.Closer
+    func (pm *ProviderManager) Close() error {
+        pm.mu.Lock()
+        defer pm.mu.Unlock()
+
+        for _, provider := range pm.providers {
+            if closer, ok := provider.(interface{ Close() error }); ok {
+                if err := closer.Close(); err != nil {
+                    slog.Warn("failed to close provider", "provider", provider.Name(), "error", err)
+                }
+            }
+        }
+        return nil
+    }
+    ```
+
+- [ ] **main.go에 Provider Manager 초기화**
   ```go
   import "github.com/mindhit/api/internal/infrastructure/ai"
 
-  // Initialize OpenAI client
-  openaiClient := ai.NewOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIModel)
+  // Initialize AI Provider Manager
+  aiManager, err := ai.NewProviderManager(ctx, cfg.AI)
+  if err != nil {
+      slog.Error("failed to initialize ai manager", "error", err)
+      os.Exit(1)
+  }
+  defer aiManager.Close()
   ```
 
 ### 검증
@@ -161,7 +1017,7 @@ go build ./...
 
 ---
 
-## Step 9.2: URL 요약 서비스
+## Step 9.4: URL 요약 서비스
 
 ### 체크리스트
 
@@ -279,7 +1135,7 @@ go build ./...
   go get github.com/PuerkitoBio/goquery
   ```
 
-- [ ] **URL 요약 서비스**
+- [ ] **URL 요약 서비스** (Provider Manager 사용)
   - [ ] `internal/service/summarize_service.go`
     ```go
     package service
@@ -289,25 +1145,26 @@ go build ./...
         "encoding/json"
         "fmt"
         "log/slog"
+        "time"
 
         "github.com/google/uuid"
         "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/url"
+        "github.com/mindhit/api/ent/pagevisit"
         "github.com/mindhit/api/internal/infrastructure/ai"
         "github.com/mindhit/api/internal/infrastructure/crawler"
     )
 
     type SummarizeService struct {
-        client   *ent.Client
-        ai       *ai.OpenAIClient
-        crawler  *crawler.Crawler
+        client    *ent.Client
+        aiManager *ai.ProviderManager
+        crawler   *crawler.Crawler
     }
 
-    func NewSummarizeService(client *ent.Client, ai *ai.OpenAIClient, crawler *crawler.Crawler) *SummarizeService {
+    func NewSummarizeService(client *ent.Client, aiManager *ai.ProviderManager, crawler *crawler.Crawler) *SummarizeService {
         return &SummarizeService{
-            client:  client,
-            ai:      ai,
-            crawler: crawler,
+            client:    client,
+            aiManager: aiManager,
+            crawler:   crawler,
         }
     }
 
@@ -364,21 +1221,21 @@ Web page content:
             }
         }
 
-        // Generate summary using AI
+        // Generate summary using AI (with automatic fallback)
         messages := []ai.Message{
             {
-                Role:    "user",
+                Role:    ai.RoleUser,
                 Content: fmt.Sprintf(summarizePrompt, content.Title, content.Content),
             },
         }
 
-        response, err := s.ai.ChatWithJSON(ctx, messages)
+        response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskSummarize, messages, ai.DefaultChatOptions())
         if err != nil {
             return fmt.Errorf("ai summarize: %w", err)
         }
 
         var summary URLSummary
-        if err := json.Unmarshal([]byte(response), &summary); err != nil {
+        if err := json.Unmarshal([]byte(response.Content), &summary); err != nil {
             return fmt.Errorf("parse ai response: %w", err)
         }
 
@@ -401,7 +1258,12 @@ Web page content:
             return fmt.Errorf("update url: %w", err)
         }
 
-        slog.Info("summarized url", "url", u.URL, "keywords", summary.Keywords)
+        slog.Info("summarized url",
+            "url", u.URL,
+            "keywords", summary.Keywords,
+            "provider", response.Provider,
+            "model", response.Model,
+        )
         return nil
     }
 
@@ -409,7 +1271,7 @@ Web page content:
         // Get all page visits for session
         pageVisits, err := s.client.PageVisit.
             Query().
-            Where(/* session_id = sessionID */).
+            Where(pagevisit.HasSessionWith(/* session.IDEQ(sessionID) */)).
             WithURL().
             All(ctx)
 
@@ -446,7 +1308,7 @@ go test ./internal/service/...
 
 ---
 
-## Step 9.3: 마인드맵 생성 서비스
+## Step 9.5: 마인드맵 생성 서비스 및 Job 등록
 
 ### 체크리스트
 
@@ -478,7 +1340,7 @@ go test ./internal/service/...
     }
 
     type MindmapLayout struct {
-        Type   string `json:"type"` // galaxy, tree, radial
+        Type   string                 `json:"type"` // galaxy, tree, radial
         Params map[string]interface{} `json:"params"`
     }
 
@@ -489,7 +1351,7 @@ go test ./internal/service/...
     }
     ```
 
-- [ ] **마인드맵 생성 서비스**
+- [ ] **마인드맵 생성 서비스** (Provider Manager 사용)
   - [ ] `internal/service/mindmap_service.go`
     ```go
     package service
@@ -509,14 +1371,14 @@ go test ./internal/service/...
     )
 
     type MindmapService struct {
-        client *ent.Client
-        ai     *ai.OpenAIClient
+        client    *ent.Client
+        aiManager *ai.ProviderManager
     }
 
-    func NewMindmapService(client *ent.Client, ai *ai.OpenAIClient) *MindmapService {
+    func NewMindmapService(client *ent.Client, aiManager *ai.ProviderManager) *MindmapService {
         return &MindmapService{
-            client: client,
-            ai:     ai,
+            client:    client,
+            aiManager: aiManager,
         }
     }
 
@@ -599,7 +1461,12 @@ Respond in JSON format:
             }
             u := pv.Edges.URL
             urlMap[u.ID.String()] = u
-            dwellTimeMap[u.ID.String()] = pv.DwellTimeSeconds
+
+            dwellTime := 0
+            if pv.DwellTimeSeconds != nil {
+                dwellTime = *pv.DwellTimeSeconds
+            }
+            dwellTimeMap[u.ID.String()] = dwellTime
 
             urlSummaries.WriteString(fmt.Sprintf("- [%s] %s\n  URL: %s\n  Summary: %s\n  Keywords: %s\n  Dwell time: %d seconds\n\n",
                 u.ID.String(),
@@ -607,7 +1474,7 @@ Respond in JSON format:
                 u.URL,
                 u.Summary,
                 strings.Join(u.Keywords, ", "),
-                pv.DwellTimeSeconds,
+                dwellTime,
             ))
         }
 
@@ -617,21 +1484,24 @@ Respond in JSON format:
             highlights.WriteString(fmt.Sprintf("- \"%s\"\n", h.Text))
         }
 
-        // Generate mindmap structure using AI
+        // Generate mindmap structure using AI (with automatic fallback)
         messages := []ai.Message{
             {
-                Role:    "user",
+                Role:    ai.RoleUser,
                 Content: fmt.Sprintf(mindmapPrompt, urlSummaries.String(), highlights.String()),
             },
         }
 
-        response, err := s.ai.ChatWithJSON(ctx, messages)
+        opts := ai.DefaultChatOptions()
+        opts.MaxTokens = 8192 // Mindmap generation needs more tokens
+
+        response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
         if err != nil {
             return fmt.Errorf("ai generate mindmap: %w", err)
         }
 
         var aiResp AIResponse
-        if err := json.Unmarshal([]byte(response), &aiResp); err != nil {
+        if err := json.Unmarshal([]byte(response.Content), &aiResp); err != nil {
             return fmt.Errorf("parse ai response: %w", err)
         }
 
@@ -654,14 +1524,18 @@ Respond in JSON format:
         // Update session status
         _, err = s.client.Session.
             UpdateOneID(sessionID).
-            SetStatus(session.StatusCompleted).
+            SetSessionStatus(session.SessionStatusCompleted).
             Save(ctx)
 
         if err != nil {
             return fmt.Errorf("update session status: %w", err)
         }
 
-        slog.Info("generated mindmap", "session_id", sessionID)
+        slog.Info("generated mindmap",
+            "session_id", sessionID,
+            "provider", response.Provider,
+            "model", response.Model,
+        )
         return nil
     }
 
@@ -799,18 +1673,6 @@ Respond in JSON format:
     }
     ```
 
-### 검증
-```bash
-go build ./...
-# 컴파일 성공
-```
-
----
-
-## Step 9.4: AI 처리 Job 등록
-
-### 체크리스트
-
 - [ ] **AI 처리 Job**
   - [ ] `internal/jobs/ai_processing.go`
     ```go
@@ -821,6 +1683,7 @@ go build ./...
         "log/slog"
         "time"
 
+        "github.com/google/uuid"
         "github.com/mindhit/api/ent"
         "github.com/mindhit/api/ent/session"
         "github.com/mindhit/api/internal/service"
@@ -851,7 +1714,7 @@ go build ./...
         // Find sessions in "processing" status
         sessions, err := j.client.Session.
             Query().
-            Where(session.StatusEQ(session.StatusProcessing)).
+            Where(session.SessionStatusEQ(session.SessionStatusProcessing)).
             Limit(5). // Process 5 at a time
             All(ctx)
 
@@ -890,7 +1753,7 @@ go build ./...
     func (j *AIProcessingJob) markSessionFailed(ctx context.Context, sessionID uuid.UUID) {
         _, err := j.client.Session.
             UpdateOneID(sessionID).
-            SetStatus(session.StatusFailed).
+            SetSessionStatus(session.SessionStatusFailed).
             Save(ctx)
 
         if err != nil {
@@ -902,7 +1765,7 @@ go build ./...
     }
     ```
 
-- [ ] **main.go에 AI Job 등록**
+- [ ] **main.go에 AI 서비스 및 Job 등록**
   ```go
   import (
       "github.com/mindhit/api/internal/infrastructure/ai"
@@ -911,13 +1774,20 @@ go build ./...
       "github.com/mindhit/api/internal/service"
   )
 
-  // Initialize AI components
-  openaiClient := ai.NewOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIModel)
+  // Initialize AI Provider Manager
+  aiManager, err := ai.NewProviderManager(ctx, cfg.AI)
+  if err != nil {
+      slog.Error("failed to initialize ai manager", "error", err)
+      os.Exit(1)
+  }
+  defer aiManager.Close()
+
+  // Initialize crawler
   crawlerClient := crawler.New()
 
-  // Initialize services
-  summarizeService := service.NewSummarizeService(client, openaiClient, crawlerClient)
-  mindmapService := service.NewMindmapService(client, openaiClient)
+  // Initialize AI services
+  summarizeService := service.NewSummarizeService(client, aiManager, crawlerClient)
+  mindmapService := service.NewMindmapService(client, aiManager)
 
   // Register AI processing job (every 5 minutes)
   aiProcessingJob := jobs.NewAIProcessingJob(client, summarizeService, mindmapService)
@@ -932,6 +1802,8 @@ go build ./...
     package controller
 
     import (
+        "context"
+        "log/slog"
         "net/http"
 
         "github.com/gin-gonic/gin"
@@ -939,6 +1811,7 @@ go build ./...
         "github.com/mindhit/api/ent"
         "github.com/mindhit/api/ent/mindmapgraph"
         "github.com/mindhit/api/ent/session"
+        "github.com/mindhit/api/ent/user"
         "github.com/mindhit/api/internal/infrastructure/middleware"
         "github.com/mindhit/api/internal/service"
     )
@@ -971,7 +1844,7 @@ go build ./...
 
         mindmap, err := c.client.MindmapGraph.
             Query().
-            Where(mindmapgraph.SessionIDEQ(sessionID)).
+            Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
             Only(ctx.Request.Context())
 
         if err != nil {
@@ -1019,7 +1892,7 @@ go build ./...
         }
 
         // Check if session is in valid state for mindmap generation
-        if sess.Status != session.StatusProcessing && sess.Status != session.StatusCompleted {
+        if sess.SessionStatus != session.SessionStatusProcessing && sess.SessionStatus != session.SessionStatusCompleted {
             ctx.JSON(http.StatusBadRequest, gin.H{
                 "error": gin.H{"message": "session must be stopped before generating mindmap"},
             })
@@ -1029,7 +1902,7 @@ go build ./...
         // Check if mindmap already exists
         exists, err := c.client.MindmapGraph.
             Query().
-            Where(mindmapgraph.SessionIDEQ(sessionID)).
+            Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
             Exist(ctx.Request.Context())
 
         if err != nil {
@@ -1102,7 +1975,7 @@ go build ./...
         // Delete existing mindmap if exists
         _, err = c.client.MindmapGraph.
             Delete().
-            Where(mindmapgraph.SessionIDEQ(sessionID)).
+            Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
             Exec(ctx.Request.Context())
 
         if err != nil && !ent.IsNotFound(err) {
@@ -1144,17 +2017,70 @@ go build ./...
   }
   ```
 
+- [ ] **AI 헬스체크 엔드포인트** (선택)
+  ```go
+  // Health check for AI providers
+  r.GET("/health/ai", func(ctx *gin.Context) {
+      health := aiManager.HealthCheck(ctx.Request.Context())
+      allHealthy := true
+      for _, ok := range health {
+          if !ok {
+              allHealthy = false
+              break
+          }
+      }
+
+      status := http.StatusOK
+      if !allHealthy {
+          status = http.StatusServiceUnavailable
+      }
+
+      ctx.JSON(status, gin.H{"providers": health})
+  })
+  ```
+
 ### 검증
 ```bash
 # 서버 실행
 go run ./cmd/server
 
 # 세션 종료 후 5분 이내 마인드맵 생성 확인
-# 로그에서 "session processing completed" 메시지 확인
+# 로그에서 provider와 model 정보 확인
+# "generated mindmap" session_id=... provider=openai model=gpt-4-turbo
+
+# AI 헬스체크
+curl http://localhost:8080/health/ai
+# {"providers":{"claude":true,"gemini":true,"openai":true}}
 
 # API로 마인드맵 조회
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8080/v1/sessions/{session_id}/mindmap
+```
+
+---
+
+## 프로바이더 비교
+
+| 프로바이더 | 모델 | 장점 | 단점 | 권장 용도 |
+|-----------|------|------|------|----------|
+| **OpenAI** | gpt-4-turbo | JSON mode 네이티브 지원, 안정적 | 비용 높음 | 마인드맵 생성 |
+| **Gemini** | gemini-1.5-pro | 긴 컨텍스트, 비용 효율적 | JSON 출력 불안정할 수 있음 | URL 요약 |
+| **Claude** | claude-3-5-sonnet | 뛰어난 분석력, 한국어 우수 | JSON mode 없음 | 복잡한 분석 |
+
+### 권장 설정
+
+```env
+# 비용 최적화 설정
+AI_DEFAULT_PROVIDER=gemini
+AI_FALLBACK_PROVIDERS=openai,claude
+AI_SUMMARIZE_PROVIDER=gemini      # 저비용
+AI_MINDMAP_PROVIDER=openai        # JSON 안정성
+
+# 품질 최적화 설정
+AI_DEFAULT_PROVIDER=openai
+AI_FALLBACK_PROVIDERS=claude,gemini
+AI_SUMMARIZE_PROVIDER=claude      # 분석력
+AI_MINDMAP_PROVIDER=openai        # JSON mode
 ```
 
 ---
@@ -1166,6 +2092,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 | GET | `/v1/sessions/:id/mindmap` | 세션의 마인드맵 조회 | Bearer Token |
 | POST | `/v1/sessions/:id/mindmap/generate` | 마인드맵 생성 시작 (비동기) | Bearer Token |
 | POST | `/v1/sessions/:id/mindmap/regenerate` | 마인드맵 재생성 (기존 삭제 후 새로 생성) | Bearer Token |
+| GET | `/health/ai` | AI 프로바이더 헬스체크 | - |
 
 ### 응답 예시
 
@@ -1197,19 +2124,14 @@ curl -H "Authorization: Bearer $TOKEN" \
 }
 ```
 
-**POST /v1/sessions/:id/mindmap/generate** (성공 - 202 Accepted)
+**GET /health/ai** (성공)
 ```json
 {
-  "message": "mindmap generation started",
-  "session_id": "uuid"
-}
-```
-
-**POST /v1/sessions/:id/mindmap/regenerate** (성공 - 202 Accepted)
-```json
-{
-  "message": "mindmap regeneration started",
-  "session_id": "uuid"
+  "providers": {
+    "openai": true,
+    "gemini": true,
+    "claude": false
+  }
 }
 ```
 
@@ -1219,19 +2141,29 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### 전체 검증 체크리스트
 
-- [ ] OpenAI API 연동
+- [ ] AI Provider 인터페이스 정의
+- [ ] OpenAI Provider 구현
+- [ ] Google Gemini Provider 구현
+- [ ] Anthropic Claude Provider 구현
+- [ ] Provider Manager 구현 (Fallback 지원)
 - [ ] URL 콘텐츠 크롤링
-- [ ] URL 요약 생성
-- [ ] 마인드맵 구조 생성
+- [ ] URL 요약 생성 (다중 프로바이더)
+- [ ] 마인드맵 구조 생성 (다중 프로바이더)
 - [ ] 마인드맵 저장
 - [ ] 마인드맵 API 조회
 - [ ] 5분마다 자동 처리
+- [ ] AI 헬스체크 엔드포인트
 
 ### 산출물 요약
 
 | 항목 | 위치 |
 |-----|------|
-| OpenAI 클라이언트 | `internal/infrastructure/ai/openai.go` |
+| AI 타입 정의 | `internal/infrastructure/ai/types.go` |
+| Provider 인터페이스 | `internal/infrastructure/ai/provider.go` |
+| OpenAI Provider | `internal/infrastructure/ai/openai.go` |
+| Gemini Provider | `internal/infrastructure/ai/gemini.go` |
+| Claude Provider | `internal/infrastructure/ai/claude.go` |
+| Provider Manager | `internal/infrastructure/ai/manager.go` |
 | 크롤러 | `internal/infrastructure/crawler/crawler.go` |
 | 요약 서비스 | `internal/service/summarize_service.go` |
 | 마인드맵 서비스 | `internal/service/mindmap_service.go` |

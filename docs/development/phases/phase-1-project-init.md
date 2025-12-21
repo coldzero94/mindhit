@@ -27,97 +27,65 @@
 
 ---
 
-## Step 1.1: 모노레포 구조 설정
+## Step 1.1: 모노레포 구조 확인
 
 ### 목표
-pnpm workspace + moon 기반 모노레포 구조 생성
+Phase 0에서 설정한 Moon + pnpm 모노레포 구조 확인 및 검증
+
+> **참고**: Moon 설치 및 기본 설정은 [Phase 0: Moon + Docker 개발 환경](./phase-0-dev-environment.md)에서 완료됩니다.
 
 ### 체크리스트
 
-- [ ] **루트 디렉토리 설정**
-  - [ ] `pnpm-workspace.yaml` 생성
-    ```yaml
-    packages:
-      - 'apps/*'
-      - 'packages/*'
-    ```
-  - [ ] 루트 `package.json` 생성
-    ```json
-    {
-      "name": "mindhit",
-      "private": true,
-      "scripts": {
-        "dev": "moon run :dev",
-        "build": "moon run :build",
-        "test": "moon run :test",
-        "lint": "moon run :lint",
-        "generate": "moon run :generate"
-      },
-      "devDependencies": {
-        "@moonrepo/cli": "^1.28.0"
-      }
-    }
-    ```
+- [ ] **Phase 0 완료 확인**
+  - [ ] Moon이 설치되어 있는지 확인
+  - [ ] Docker Compose가 동작하는지 확인
+  - [ ] GitHub Actions CI 워크플로우가 설정되어 있는지 확인
 
-- [ ] **디렉토리 구조 생성**
+- [ ] **디렉토리 구조 확인**
   ```bash
-  mkdir -p apps/{api,web,extension}
-  mkdir -p packages/{protocol,shared}
+  ls -la .moon/
+  ls -la apps/
+  ls -la packages/
   ```
 
-- [ ] **moon 설정**
-  - [ ] `.moon/workspace.yml` 생성
-    ```yaml
-    $schema: 'https://moonrepo.dev/schemas/workspace.json'
-    projects:
-      - 'apps/*'
-      - 'packages/*'
-    vcs:
-      manager: git
-      defaultBranch: main
-    ```
-  - [ ] `.moon/toolchain.yml` 생성
-    ```yaml
-    $schema: 'https://moonrepo.dev/schemas/toolchain.json'
-    node:
-      version: '20.10.0'
-      packageManager: pnpm
-    ```
-
-- [ ] **Git 설정**
-  - [ ] `.gitignore` 업데이트
-    ```
-    node_modules/
-    .moon/cache/
-    .moon/docker/
-    dist/
-    build/
-    .env
-    .env.local
-    ```
+- [ ] **Moon 프로젝트 확인**
+  ```bash
+  pnpm moon query projects
+  ```
 
 ### 검증
+
 ```bash
-# pnpm workspace 확인
-pnpm install
+# Moon 버전 확인
+pnpm moon --version
 
-# moon 동작 확인
-moon --version
+# 프로젝트 목록 확인
+pnpm moon query projects
+
+# Docker 서비스 확인
+docker-compose ps
 ```
 
-### 결과물
-```
+### 결과물 (Phase 0에서 생성됨)
+
+```text
 mindhit/
 ├── .moon/
-│   ├── workspace.yml
-│   └── toolchain.yml
+│   ├── workspace.yml     # 워크스페이스 설정
+│   ├── toolchain.yml     # 도구 버전 설정
+│   └── tasks.yml         # 전역 태스크 설정
+├── .github/
+│   └── workflows/
+│       └── ci.yml        # Moon CI 워크플로우
 ├── apps/
-│   ├── api/
-│   ├── web/
-│   └── extension/
+│   ├── api/              # Go 백엔드
+│   ├── web/              # Next.js 웹앱
+│   └── extension/        # Chrome Extension
 ├── packages/
-│   ├── protocol/
-│   └── shared/
+│   ├── shared/           # 공유 유틸
+│   └── protocol/         # API 타입 정의
+├── docker-compose.yml
+├── Makefile
 ├── package.json
 ├── pnpm-workspace.yaml
 └── pnpm-lock.yaml

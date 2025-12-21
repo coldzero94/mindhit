@@ -4,10 +4,10 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | Docker 기반 로컬 개발 환경 구성 |
-| **선행 조건** | Docker, Docker Compose 설치 |
-| **예상 소요** | 2 Steps |
-| **결과물** | PostgreSQL, Redis, API 서버가 Docker로 동작 |
+| **목표** | Moon + Docker 기반 로컬 개발 환경 구성 |
+| **선행 조건** | Node.js, pnpm, Docker, Docker Compose 설치 |
+| **예상 소요** | 4 Steps |
+| **결과물** | Moon 태스크 러너 + PostgreSQL, Redis, API 서버가 동작 |
 
 ---
 
@@ -15,12 +15,182 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 0.1 | Docker Compose 구성 | ⬜ |
-| 0.2 | 개발 환경 스크립트 | ⬜ |
+| 0.1 | Moon 설치 및 초기 설정 | ⬜ |
+| 0.2 | Docker Compose 구성 | ⬜ |
+| 0.3 | 개발 환경 스크립트 | ⬜ |
+| 0.4 | Moon CI 워크플로우 구성 | ⬜ |
 
 ---
 
-## Step 0.1: Docker Compose 구성
+## Step 0.1: Moon 설치 및 초기 설정
+
+### 목표
+Moon 태스크 러너 설치 및 모노레포 기본 설정
+
+### Moon 소개
+
+Moon은 모노레포를 위한 고성능 태스크 러너입니다.
+
+| 특징 | 설명 |
+|-----|------|
+| **빠른 실행** | 변경된 파일만 감지하여 필요한 태스크만 실행 |
+| **캐싱** | 이전 실행 결과를 캐싱하여 중복 작업 방지 |
+| **의존성 관리** | 프로젝트 간 의존성 자동 감지 |
+| **CI 최적화** | `moon ci` 명령으로 PR 변경 사항만 테스트 |
+
+### 체크리스트
+
+- [ ] **Node.js 및 pnpm 설치 확인**
+  ```bash
+  node --version  # v20.x 이상
+  pnpm --version  # v8.x 이상
+  ```
+
+- [ ] **pnpm-workspace.yaml 생성** (루트)
+  ```yaml
+  packages:
+    - 'apps/*'
+    - 'packages/*'
+  ```
+
+- [ ] **루트 package.json 생성**
+  ```json
+  {
+    "name": "mindhit",
+    "private": true,
+    "packageManager": "pnpm@9.0.0",
+    "scripts": {
+      "dev": "moon run :dev",
+      "build": "moon run :build",
+      "test": "moon run :test",
+      "lint": "moon run :lint",
+      "ci": "moon ci"
+    },
+    "devDependencies": {
+      "@moonrepo/cli": "^1.29.0"
+    }
+  }
+  ```
+
+- [ ] **Moon 설치**
+  ```bash
+  pnpm install
+  ```
+
+- [ ] **Moon workspace 설정**
+  - [ ] `.moon/workspace.yml` 생성
+    ```yaml
+    $schema: 'https://moonrepo.dev/schemas/workspace.json'
+
+    # 프로젝트 위치 설정
+    projects:
+      - 'apps/*'
+      - 'packages/*'
+
+    # VCS 설정
+    vcs:
+      manager: git
+      defaultBranch: main
+      remoteCandidates:
+        - origin
+
+    # 버전 관리 및 제약
+    versionConstraint: '>=1.28.0'
+
+    # 실험적 기능 (선택)
+    experiments:
+      actionPipelineV2: true
+
+    # 원격 캐싱 (선택, 향후 설정)
+    # runner:
+    #   cacheLifetime: '7 days'
+    ```
+
+- [ ] **Moon toolchain 설정**
+  - [ ] `.moon/toolchain.yml` 생성
+    ```yaml
+    $schema: 'https://moonrepo.dev/schemas/toolchain.json'
+
+    # Node.js 설정
+    node:
+      version: '20.10.0'
+      packageManager: pnpm
+      pnpm:
+        version: '9.0.0'
+
+    # TypeScript 설정 (웹앱/익스텐션용)
+    typescript:
+      syncProjectReferences: true
+    ```
+
+- [ ] **Moon tasks 설정 (전역)**
+  - [ ] `.moon/tasks.yml` 생성
+    ```yaml
+    $schema: 'https://moonrepo.dev/schemas/tasks.json'
+
+    # 전역 태스크 설정
+    fileGroups:
+      sources:
+        - 'src/**/*'
+        - 'lib/**/*'
+      tests:
+        - 'test/**/*'
+        - '**/*.test.*'
+      configs:
+        - '*.config.*'
+        - 'tsconfig.json'
+
+    # 환경별 설정
+    implicitDeps:
+      - '^:build'
+
+    # CI에서 실행하지 않을 태스크
+    implicitInputs:
+      - '/.moon/*.yml'
+    ```
+
+- [ ] **디렉토리 구조 생성**
+  ```bash
+  mkdir -p apps/{api,web,extension}
+  mkdir -p packages/{shared,protocol}
+  mkdir -p .github/workflows
+  ```
+
+### 검증
+```bash
+# Moon 버전 확인
+pnpm moon --version
+
+# 프로젝트 목록 확인
+pnpm moon project-graph
+
+# 설정 검증
+pnpm moon query projects
+```
+
+### 결과물
+
+```text
+mindhit/
+├── .moon/
+│   ├── workspace.yml     # 워크스페이스 설정
+│   ├── toolchain.yml     # 도구 버전 설정
+│   └── tasks.yml         # 전역 태스크 설정
+├── apps/
+│   ├── api/              # Go 백엔드
+│   ├── web/              # Next.js 웹앱
+│   └── extension/        # Chrome Extension
+├── packages/
+│   ├── shared/           # 공유 유틸
+│   └── protocol/         # API 타입 정의
+├── package.json
+├── pnpm-workspace.yaml
+└── pnpm-lock.yaml
+```
+
+---
+
+## Step 0.2: Docker Compose 구성
 
 ### 목표
 PostgreSQL, Redis, API 서버를 Docker Compose로 구성
@@ -220,16 +390,16 @@ docker exec -it mindhit-redis redis-cli ping
 
 ---
 
-## Step 0.2: 개발 환경 스크립트
+## Step 0.3: 개발 환경 스크립트
 
 ### 목표
-개발 환경 관리를 위한 편의 스크립트 생성
+개발 환경 관리를 위한 편의 스크립트 생성 (Moon 통합)
 
 ### 체크리스트
 
-- [ ] **Makefile 생성** (루트)
+- [ ] **Makefile 생성** (루트) - Moon 명령어와 Docker 통합
   ```makefile
-  .PHONY: help dev dev-db dev-full down logs clean migrate test lint
+  .PHONY: help dev dev-db dev-full down logs clean migrate test lint build ci
 
   # 기본 도움말
   help:
@@ -242,15 +412,21 @@ docker exec -it mindhit-redis redis-cli ping
   	@echo "  make logs        - 로그 보기"
   	@echo "  make clean       - 볼륨 포함 완전 삭제"
   	@echo ""
+  	@echo "Moon 태스크:"
+  	@echo "  make build       - 모든 프로젝트 빌드 (moon run :build)"
+  	@echo "  make test        - 모든 프로젝트 테스트 (moon run :test)"
+  	@echo "  make lint        - 모든 프로젝트 린트 (moon run :lint)"
+  	@echo "  make ci          - CI 파이프라인 실행 (moon ci)"
+  	@echo ""
   	@echo "개발:"
-  	@echo "  make api         - API 서버 로컬 실행 (DB는 Docker)"
+  	@echo "  make api         - API 서버 로컬 실행 (Hot reload)"
   	@echo "  make migrate     - 마이그레이션 적용"
   	@echo "  make migrate-new - 새 마이그레이션 생성"
   	@echo "  make generate    - Ent 코드 생성"
-  	@echo ""
-  	@echo "테스트:"
-  	@echo "  make test        - 전체 테스트 실행"
-  	@echo "  make lint        - 린트 실행"
+
+  # ===================
+  # Docker 환경 관리
+  # ===================
 
   # DB만 실행 (로컬 개발용)
   dev-db:
@@ -269,10 +445,6 @@ docker exec -it mindhit-redis redis-cli ping
   	docker-compose --profile full up -d
   	@echo "All services started!"
 
-  # API 서버 로컬 실행 (Hot reload)
-  api:
-  	cd apps/api && air
-
   # 컨테이너 중지
   down:
   	docker-compose down
@@ -286,11 +458,37 @@ docker exec -it mindhit-redis redis-cli ping
   	docker-compose down -v --remove-orphans
   	@echo "All containers and volumes removed!"
 
+  # ===================
+  # Moon 태스크
+  # ===================
+
+  # 모든 프로젝트 빌드
+  build:
+  	pnpm moon run :build
+
+  # 모든 프로젝트 테스트
+  test:
+  	pnpm moon run :test
+
+  # 모든 프로젝트 린트
+  lint:
+  	pnpm moon run :lint
+
+  # CI 파이프라인 (변경된 프로젝트만)
+  ci:
+  	pnpm moon ci
+
+  # ===================
+  # API 개발
+  # ===================
+
+  # API 서버 로컬 실행 (Hot reload)
+  api:
+  	pnpm moon run api:dev
+
   # 마이그레이션 적용
   migrate:
-  	cd apps/api && atlas migrate apply \
-  		--dir "file://ent/migrate/migrations" \
-  		--url "postgres://postgres:password@localhost:5432/mindhit?sslmode=disable"
+  	pnpm moon run api:migrate-apply
 
   # 새 마이그레이션 생성
   migrate-new:
@@ -302,15 +500,7 @@ docker exec -it mindhit-redis redis-cli ping
 
   # Ent 코드 생성
   generate:
-  	cd apps/api && go generate ./ent
-
-  # 테스트 실행
-  test:
-  	cd apps/api && go test -v -race -cover ./...
-
-  # 린트 실행
-  lint:
-  	cd apps/api && golangci-lint run
+  	pnpm moon run api:generate
   ```
 
 - [ ] **환경 변수 파일 템플릿**
@@ -450,9 +640,401 @@ make dev-full
 
 ---
 
+## Step 0.4: Moon CI 워크플로우 구성
+
+### 목표
+GitHub Actions에서 Moon CI를 활용한 자동화 파이프라인 구성
+
+### Moon CI 핵심 개념
+
+Moon CI는 PR에서 변경된 파일만 감지하여 필요한 태스크만 실행합니다.
+
+```mermaid
+flowchart LR
+    A[PR 생성] --> B[moon ci 실행]
+    B --> C{변경 감지}
+    C --> D[apps/api 변경]
+    C --> E[apps/web 변경]
+    C --> F[packages/shared 변경]
+    D --> G[api:test, api:lint]
+    E --> H[web:test, web:lint]
+    F --> I[shared 의존 프로젝트 모두 실행]
+```
+
+### 체크리스트
+
+- [ ] **GitHub Actions 워크플로우 생성**
+  - [ ] `.github/workflows/ci.yml`
+    ```yaml
+    name: CI
+
+    on:
+      push:
+        branches:
+          - main
+      pull_request:
+        branches:
+          - main
+
+    env:
+      MOON_TOOLCHAIN_FORCE_GLOBALS: true
+
+    jobs:
+      ci:
+        name: CI Pipeline
+        runs-on: ubuntu-latest
+
+        services:
+          postgres:
+            image: postgres:16-alpine
+            env:
+              POSTGRES_USER: postgres
+              POSTGRES_PASSWORD: password
+              POSTGRES_DB: mindhit_test
+            ports:
+              - 5432:5432
+            options: >-
+              --health-cmd pg_isready
+              --health-interval 10s
+              --health-timeout 5s
+              --health-retries 5
+
+          redis:
+            image: redis:7-alpine
+            ports:
+              - 6379:6379
+            options: >-
+              --health-cmd "redis-cli ping"
+              --health-interval 10s
+              --health-timeout 5s
+              --health-retries 5
+
+        steps:
+          # 1. 체크아웃 (전체 히스토리 필요)
+          - name: Checkout repository
+            uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+
+          # 2. Go 설치
+          - name: Setup Go
+            uses: actions/setup-go@v5
+            with:
+              go-version: '1.22'
+              cache: true
+              cache-dependency-path: apps/api/go.sum
+
+          # 3. Moon toolchain 설치 (pnpm + node 자동 설치)
+          - name: Setup Moon toolchain
+            uses: moonrepo/setup-toolchain@v0
+            with:
+              auto-install: true
+
+          # 4. pnpm 의존성 설치
+          - name: Install dependencies
+            run: pnpm install --frozen-lockfile
+
+          # 5. Go 의존성 설치
+          - name: Install Go dependencies
+            run: |
+              cd apps/api
+              go mod download
+
+          # 6. Moon CI 실행 (변경된 프로젝트만)
+          - name: Run Moon CI
+            run: moon ci
+            env:
+              DATABASE_URL: postgres://postgres:password@localhost:5432/mindhit_test?sslmode=disable
+              REDIS_URL: redis://localhost:6379
+              JWT_SECRET: test-secret-key
+
+          # 7. 결과 리포트 (PR 코멘트)
+          - name: Report results
+            uses: moonrepo/run-report-action@v1
+            if: success() || failure()
+            with:
+              access-token: ${{ secrets.GITHUB_TOKEN }}
+    ```
+
+- [ ] **병렬 실행 워크플로우** (대규모 프로젝트용, 선택)
+  - [ ] `.github/workflows/ci-parallel.yml`
+    ```yaml
+    name: CI (Parallel)
+
+    on:
+      push:
+        branches:
+          - main
+      pull_request:
+        branches:
+          - main
+
+    jobs:
+      ci:
+        name: CI Job ${{ matrix.index }}
+        runs-on: ubuntu-latest
+        strategy:
+          matrix:
+            index: [0, 1, 2]  # 3개 병렬 작업
+
+        steps:
+          - uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+
+          - uses: moonrepo/setup-toolchain@v0
+            with:
+              auto-install: true
+
+          - run: pnpm install --frozen-lockfile
+
+          # 작업을 3개로 분할하여 병렬 실행
+          - name: Run Moon CI (parallel)
+            run: moon ci --job ${{ matrix.index }} --jobTotal 3
+    ```
+
+- [ ] **API 전용 moon.yml 태스크 정의**
+  - [ ] `apps/api/moon.yml` 업데이트
+    ```yaml
+    $schema: 'https://moonrepo.dev/schemas/project.json'
+
+    language: go
+    type: application
+
+    fileGroups:
+      sources:
+        - '**/*.go'
+        - 'go.mod'
+        - 'go.sum'
+      tests:
+        - '**/*_test.go'
+      schemas:
+        - 'ent/schema/**/*.go'
+
+    tasks:
+      # 빌드
+      build:
+        command: go build -o ./bin/server ./cmd/server
+        inputs:
+          - '@group(sources)'
+        outputs:
+          - bin/server
+
+      # 테스트
+      test:
+        command: go test -v -race -coverprofile=coverage.out ./...
+        inputs:
+          - '@group(sources)'
+          - '@group(tests)'
+
+      # 린트
+      lint:
+        command: golangci-lint run
+        inputs:
+          - '@group(sources)'
+
+      # 개발 서버 (로컬 전용)
+      dev:
+        command: air -c .air.toml
+        local: true
+        options:
+          runInCI: false
+
+      # Ent 코드 생성
+      generate:
+        command: go generate ./ent
+        inputs:
+          - '@group(schemas)'
+        outputs:
+          - ent/client.go
+          - ent/ent.go
+
+      # 마이그레이션 적용
+      migrate-apply:
+        command: atlas migrate apply --dir "file://ent/migrate/migrations" --url "${DATABASE_URL}"
+        local: true
+        options:
+          runInCI: false
+
+      # 마이그레이션 상태
+      migrate-status:
+        command: atlas migrate status --dir "file://ent/migrate/migrations" --url "${DATABASE_URL}"
+        local: true
+        options:
+          runInCI: false
+    ```
+
+- [ ] **Web 프로젝트 moon.yml** (Next.js용)
+  - [ ] `apps/web/moon.yml`
+    ```yaml
+    $schema: 'https://moonrepo.dev/schemas/project.json'
+
+    language: typescript
+    type: application
+
+    dependsOn:
+      - 'shared'
+      - 'protocol'
+
+    fileGroups:
+      sources:
+        - 'src/**/*'
+        - 'app/**/*'
+      tests:
+        - '**/*.test.*'
+        - '**/*.spec.*'
+      configs:
+        - 'next.config.*'
+        - 'tsconfig.json'
+        - 'tailwind.config.*'
+
+    tasks:
+      build:
+        command: next build
+        inputs:
+          - '@group(sources)'
+          - '@group(configs)'
+        outputs:
+          - .next
+
+      dev:
+        command: next dev
+        local: true
+        options:
+          runInCI: false
+
+      lint:
+        command: next lint
+        inputs:
+          - '@group(sources)'
+
+      test:
+        command: vitest run
+        inputs:
+          - '@group(sources)'
+          - '@group(tests)'
+
+      typecheck:
+        command: tsc --noEmit
+        inputs:
+          - '@group(sources)'
+          - '@group(configs)'
+    ```
+
+- [ ] **Extension 프로젝트 moon.yml**
+  - [ ] `apps/extension/moon.yml`
+    ```yaml
+    $schema: 'https://moonrepo.dev/schemas/project.json'
+
+    language: typescript
+    type: application
+
+    dependsOn:
+      - 'shared'
+      - 'protocol'
+
+    fileGroups:
+      sources:
+        - 'src/**/*'
+      tests:
+        - '**/*.test.*'
+      configs:
+        - 'manifest.json'
+        - 'tsconfig.json'
+        - 'vite.config.*'
+
+    tasks:
+      build:
+        command: vite build
+        inputs:
+          - '@group(sources)'
+          - '@group(configs)'
+        outputs:
+          - dist
+
+      dev:
+        command: vite build --watch
+        local: true
+        options:
+          runInCI: false
+
+      lint:
+        command: eslint src --ext .ts,.tsx
+        inputs:
+          - '@group(sources)'
+
+      test:
+        command: vitest run
+        inputs:
+          - '@group(sources)'
+          - '@group(tests)'
+
+      typecheck:
+        command: tsc --noEmit
+        inputs:
+          - '@group(sources)'
+    ```
+
+### Moon CI 명령어 참조
+
+| 명령어 | 설명 |
+|-------|------|
+| `moon ci` | 변경된 프로젝트만 빌드/테스트/린트 실행 |
+| `moon ci :build` | 변경된 프로젝트의 build 태스크만 실행 |
+| `moon ci :test :lint` | 테스트와 린트만 실행 |
+| `moon ci --base main` | main 브랜치 대비 변경 감지 |
+| `moon ci --job 0 --jobTotal 3` | 병렬 작업 분할 (3개 중 첫 번째) |
+
+### 환경 변수
+
+| 변수 | 설명 |
+|-----|------|
+| `MOON_BASE` | 베이스 브랜치 (기본: vcs.defaultBranch) |
+| `MOON_HEAD` | 비교 대상 커밋 (기본: HEAD) |
+| `MOON_TOOLCHAIN_FORCE_GLOBALS` | 시스템 도구 사용 (CI 최적화) |
+
+### 검증
+
+```bash
+# 로컬에서 CI 시뮬레이션
+moon ci --dry-run
+
+# 특정 브랜치 대비 변경 확인
+moon ci --base main --dry-run
+
+# 변경된 프로젝트 확인
+moon query touched-files
+moon query projects --affected
+```
+
+### CI 구성 파일 구조
+
+```text
+.github/
+└── workflows/
+    ├── ci.yml              # 기본 CI 워크플로우
+    └── ci-parallel.yml     # 병렬 CI (선택)
+
+apps/
+├── api/
+│   └── moon.yml           # Go API 태스크
+├── web/
+│   └── moon.yml           # Next.js 태스크
+└── extension/
+    └── moon.yml           # Extension 태스크
+```
+
+---
+
 ## Phase 0 완료 확인
 
 ### 전체 검증 체크리스트
+
+- [ ] **Moon 설정 확인**
+  ```bash
+  pnpm moon --version
+  pnpm moon query projects
+  ```
 
 - [ ] **Docker Compose 실행**
   ```bash
@@ -482,16 +1064,26 @@ make dev-full
 - [ ] **Hot Reload 동작**
   - main.go 수정 시 자동 재시작 확인
 
+- [ ] **Moon CI 테스트**
+  ```bash
+  # 로컬에서 CI 시뮬레이션
+  pnpm moon ci --dry-run
+  ```
+
 ### 산출물 요약
 
 | 항목 | 위치 |
 |-----|------|
+| Moon Workspace | `.moon/workspace.yml` |
+| Moon Toolchain | `.moon/toolchain.yml` |
+| Moon Tasks (전역) | `.moon/tasks.yml` |
 | Docker Compose | `docker-compose.yml` |
 | API Dockerfile | `apps/api/Dockerfile.dev` |
 | Air 설정 | `apps/api/.air.toml` |
 | Makefile | `Makefile` |
 | 환경 변수 | `apps/api/.env.example` |
 | 설정 스크립트 | `scripts/dev-setup.sh` |
+| GitHub Actions CI | `.github/workflows/ci.yml` |
 
 ### 환경 구성 요약
 
@@ -500,6 +1092,16 @@ make dev-full
 | PostgreSQL | 5432 | 메인 데이터베이스 |
 | Redis | 6379 | 캐시, Rate Limiting |
 | API | 8080 | Go 백엔드 서버 |
+
+### Moon 태스크 요약
+
+| 명령어 | 설명 |
+|-------|------|
+| `pnpm moon run :build` | 모든 프로젝트 빌드 |
+| `pnpm moon run :test` | 모든 프로젝트 테스트 |
+| `pnpm moon run :lint` | 모든 프로젝트 린트 |
+| `pnpm moon ci` | CI 파이프라인 (변경 감지) |
+| `pnpm moon run api:dev` | API 개발 서버 |
 
 ---
 

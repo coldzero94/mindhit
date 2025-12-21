@@ -32,7 +32,7 @@ phases/
 
 | Phase | 이름 | 상태 | 예상 Step 수 |
 |-------|------|------|-------------|
-| 0 | [Docker 개발 환경](./phase-0-dev-environment.md) | ⬜ 대기 | 2 steps |
+| 0 | [Moon + Docker 개발 환경](./phase-0-dev-environment.md) | ⬜ 대기 | 4 steps |
 | 1 | [프로젝트 초기화](./phase-1-project-init.md) | ⬜ 대기 | 9 steps |
 | 1.5 | [API 스펙 공통화](./phase-1.5-api-spec.md) | ⬜ 대기 | 5 steps |
 | 2 | [인증 시스템](./phase-2-auth.md) | ⬜ 대기 | 5 steps |
