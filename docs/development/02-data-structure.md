@@ -155,6 +155,151 @@ CREATE TABLE mindmap_graphs (
 );
 ```
 
+### plans (결제 플랜)
+
+```sql
+CREATE TABLE plans (
+  id VARCHAR(20) PRIMARY KEY,           -- 'free', 'pro', 'enterprise'
+  name VARCHAR(50) NOT NULL,
+  price_cents INTEGER NOT NULL,          -- 0, 1200, NULL(문의)
+  billing_period VARCHAR(20) DEFAULT 'monthly',
+  token_limit INTEGER,                   -- NULL = 무제한
+  session_retention_days INTEGER,        -- NULL = 무제한
+  max_concurrent_sessions INTEGER,       -- NULL = 무제한
+  features JSONB NOT NULL,               -- 기능 플래그
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### subscriptions (구독)
+
+```sql
+CREATE TABLE subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id VARCHAR(20) NOT NULL REFERENCES plans(id),
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  -- 'active' | 'canceled' | 'past_due' | 'trialing'
+  current_period_start TIMESTAMPTZ NOT NULL,
+  current_period_end TIMESTAMPTZ NOT NULL,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  stripe_subscription_id VARCHAR(255),   -- Stripe 연동
+  stripe_customer_id VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_subscriptions_user_active
+  ON subscriptions(user_id) WHERE status = 'active';
+```
+
+**빌링 주기 필드 설명:**
+
+| 필드 | 설명 | 예시 |
+|-----|------|------|
+| `current_period_start` | 현재 빌링 주기 시작일 | 2024-12-15 00:00:00 UTC |
+| `current_period_end` | 현재 빌링 주기 종료일 | 2025-01-14 23:59:59 UTC |
+
+**플랜별 빌링 주기:**
+
+| 플랜 | 빌링 주기 계산 방식 |
+|-----|-------------------|
+| Free | 가입일(`users.created_at`) 기준 30일 주기 |
+| Pro | 구독 시작일 기준 (예: 15일 시작 → 매월 15일~다음달 14일) |
+| Enterprise | 계약일 기준 |
+
+### token_usage (토큰 사용량)
+
+```sql
+CREATE TABLE token_usage (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  session_id UUID REFERENCES sessions(id) ON DELETE SET NULL,
+  operation VARCHAR(50) NOT NULL,        -- 'summarize', 'mindmap', 'keywords'
+  tokens_used INTEGER NOT NULL,
+  ai_model VARCHAR(50),                  -- 'gpt-4-turbo', 'gemini-1.5-pro'
+  period_start DATE NOT NULL,            -- 빌링 기간 시작일
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_token_usage_user_period
+  ON token_usage(user_id, period_start);
+```
+
+**토큰 측정 및 빌링 주기 로직:**
+
+| 항목 | 설명 |
+|-----|------|
+| `tokens_used` | AI API 응답에서 추출한 **정확한** 토큰 수 (예상치 아님) |
+| `period_start` | 토큰이 속하는 빌링 주기 시작일 |
+
+**토큰 측정 원리:**
+
+AI API 호출 시 응답에 실제 사용된 토큰 수가 포함됩니다:
+
+```text
+OpenAI:   response.usage.total_tokens
+Gemini:   response.usageMetadata.totalTokenCount
+Claude:   response.usage.input_tokens + output_tokens
+```
+
+**period_start 계산 로직:**
+
+```sql
+-- Free 플랜 사용자: 가입일 기준 30일 주기
+-- 예: 12월 10일 가입 → 현재 빌링 주기 시작일 계산
+WITH user_signup AS (
+  SELECT created_at FROM users WHERE id = $1
+)
+SELECT
+  created_at + (FLOOR(EXTRACT(DAY FROM NOW() - created_at) / 30) * INTERVAL '30 days')
+  AS period_start
+FROM user_signup;
+-- 결과: 가입일 기준 현재 30일 주기의 시작일
+
+-- Pro/Enterprise 플랜 사용자: 구독의 current_period_start 사용
+SELECT current_period_start FROM subscriptions
+WHERE user_id = $1 AND status = 'active';
+-- 결과: 2024-12-15 (구독 시작일 기준)
+```
+
+**현재 빌링 주기 사용량 조회:**
+
+```sql
+-- 특정 사용자의 현재 빌링 주기 토큰 사용량
+SELECT SUM(tokens_used) AS total_tokens
+FROM token_usage
+WHERE user_id = $1
+  AND period_start >= (
+    -- Pro/Enterprise: 구독 period_start
+    -- Free: 가입일 기준 30일 주기 시작일
+    COALESCE(
+      (SELECT current_period_start FROM subscriptions
+       WHERE user_id = $1 AND status = 'active'),
+      -- Free 플랜: 가입일 + (경과일수 / 30) * 30일
+      (SELECT created_at + (FLOOR(EXTRACT(DAY FROM NOW() - created_at) / 30) * INTERVAL '30 days')
+       FROM users WHERE id = $1)
+    )
+  );
+```
+
+### invoices (결제 내역)
+
+```sql
+CREATE TABLE invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subscription_id UUID REFERENCES subscriptions(id),
+  amount_cents INTEGER NOT NULL,
+  currency VARCHAR(3) DEFAULT 'USD',
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  -- 'pending' | 'paid' | 'failed' | 'refunded'
+  stripe_invoice_id VARCHAR(255),
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
 ---
 
 ## 2. 테이블 관계도
@@ -163,14 +308,20 @@ CREATE TABLE mindmap_graphs (
 erDiagram
     users ||--o{ sessions : "has many"
     users ||--o| user_settings : "has one"
+    users ||--o{ subscriptions : "has many"
+    users ||--o{ token_usage : "has many"
+    users ||--o{ invoices : "has many"
     sessions ||--o{ page_visits : "has many"
     sessions ||--o{ raw_events : "has many"
     sessions ||--o{ highlights : "has many"
     sessions ||--o| mindmap_graphs : "has one"
+    sessions ||--o{ token_usage : "has many"
     page_visits }o--|| urls : "references"
     page_visits ||--o{ highlights : "has many"
     highlights }o--|| urls : "references"
     raw_events }o--o| urls : "may reference"
+    plans ||--o{ subscriptions : "has many"
+    subscriptions ||--o{ invoices : "has many"
 
     users {
         uuid id PK
@@ -253,6 +404,55 @@ erDiagram
         jsonb nodes
         jsonb edges
         jsonb metadata
+        timestamp created_at
+    }
+
+    plans {
+        string id PK
+        string name
+        integer price_cents
+        string billing_period
+        integer token_limit
+        integer session_retention_days
+        integer max_concurrent_sessions
+        jsonb features
+        timestamp created_at
+    }
+
+    subscriptions {
+        uuid id PK
+        uuid user_id FK
+        string plan_id FK
+        enum status
+        timestamp current_period_start
+        timestamp current_period_end
+        boolean cancel_at_period_end
+        string stripe_subscription_id
+        string stripe_customer_id
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    token_usage {
+        bigserial id PK
+        uuid user_id FK
+        uuid session_id FK
+        string operation
+        integer tokens_used
+        string ai_model
+        date period_start
+        timestamp created_at
+    }
+
+    invoices {
+        uuid id PK
+        uuid user_id FK
+        uuid subscription_id FK
+        integer amount_cents
+        string currency
+        enum status
+        string stripe_invoice_id
+        timestamp paid_at
         timestamp created_at
     }
 ```

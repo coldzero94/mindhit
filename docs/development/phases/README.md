@@ -23,7 +23,8 @@ phases/
 ├── phase-9-ai.md                # AI 마인드맵 생성
 ├── phase-10-dashboard.md        # 웹앱 대시보드
 ├── phase-11-monitoring.md       # 모니터링 시스템
-└── phase-12-deployment.md       # 배포 및 운영
+├── phase-12-deployment.md       # 배포 및 운영
+└── phase-13-billing.md          # 결제 및 구독 시스템
 ```
 
 ---
@@ -46,6 +47,7 @@ phases/
 | 10 | [웹앱 대시보드](./phase-10-dashboard.md) | ⬜ 대기 | 4 steps |
 | 11 | [모니터링 시스템](./phase-11-monitoring.md) | ⬜ 대기 | 4 steps |
 | 12 | [배포 및 운영](./phase-12-deployment.md) | ⬜ 대기 | 4 steps |
+| 13 | [결제 및 구독](./phase-13-billing.md) | ⬜ 대기 | 7 steps |
 
 **상태 범례:**
 - ⬜ 대기
@@ -72,6 +74,7 @@ flowchart TD
     P9 --> P10[Phase 10<br/>대시보드]
     P10 --> P11[Phase 11<br/>모니터링]
     P11 --> P12[Phase 12<br/>배포/운영]
+    P12 --> P13[Phase 13<br/>결제/구독]
 
     style P0 fill:#e1f5fe
     style P1 fill:#e1f5fe
@@ -87,6 +90,7 @@ flowchart TD
     style P10 fill:#f3e5f5
     style P11 fill:#efebe9
     style P12 fill:#efebe9
+    style P13 fill:#fff9c4
 ```
 
 ---
@@ -148,6 +152,10 @@ flowchart TD
 ### 프로덕션 준비
 11. Phase 11 (모니터링)
 12. Phase 12 (배포/운영)
+
+### 수익화
+
+13. Phase 13 (결제/구독)
 
 ---
 

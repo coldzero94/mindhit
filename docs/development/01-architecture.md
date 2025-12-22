@@ -133,24 +133,45 @@ flowchart TB
 
 ### AI 호출 최적화
 
-```typescript
+```go
 // 세션의 모든 URL 조회
-const urls = await getSessionUrls(sessionId);
+urls, err := client.URL.Query().
+    Where(url.HasPageVisitsWith(pagevisit.SessionIDEQ(sessionID))).
+    All(ctx)
 
 // 요약 안 된 URL만 필터링
-const unsummarized = urls.filter(u => !u.summary);
+var unsummarized []*ent.URL
+for _, u := range urls {
+    if u.Summary == "" {
+        unsummarized = append(unsummarized, u)
+    }
+}
 
-// 배치로 요약 생성 (병렬 처리)
-const summaries = await Promise.all(
-  unsummarized.map(url => summarizePage(url.content))
-);
+// 배치로 요약 생성 (errgroup으로 병렬 처리)
+g, ctx := errgroup.WithContext(ctx)
+summaries := make([]string, len(unsummarized))
+for i, u := range unsummarized {
+    i, u := i, u
+    g.Go(func() error {
+        summary, err := aiService.SummarizePage(ctx, u.Content)
+        if err != nil {
+            return err
+        }
+        summaries[i] = summary
+        return nil
+    })
+}
+if err := g.Wait(); err != nil {
+    return err
+}
 
 // 요약 저장
-await updateUrlSummaries(unsummarized, summaries);
+for i, u := range unsummarized {
+    client.URL.UpdateOneID(u.ID).SetSummary(summaries[i]).Exec(ctx)
+}
 
 // 전체 요약으로 마인드맵 생성
-const allSummaries = urls.map(u => u.summary || summaries[...]);
-const mindmap = await generateMindmap(allSummaries, highlights);
+mindmap, err := aiService.GenerateMindmap(ctx, urls, highlights)
 ```
 
 ---
@@ -174,13 +195,13 @@ extension/
 │   └── service-worker.ts     # 이벤트 수집, 배치 전송
 ├── content/
 │   ├── content.ts            # 하이라이팅 감지
-│   └── extractor.ts          # 페이지 텍스트 추출 ← NEW
+│   └── extractor.ts          # 페이지 텍스트 추출
 └── lib/
     ├── event-queue.ts
     └── api-client.ts
 ```
 
-### 2. Backend API
+### 2. Backend API (Go + Gin + Ent)
 
 | 역할 | 설명 |
 |-----|------|
@@ -190,22 +211,33 @@ extension/
 | Job Enqueue | 세션 종료 시 AI 작업 큐에 추가 |
 
 ```
-server/
-├── src/
-│   ├── routes/
-│   │   ├── auth.ts
-│   │   ├── sessions.ts
-│   │   └── events.ts
-│   ├── services/
-│   │   ├── url-service.ts      # URL 중복 처리 ← NEW
-│   │   ├── content-service.ts  # 콘텐츠 저장 ← NEW
-│   │   ├── segment-builder.ts
-│   │   └── job-queue.ts
-│   └── workers/
-│       ├── ai-processor.ts
-│       └── crawler.ts          # 폴백 크롤러 ← NEW
-└── prisma/
-    └── schema.prisma
+apps/api/
+├── cmd/
+│   └── server/
+│       └── main.go              # Application entry point
+├── ent/
+│   ├── schema/                  # Ent 스키마 정의
+│   │   ├── user.go
+│   │   ├── session.go
+│   │   ├── url.go
+│   │   └── ...
+│   └── migrate/
+│       └── migrations/          # Atlas 자동 생성 migration
+├── internal/
+│   ├── controller/              # HTTP handlers (Gin)
+│   │   ├── auth_controller.go
+│   │   ├── session_controller.go
+│   │   └── event_controller.go
+│   ├── service/                 # Business logic
+│   │   ├── auth_service.go
+│   │   ├── session_service.go
+│   │   ├── url_service.go       # URL 중복 처리
+│   │   └── ai_service.go
+│   └── infrastructure/
+│       ├── config/
+│       └── middleware/
+├── go.mod
+└── moon.yml
 ```
 
 ### 3. Worker (AI Processing)
@@ -295,10 +327,10 @@ WHERE url_hash = 'sha256...';
 | 영역 | 기술 |
 |-----|------|
 | **Extension** | TypeScript, Manifest V3, IndexedDB |
-| **Web App** | Next.js 14, React, TailwindCSS, React Flow |
-| **Backend** | Node.js, Fastify, Prisma ORM |
-| **Database** | PostgreSQL (Supabase/Neon) |
-| **Queue** | Redis (BullMQ) |
+| **Web App** | Next.js 14, React, TailwindCSS, React Three Fiber |
+| **Backend** | Go 1.22+, Gin, Ent ORM, Atlas (migration) |
+| **Database** | PostgreSQL |
+| **Queue** | Redis (gocron + BullMQ 호환) |
 | **AI** | OpenAI API (GPT-4 Turbo) |
 | **Crawler** | Playwright (폴백용) |
 | **Email** | Resend / SendGrid |

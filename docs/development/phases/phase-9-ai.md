@@ -4,10 +4,117 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | 다중 AI 프로바이더(OpenAI, Google Gemini, Anthropic Claude)를 지원하는 콘텐츠 요약 및 마인드맵 생성 |
+| **목표** | 다중 AI 프로바이더(OpenAI, Google Gemini, Anthropic Claude)를 지원하는 태그 추출 및 마인드맵 생성 |
 | **선행 조건** | Phase 6 완료 (스케줄러) |
 | **예상 소요** | 5 Steps |
-| **결과물** | 세션 완료 시 자동 마인드맵 생성 (AI 프로바이더 선택 가능) |
+| **결과물** | 페이지 방문 시 태그 추출, 세션 종료 시 관계도 JSON 생성 |
+
+---
+
+## 마인드맵 생성 알고리즘
+
+### 핵심 원칙
+
+1. **페이지 방문 시**: LLM으로 태그/키워드 추출 (페이지당 1회, 중복 URL은 재사용)
+2. **세션 종료 시**: 추출된 태그들을 기반으로 LLM이 관계도 JSON 생성 (세션당 1회)
+
+### 처리 흐름
+
+```mermaid
+sequenceDiagram
+    participant EXT as Extension
+    participant API as API Server
+    participant DB as Database
+    participant AI as AI Provider
+
+    Note over EXT,AI: 1. 페이지 방문 시 (실시간)
+    EXT->>API: 이벤트 배치 전송 (URL, content)
+    API->>DB: URL 중복 체크 (url_hash)
+    alt URL이 새로운 경우
+        API->>AI: 태그 추출 요청 (content)
+        AI-->>API: { tags: [...], summary: "..." }
+        API->>DB: urls 테이블에 tags, summary 저장
+    else URL이 이미 존재
+        API->>DB: 기존 tags 재사용
+    end
+
+    Note over EXT,AI: 2. 세션 종료 시 (1회)
+    EXT->>API: 세션 Stop 요청
+    API->>DB: 세션 상태 → processing
+    API->>DB: 세션의 모든 URL + tags 조회
+    API->>AI: 관계도 생성 요청 (tags 목록)
+    AI-->>API: { nodes: [...], edges: [...] }
+    API->>DB: mindmap_graphs 저장
+    API->>DB: 세션 상태 → completed
+```
+
+### 태그 추출 (페이지당)
+
+| 항목 | 설명 |
+|-----|------|
+| **트리거** | 이벤트 배치 수신 시 새로운 URL 감지 |
+| **입력** | 페이지 제목, 콘텐츠 (최대 10,000자) |
+| **출력** | 3-5개 태그, 1-2문장 요약 |
+| **저장** | `urls.tags`, `urls.summary` |
+| **중복 처리** | url_hash로 중복 체크, 기존 URL은 재처리 안 함 |
+
+**프롬프트 예시:**
+```
+웹 페이지를 분석하고 다음을 추출하세요:
+1. 핵심 태그 3-5개 (한국어, 명사형)
+2. 1-2문장 요약
+
+JSON 형식으로 응답:
+{
+  "tags": ["태그1", "태그2", "태그3"],
+  "summary": "페이지 요약"
+}
+```
+
+### 관계도 생성 (세션당)
+
+| 항목 | 설명 |
+|-----|------|
+| **트리거** | 세션 종료 (Stop) 시 |
+| **입력** | 세션의 모든 URL + tags + 체류시간 + 하이라이트 |
+| **출력** | 마인드맵 JSON (nodes, edges) |
+| **저장** | `mindmap_graphs` 테이블 |
+
+**프롬프트 예시:**
+```
+브라우징 세션 데이터를 분석하고 마인드맵 구조를 생성하세요.
+
+세션 데이터:
+- URL 1: [태그: AI, 머신러닝] 체류시간: 5분
+- URL 2: [태그: 딥러닝, 신경망] 체류시간: 3분
+- URL 3: [태그: AI, 자연어처리] 체류시간: 8분
+- 하이라이트: "GPT-4는 가장 강력한..."
+
+다음 JSON 형식으로 응답:
+{
+  "core": { "label": "핵심 주제" },
+  "topics": [
+    {
+      "label": "주요 토픽",
+      "subtopics": [
+        { "label": "하위 토픽", "url_ids": ["uuid1"] }
+      ]
+    }
+  ],
+  "connections": [
+    { "from": "토픽1", "to": "토픽2", "reason": "연결 이유" }
+  ]
+}
+```
+
+### 비용 최적화
+
+| 전략 | 설명 |
+|-----|------|
+| **URL 중복 제거** | 같은 URL은 태그 1번만 추출 (url_hash 기반) |
+| **배치 처리** | 이벤트 수신 시 여러 URL 한 번에 처리 |
+| **경량 모델 사용** | 태그 추출은 GPT-3.5/Gemini Flash로 충분 |
+| **관계도만 고급 모델** | 세션당 1회이므로 GPT-4/Claude 사용 가능 |
 
 ---
 
@@ -16,7 +123,7 @@
 ```mermaid
 flowchart TB
     subgraph Service_Layer
-        SS[SummarizeService]
+        TS[TagExtractionService]
         MS[MindmapService]
     end
 
@@ -32,7 +139,7 @@ flowchart TB
         CFG[Config]
     end
 
-    SS --> PM
+    TS --> PM
     MS --> PM
     PM --> IF
     CFG --> PM
@@ -43,7 +150,7 @@ flowchart TB
 1. **인터페이스 기반 설계**: 모든 AI 프로바이더는 동일한 인터페이스 구현
 2. **런타임 프로바이더 전환**: 환경변수 또는 설정으로 프로바이더 변경 가능
 3. **Fallback 지원**: 기본 프로바이더 실패 시 대체 프로바이더 사용
-4. **용도별 프로바이더 분리**: 요약과 마인드맵 생성에 다른 모델 사용 가능
+4. **용도별 프로바이더 분리**: 태그 추출과 관계도 생성에 다른 모델 사용 가능
 
 ---
 
@@ -54,8 +161,8 @@ flowchart TB
 | 9.1 | AI Provider 인터페이스 정의 | ⬜ |
 | 9.2 | 개별 Provider 구현 (OpenAI, Gemini, Claude) | ⬜ |
 | 9.3 | Provider Manager 및 Config | ⬜ |
-| 9.4 | URL 요약 서비스 | ⬜ |
-| 9.5 | 마인드맵 생성 서비스 및 Job 등록 | ⬜ |
+| 9.4 | 태그 추출 서비스 (페이지당) | ⬜ |
+| 9.5 | 마인드맵 생성 서비스 (세션당) | ⬜ |
 
 ---
 
@@ -1017,126 +1124,16 @@ go build ./...
 
 ---
 
-## Step 9.4: URL 요약 서비스
+## Step 9.4: 태그 추출 서비스 (페이지당)
+
+### 목표
+
+이벤트 배치 수신 시 새로운 URL에 대해 실시간으로 태그를 추출합니다.
 
 ### 체크리스트
 
-- [ ] **URL 콘텐츠 가져오기**
-  - [ ] `internal/infrastructure/crawler/crawler.go`
-    ```go
-    package crawler
-
-    import (
-        "context"
-        "fmt"
-        "io"
-        "net/http"
-        "strings"
-        "time"
-
-        "github.com/PuerkitoBio/goquery"
-    )
-
-    type Crawler struct {
-        client *http.Client
-    }
-
-    func New() *Crawler {
-        return &Crawler{
-            client: &http.Client{
-                Timeout: 30 * time.Second,
-            },
-        }
-    }
-
-    type PageContent struct {
-        Title   string
-        Content string
-        URL     string
-    }
-
-    func (c *Crawler) FetchContent(ctx context.Context, url string) (*PageContent, error) {
-        req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-        if err != nil {
-            return nil, err
-        }
-
-        req.Header.Set("User-Agent", "MindHit/1.0 (Content Summarizer)")
-
-        resp, err := c.client.Do(req)
-        if err != nil {
-            return nil, fmt.Errorf("fetch url: %w", err)
-        }
-        defer resp.Body.Close()
-
-        if resp.StatusCode != http.StatusOK {
-            return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-        }
-
-        body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1MB limit
-        if err != nil {
-            return nil, fmt.Errorf("read body: %w", err)
-        }
-
-        doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
-        if err != nil {
-            return nil, fmt.Errorf("parse html: %w", err)
-        }
-
-        // Remove script, style, nav, footer elements
-        doc.Find("script, style, nav, footer, header, aside").Remove()
-
-        title := doc.Find("title").First().Text()
-        if title == "" {
-            title = doc.Find("h1").First().Text()
-        }
-
-        // Extract main content
-        var content string
-        mainSelectors := []string{
-            "article",
-            "main",
-            "[role='main']",
-            ".content",
-            ".post-content",
-            ".article-content",
-        }
-
-        for _, selector := range mainSelectors {
-            if sel := doc.Find(selector).First(); sel.Length() > 0 {
-                content = sel.Text()
-                break
-            }
-        }
-
-        if content == "" {
-            content = doc.Find("body").Text()
-        }
-
-        // Clean up content
-        content = strings.TrimSpace(content)
-        content = strings.Join(strings.Fields(content), " ")
-
-        // Limit content length
-        if len(content) > 10000 {
-            content = content[:10000] + "..."
-        }
-
-        return &PageContent{
-            Title:   strings.TrimSpace(title),
-            Content: content,
-            URL:     url,
-        }, nil
-    }
-    ```
-
-- [ ] **의존성 추가**
-  ```bash
-  go get github.com/PuerkitoBio/goquery
-  ```
-
-- [ ] **URL 요약 서비스** (Provider Manager 사용)
-  - [ ] `internal/service/summarize_service.go`
+- [ ] **태그 추출 서비스**
+  - [ ] `internal/service/tag_extraction_service.go`
     ```go
     package service
 
@@ -1145,170 +1142,244 @@ go build ./...
         "encoding/json"
         "fmt"
         "log/slog"
-        "time"
 
         "github.com/google/uuid"
         "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/pagevisit"
+        "github.com/mindhit/api/ent/url"
         "github.com/mindhit/api/internal/infrastructure/ai"
-        "github.com/mindhit/api/internal/infrastructure/crawler"
     )
 
-    type SummarizeService struct {
+    type TagExtractionService struct {
         client    *ent.Client
         aiManager *ai.ProviderManager
-        crawler   *crawler.Crawler
     }
 
-    func NewSummarizeService(client *ent.Client, aiManager *ai.ProviderManager, crawler *crawler.Crawler) *SummarizeService {
-        return &SummarizeService{
+    func NewTagExtractionService(client *ent.Client, aiManager *ai.ProviderManager) *TagExtractionService {
+        return &TagExtractionService{
             client:    client,
             aiManager: aiManager,
-            crawler:   crawler,
         }
     }
 
-    type URLSummary struct {
-        Summary  string   `json:"summary"`
-        Keywords []string `json:"keywords"`
+    type TagResult struct {
+        Tags    []string `json:"tags"`
+        Summary string   `json:"summary"`
     }
 
-    const summarizePrompt = `You are a content summarizer. Analyze the following web page content and provide:
-1. A concise summary (2-3 sentences) in Korean
-2. 3-5 relevant keywords in Korean
+    const tagExtractionPrompt = `웹 페이지를 분석하고 다음을 추출하세요:
+1. 핵심 태그 3-5개 (한국어, 명사형)
+2. 1-2문장 요약 (한국어)
 
-Respond in JSON format:
+페이지 제목: %s
+페이지 내용:
+%s
+
+JSON 형식으로 응답:
 {
-  "summary": "요약 내용",
-  "keywords": ["키워드1", "키워드2", "키워드3"]
-}
+  "tags": ["태그1", "태그2", "태그3"],
+  "summary": "페이지 요약"
+}`
 
-Web page title: %s
-Web page content:
-%s`
-
-    func (s *SummarizeService) SummarizeURL(ctx context.Context, urlID uuid.UUID) error {
+    // ExtractTags extracts tags from a URL's content
+    // Called when a new URL is received in event batch
+    func (s *TagExtractionService) ExtractTags(ctx context.Context, urlID uuid.UUID) error {
         // Get URL from database
         u, err := s.client.URL.Get(ctx, urlID)
         if err != nil {
             return fmt.Errorf("get url: %w", err)
         }
 
-        // Skip if already summarized
-        if u.Summary != "" {
+        // Skip if already has tags (중복 URL 처리)
+        if len(u.Tags) > 0 {
+            slog.Debug("url already has tags, skipping", "url", u.URL)
             return nil
         }
 
-        // Check if content needs to be re-crawled (older than 24 hours)
-        needsCrawl := u.Content == "" || u.CrawledAt == nil ||
-            time.Since(*u.CrawledAt) > 24*time.Hour
-
-        var content *crawler.PageContent
-        if needsCrawl {
-            // Fetch content
-            var err error
-            content, err = s.crawler.FetchContent(ctx, u.URL)
-            if err != nil {
-                slog.Warn("failed to fetch url content", "url", u.URL, "error", err)
-                return nil // Don't fail the whole process
-            }
-        } else {
-            // Use existing content
-            content = &crawler.PageContent{
-                Title:   u.Title,
-                Content: u.Content,
-                URL:     u.URL,
-            }
+        // Skip if no content (Extension에서 추출 실패한 경우)
+        if u.Content == "" {
+            slog.Warn("url has no content, skipping tag extraction", "url", u.URL)
+            return nil
         }
 
-        // Generate summary using AI (with automatic fallback)
+        // Generate tags using AI (경량 모델 사용)
         messages := []ai.Message{
             {
                 Role:    ai.RoleUser,
-                Content: fmt.Sprintf(summarizePrompt, content.Title, content.Content),
+                Content: fmt.Sprintf(tagExtractionPrompt, u.Title, truncateContent(u.Content, 8000)),
             },
         }
 
-        response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskSummarize, messages, ai.DefaultChatOptions())
+        opts := ai.DefaultChatOptions()
+        opts.MaxTokens = 500 // 태그 추출은 짧은 응답
+
+        response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskTagExtraction, messages, opts)
         if err != nil {
-            return fmt.Errorf("ai summarize: %w", err)
+            return fmt.Errorf("ai tag extraction: %w", err)
         }
 
-        var summary URLSummary
-        if err := json.Unmarshal([]byte(response.Content), &summary); err != nil {
+        var result TagResult
+        if err := json.Unmarshal([]byte(response.Content), &result); err != nil {
             return fmt.Errorf("parse ai response: %w", err)
         }
 
-        // Update URL in database
-        now := time.Now()
-        update := s.client.URL.UpdateOneID(urlID).
-            SetSummary(summary.Summary).
-            SetKeywords(summary.Keywords)
+        // Update URL with tags and summary
+        _, err = s.client.URL.UpdateOneID(urlID).
+            SetTags(result.Tags).
+            SetSummary(result.Summary).
+            Save(ctx)
 
-        // Only update content and crawled_at if we actually crawled
-        if needsCrawl {
-            update = update.
-                SetTitle(content.Title).
-                SetContent(content.Content).
-                SetCrawledAt(now)
-        }
-
-        _, err = update.Save(ctx)
         if err != nil {
             return fmt.Errorf("update url: %w", err)
         }
 
-        slog.Info("summarized url",
+        slog.Info("extracted tags",
             "url", u.URL,
-            "keywords", summary.Keywords,
+            "tags", result.Tags,
             "provider", response.Provider,
-            "model", response.Model,
+            "tokens", response.InputTokens+response.OutputTokens,
         )
         return nil
     }
 
-    func (s *SummarizeService) SummarizeSessionURLs(ctx context.Context, sessionID uuid.UUID) error {
-        // Get all page visits for session
-        pageVisits, err := s.client.PageVisit.
-            Query().
-            Where(pagevisit.HasSessionWith(/* session.IDEQ(sessionID) */)).
-            WithURL().
-            All(ctx)
-
-        if err != nil {
-            return fmt.Errorf("get page visits: %w", err)
-        }
-
-        for _, pv := range pageVisits {
-            if pv.Edges.URL == nil {
-                continue
-            }
-
-            if err := s.SummarizeURL(ctx, pv.Edges.URL.ID); err != nil {
-                slog.Error("failed to summarize url",
-                    "url_id", pv.Edges.URL.ID,
+    // ExtractTagsForNewURLs processes multiple new URLs from an event batch
+    func (s *TagExtractionService) ExtractTagsForNewURLs(ctx context.Context, urlIDs []uuid.UUID) error {
+        for _, urlID := range urlIDs {
+            if err := s.ExtractTags(ctx, urlID); err != nil {
+                slog.Error("failed to extract tags",
+                    "url_id", urlID,
                     "error", err,
                 )
-                // Continue with other URLs
+                // Continue with other URLs (graceful degradation)
             }
+        }
+        return nil
+    }
+
+    func truncateContent(content string, maxLen int) string {
+        if len(content) <= maxLen {
+            return content
+        }
+        return content[:maxLen] + "..."
+    }
+    ```
+
+- [ ] **이벤트 서비스에 태그 추출 통합**
+  - [ ] `internal/service/event_service.go` 수정
+    ```go
+    type EventService struct {
+        client               *ent.Client
+        tagExtractionService *TagExtractionService
+    }
+
+    func (s *EventService) ProcessBatchEvents(ctx context.Context, sessionID uuid.UUID, events []Event) error {
+        var newURLIDs []uuid.UUID
+
+        for _, event := range events {
+            if event.Type == "page_visit" {
+                // URL 저장 또는 조회
+                urlID, isNew, err := s.upsertURL(ctx, event)
+                if err != nil {
+                    slog.Error("failed to upsert url", "error", err)
+                    continue
+                }
+
+                // 새 URL인 경우 태그 추출 대상에 추가
+                if isNew {
+                    newURLIDs = append(newURLIDs, urlID)
+                }
+
+                // page_visit 저장
+                // ...
+            }
+        }
+
+        // 새 URL들에 대해 비동기로 태그 추출
+        if len(newURLIDs) > 0 {
+            go func() {
+                bgCtx := context.Background()
+                if err := s.tagExtractionService.ExtractTagsForNewURLs(bgCtx, newURLIDs); err != nil {
+                    slog.Error("failed to extract tags for new urls", "error", err)
+                }
+            }()
         }
 
         return nil
     }
+
+    func (s *EventService) upsertURL(ctx context.Context, event Event) (uuid.UUID, bool, error) {
+        urlHash := hashURL(event.URL)
+
+        // 기존 URL 조회
+        existing, err := s.client.URL.Query().
+            Where(url.URLHashEQ(urlHash)).
+            Only(ctx)
+
+        if err == nil {
+            // 이미 존재하는 URL
+            return existing.ID, false, nil
+        }
+
+        if !ent.IsNotFound(err) {
+            return uuid.Nil, false, err
+        }
+
+        // 새 URL 생성
+        newURL, err := s.client.URL.Create().
+            SetURL(event.URL).
+            SetURLHash(urlHash).
+            SetTitle(event.Title).
+            SetContent(event.Content). // Extension에서 추출한 콘텐츠
+            Save(ctx)
+
+        if err != nil {
+            return uuid.Nil, false, err
+        }
+
+        return newURL.ID, true, nil
+    }
     ```
 
+- [ ] **AI Config에 TaskTagExtraction 추가**
+  ```go
+  // internal/infrastructure/ai/manager.go
+  const (
+      TaskSummarize      TaskType = "summarize"
+      TaskMindmap        TaskType = "mindmap"
+      TaskTagExtraction  TaskType = "tag_extraction"  // NEW
+      TaskGeneral        TaskType = "general"
+  )
+  ```
+
+- [ ] **환경변수에 태그 추출 프로바이더 설정**
+  ```env
+  # 태그 추출은 경량 모델 사용 (비용 최적화)
+  AI_TAG_EXTRACTION_PROVIDER=gemini
+  GEMINI_MODEL=gemini-1.5-flash  # 빠르고 저렴한 모델
+  ```
+
 ### 검증
+
 ```bash
 go build ./...
 # 컴파일 성공
 
 # 테스트 (유닛 테스트)
 go test ./internal/service/...
+
+# 로그에서 태그 추출 확인
+# "extracted tags" url=https://... tags=["AI", "머신러닝"] provider=gemini
 ```
 
 ---
 
-## Step 9.5: 마인드맵 생성 서비스 및 Job 등록
+## Step 9.5: 관계도 생성 서비스 (세션 종료 시 1회)
+
+### 목표
+
+세션 종료 시 추출된 태그들을 기반으로 LLM이 관계도 JSON을 생성합니다.
+- **입력**: 세션 내 모든 URL + 각 URL의 태그/요약
+- **출력**: 마인드맵 구조 JSON (nodes, edges, layout)
+- **호출 시점**: 세션 Stop 시 1회만 호출
 
 ### 체크리스트
 
@@ -1337,6 +1408,7 @@ go test ./internal/service/...
         Source string  `json:"source"`
         Target string  `json:"target"`
         Weight float64 `json:"weight"`
+        Label  string  `json:"label,omitempty"` // 연결 이유
     }
 
     type MindmapLayout struct {
@@ -1351,7 +1423,7 @@ go test ./internal/service/...
     }
     ```
 
-- [ ] **마인드맵 생성 서비스** (Provider Manager 사용)
+- [ ] **관계도 생성 서비스** (태그 기반)
   - [ ] `internal/service/mindmap_service.go`
     ```go
     package service
@@ -1382,61 +1454,85 @@ go test ./internal/service/...
         }
     }
 
-    const mindmapPrompt = `Analyze the following browsing session data and generate a mindmap structure.
+    // 태그 기반 관계도 생성 프롬프트
+    const relationshipGraphPrompt = `브라우징 세션의 페이지들과 추출된 태그를 분석하여 관계도를 생성하세요.
 
-Session contains the following URLs with their summaries:
+## 세션 데이터
+
+### 방문한 페이지들 (URL + 태그 + 요약)
 %s
 
-Highlights from the session:
+### 하이라이트 (사용자가 선택한 텍스트)
 %s
 
-Generate a hierarchical mindmap structure with:
-1. One core topic (central theme of the browsing session)
-2. 3-5 main topics (major themes)
-3. Sub-topics under each main topic (related pages/concepts)
+## 요청사항
 
-Respond in JSON format:
+1. **핵심 주제 (core)**: 세션 전체를 관통하는 중심 테마 1개
+2. **주요 토픽 (topics)**: 공통 태그를 기반으로 3-5개 그룹화
+3. **페이지 연결**: 각 토픽에 해당하는 페이지들 매핑
+4. **토픽 간 연결 (connections)**: 태그가 겹치는 토픽들의 관계
+
+## JSON 형식으로 응답
+
 {
   "core": {
-    "label": "핵심 주제",
-    "description": "설명"
+    "label": "핵심 주제 (한국어)",
+    "description": "세션 전체 요약 (1-2문장)"
   },
   "topics": [
     {
-      "label": "주요 토픽",
-      "description": "설명",
-      "subtopics": [
-        {"label": "하위 토픽", "url_ids": ["uuid1", "uuid2"]}
+      "id": "topic-1",
+      "label": "토픽명 (한국어)",
+      "tags": ["관련", "태그들"],
+      "description": "토픽 설명",
+      "pages": [
+        {
+          "url_id": "uuid",
+          "title": "페이지 제목",
+          "relevance": 0.9
+        }
       ]
     }
   ],
   "connections": [
-    {"from": "토픽1", "to": "토픽2", "reason": "연결 이유"}
+    {
+      "from": "topic-1",
+      "to": "topic-2",
+      "shared_tags": ["공통태그"],
+      "reason": "연결 이유"
+    }
   ]
 }`
 
-    type AIResponse struct {
+    // AI 응답 타입 (태그 기반)
+    type RelationshipGraphResponse struct {
         Core struct {
             Label       string `json:"label"`
             Description string `json:"description"`
         } `json:"core"`
         Topics []struct {
-            Label       string `json:"label"`
-            Description string `json:"description"`
-            Subtopics   []struct {
-                Label  string   `json:"label"`
-                URLIDs []string `json:"url_ids"`
-            } `json:"subtopics"`
+            ID          string   `json:"id"`
+            Label       string   `json:"label"`
+            Tags        []string `json:"tags"`
+            Description string   `json:"description"`
+            Pages       []struct {
+                URLID     string  `json:"url_id"`
+                Title     string  `json:"title"`
+                Relevance float64 `json:"relevance"`
+            } `json:"pages"`
         } `json:"topics"`
         Connections []struct {
-            From   string `json:"from"`
-            To     string `json:"to"`
-            Reason string `json:"reason"`
+            From       string   `json:"from"`
+            To         string   `json:"to"`
+            SharedTags []string `json:"shared_tags"`
+            Reason     string   `json:"reason"`
         } `json:"connections"`
     }
 
-    func (s *MindmapService) GenerateMindmap(ctx context.Context, sessionID uuid.UUID) error {
-        // Get session with all related data
+    // GenerateRelationshipGraph generates a mindmap from extracted tags
+    // Called once when session is stopped
+    func (s *MindmapService) GenerateRelationshipGraph(ctx context.Context, sessionID uuid.UUID) error {
+        // Get session with all related data (URLs already have tags from Step 9.4)
         sess, err := s.client.Session.
             Query().
             Where(session.IDEQ(sessionID)).
@@ -1450,8 +1546,8 @@ Respond in JSON format:
             return fmt.Errorf("get session: %w", err)
         }
 
-        // Build URL summaries text
-        var urlSummaries strings.Builder
+        // Build page data with tags (Step 9.4에서 추출된 태그 사용)
+        var pageData strings.Builder
         urlMap := make(map[string]*ent.URL)
         dwellTimeMap := make(map[string]int)
 
@@ -1468,45 +1564,57 @@ Respond in JSON format:
             }
             dwellTimeMap[u.ID.String()] = dwellTime
 
-            urlSummaries.WriteString(fmt.Sprintf("- [%s] %s\n  URL: %s\n  Summary: %s\n  Keywords: %s\n  Dwell time: %d seconds\n\n",
+            // 태그와 요약 포함 (Step 9.4에서 이미 추출됨)
+            pageData.WriteString(fmt.Sprintf(`
+- ID: %s
+  제목: %s
+  URL: %s
+  태그: [%s]
+  요약: %s
+  체류시간: %d초
+`,
                 u.ID.String(),
                 u.Title,
                 u.URL,
+                strings.Join(u.Tags, ", "),
                 u.Summary,
-                strings.Join(u.Keywords, ", "),
                 dwellTime,
             ))
         }
 
         // Build highlights text
         var highlights strings.Builder
-        for _, h := range sess.Edges.Highlights {
-            highlights.WriteString(fmt.Sprintf("- \"%s\"\n", h.Text))
+        if len(sess.Edges.Highlights) > 0 {
+            for _, h := range sess.Edges.Highlights {
+                highlights.WriteString(fmt.Sprintf("- \"%s\"\n", h.Text))
+            }
+        } else {
+            highlights.WriteString("(하이라이트 없음)")
         }
 
-        // Generate mindmap structure using AI (with automatic fallback)
+        // Generate relationship graph using AI (프리미엄 모델 사용)
         messages := []ai.Message{
             {
                 Role:    ai.RoleUser,
-                Content: fmt.Sprintf(mindmapPrompt, urlSummaries.String(), highlights.String()),
+                Content: fmt.Sprintf(relationshipGraphPrompt, pageData.String(), highlights.String()),
             },
         }
 
         opts := ai.DefaultChatOptions()
-        opts.MaxTokens = 8192 // Mindmap generation needs more tokens
+        opts.MaxTokens = 4096 // 관계도 JSON은 적당한 크기
 
         response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
         if err != nil {
-            return fmt.Errorf("ai generate mindmap: %w", err)
+            return fmt.Errorf("ai generate relationship graph: %w", err)
         }
 
-        var aiResp AIResponse
+        var aiResp RelationshipGraphResponse
         if err := json.Unmarshal([]byte(response.Content), &aiResp); err != nil {
             return fmt.Errorf("parse ai response: %w", err)
         }
 
         // Convert AI response to mindmap data
-        mindmapData := s.buildMindmapData(aiResp, urlMap, dwellTimeMap)
+        mindmapData := s.buildMindmapFromRelationship(aiResp, urlMap, dwellTimeMap)
 
         // Save mindmap to database
         _, err = s.client.MindmapGraph.
@@ -1531,21 +1639,23 @@ Respond in JSON format:
             return fmt.Errorf("update session status: %w", err)
         }
 
-        slog.Info("generated mindmap",
+        slog.Info("generated relationship graph",
             "session_id", sessionID,
+            "topics", len(aiResp.Topics),
+            "connections", len(aiResp.Connections),
             "provider", response.Provider,
-            "model", response.Model,
+            "tokens", response.InputTokens+response.OutputTokens,
         )
         return nil
     }
 
-    func (s *MindmapService) buildMindmapData(resp AIResponse, urlMap map[string]*ent.URL, dwellTimeMap map[string]int) MindmapData {
+    // buildMindmapFromRelationship converts AI response to mindmap data structure
+    func (s *MindmapService) buildMindmapFromRelationship(resp RelationshipGraphResponse, urlMap map[string]*ent.URL, dwellTimeMap map[string]int) MindmapData {
         var nodes []MindmapNode
         var edges []MindmapEdge
-        nodeIDMap := make(map[string]string)
 
-        // Create core node (center of galaxy)
-        coreID := uuid.New().String()
+        // Create core node (center of galaxy - 태양)
+        coreID := "core"
         nodes = append(nodes, MindmapNode{
             ID:    coreID,
             Label: resp.Core.Label,
@@ -1557,23 +1667,30 @@ Respond in JSON format:
                 "description": resp.Core.Description,
             },
         })
-        nodeIDMap[resp.Core.Label] = coreID
 
-        // Create topic nodes (planets orbiting the sun)
+        // Create topic nodes (planets orbiting the sun - 행성)
         topicCount := len(resp.Topics)
         for i, topic := range resp.Topics {
-            topicID := uuid.New().String()
-            nodeIDMap[topic.Label] = topicID
+            topicID := topic.ID
+            if topicID == "" {
+                topicID = fmt.Sprintf("topic-%d", i)
+            }
 
             // Position in orbit around core
             angle := (float64(i) / float64(topicCount)) * 2 * math.Pi
             radius := 200.0
 
+            // 토픽 크기 = 연결된 페이지 수에 비례
+            topicSize := 40.0 + float64(len(topic.Pages))*10
+            if topicSize > 80 {
+                topicSize = 80
+            }
+
             nodes = append(nodes, MindmapNode{
                 ID:    topicID,
                 Label: topic.Label,
                 Type:  "topic",
-                Size:  60,
+                Size:  topicSize,
                 Color: getTopicColor(i),
                 Position: &Position{
                     X: radius * math.Cos(angle),
@@ -1582,6 +1699,7 @@ Respond in JSON format:
                 },
                 Data: map[string]interface{}{
                     "description": topic.Description,
+                    "tags":        topic.Tags,
                 },
             })
 
@@ -1592,26 +1710,27 @@ Respond in JSON format:
                 Weight: 1.0,
             })
 
-            // Create subtopic nodes (moons)
-            for j, subtopic := range topic.Subtopics {
-                subtopicID := uuid.New().String()
+            // Create page nodes (moons - 위성)
+            for j, page := range topic.Pages {
+                pageID := page.URLID
 
                 // Position around parent topic
-                subAngle := angle + (float64(j)-float64(len(topic.Subtopics))/2)*0.3
-                subRadius := 80.0
+                subAngle := angle + (float64(j)-float64(len(topic.Pages))/2)*0.4
+                subRadius := 60.0 + float64(j)*15
 
                 // Calculate size based on dwell time
-                size := 20.0
-                for _, urlID := range subtopic.URLIDs {
-                    if dwell, ok := dwellTimeMap[urlID]; ok {
-                        size = math.Min(50, 20+float64(dwell)/10)
-                    }
+                size := 15.0
+                if dwell, ok := dwellTimeMap[page.URLID]; ok {
+                    size = math.Min(40, 15+float64(dwell)/20)
                 }
 
+                // relevance가 높을수록 더 큰 크기
+                size = size * (0.5 + page.Relevance*0.5)
+
                 nodes = append(nodes, MindmapNode{
-                    ID:    subtopicID,
-                    Label: subtopic.Label,
-                    Type:  "subtopic",
+                    ID:    pageID,
+                    Label: page.Title,
+                    Type:  "page",
                     Size:  size,
                     Color: getTopicColor(i),
                     Position: &Position{
@@ -1620,29 +1739,27 @@ Respond in JSON format:
                         Z: 0,
                     },
                     Data: map[string]interface{}{
-                        "url_ids": subtopic.URLIDs,
+                        "url_id":    page.URLID,
+                        "relevance": page.Relevance,
                     },
                 })
 
                 edges = append(edges, MindmapEdge{
                     Source: topicID,
-                    Target: subtopicID,
-                    Weight: 0.5,
+                    Target: pageID,
+                    Weight: page.Relevance,
                 })
             }
         }
 
-        // Add cross-topic connections
+        // Add cross-topic connections (공통 태그 기반 연결)
         for _, conn := range resp.Connections {
-            fromID, fromOK := nodeIDMap[conn.From]
-            toID, toOK := nodeIDMap[conn.To]
-            if fromOK && toOK {
-                edges = append(edges, MindmapEdge{
-                    Source: fromID,
-                    Target: toID,
-                    Weight: 0.3,
-                })
-            }
+            edges = append(edges, MindmapEdge{
+                Source: conn.From,
+                Target: conn.To,
+                Weight: float64(len(conn.SharedTags)) * 0.2, // 공통 태그 수에 비례
+                Label:  conn.Reason,
+            })
         }
 
         return MindmapData{
@@ -1673,8 +1790,8 @@ Respond in JSON format:
     }
     ```
 
-- [ ] **AI 처리 Job**
-  - [ ] `internal/jobs/ai_processing.go`
+- [ ] **관계도 생성 Job** (세션 종료 시 실행)
+  - [ ] `internal/jobs/relationship_graph_job.go`
     ```go
     package jobs
 
@@ -1689,29 +1806,29 @@ Respond in JSON format:
         "github.com/mindhit/api/internal/service"
     )
 
-    type AIProcessingJob struct {
-        client            *ent.Client
-        summarizeService  *service.SummarizeService
-        mindmapService    *service.MindmapService
+    // RelationshipGraphJob processes stopped sessions to generate relationship graphs
+    // 태그 추출은 이미 Step 9.4에서 실시간으로 처리됨
+    // 이 Job은 관계도 생성만 담당
+    type RelationshipGraphJob struct {
+        client         *ent.Client
+        mindmapService *service.MindmapService
     }
 
-    func NewAIProcessingJob(
+    func NewRelationshipGraphJob(
         client *ent.Client,
-        summarizeService *service.SummarizeService,
         mindmapService *service.MindmapService,
-    ) *AIProcessingJob {
-        return &AIProcessingJob{
-            client:           client,
-            summarizeService: summarizeService,
-            mindmapService:   mindmapService,
+    ) *RelationshipGraphJob {
+        return &RelationshipGraphJob{
+            client:         client,
+            mindmapService: mindmapService,
         }
     }
 
-    func (j *AIProcessingJob) Run() {
-        ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+    func (j *RelationshipGraphJob) Run() {
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
         defer cancel()
 
-        // Find sessions in "processing" status
+        // Find sessions in "processing" status (세션이 Stop되면 processing 상태)
         sessions, err := j.client.Session.
             Query().
             Where(session.SessionStatusEQ(session.SessionStatusProcessing)).
@@ -1724,11 +1841,11 @@ Respond in JSON format:
         }
 
         for _, sess := range sessions {
-            slog.Info("processing session", "session_id", sess.ID)
+            slog.Info("generating relationship graph", "session_id", sess.ID)
 
-            // Step 1: Summarize all URLs
-            if err := j.summarizeService.SummarizeSessionURLs(ctx, sess.ID); err != nil {
-                slog.Error("failed to summarize session urls",
+            // 관계도 생성 (태그는 이미 추출되어 있음)
+            if err := j.mindmapService.GenerateRelationshipGraph(ctx, sess.ID); err != nil {
+                slog.Error("failed to generate relationship graph",
                     "session_id", sess.ID,
                     "error", err,
                 )
@@ -1736,21 +1853,11 @@ Respond in JSON format:
                 continue
             }
 
-            // Step 2: Generate mindmap
-            if err := j.mindmapService.GenerateMindmap(ctx, sess.ID); err != nil {
-                slog.Error("failed to generate mindmap",
-                    "session_id", sess.ID,
-                    "error", err,
-                )
-                j.markSessionFailed(ctx, sess.ID)
-                continue
-            }
-
-            slog.Info("session processing completed", "session_id", sess.ID)
+            slog.Info("relationship graph generated", "session_id", sess.ID)
         }
     }
 
-    func (j *AIProcessingJob) markSessionFailed(ctx context.Context, sessionID uuid.UUID) {
+    func (j *RelationshipGraphJob) markSessionFailed(ctx context.Context, sessionID uuid.UUID) {
         _, err := j.client.Session.
             UpdateOneID(sessionID).
             SetSessionStatus(session.SessionStatusFailed).
@@ -1765,11 +1872,10 @@ Respond in JSON format:
     }
     ```
 
-- [ ] **main.go에 AI 서비스 및 Job 등록**
+- [ ] **main.go에 서비스 및 Job 등록**
   ```go
   import (
       "github.com/mindhit/api/internal/infrastructure/ai"
-      "github.com/mindhit/api/internal/infrastructure/crawler"
       "github.com/mindhit/api/internal/jobs"
       "github.com/mindhit/api/internal/service"
   )
@@ -1782,21 +1888,20 @@ Respond in JSON format:
   }
   defer aiManager.Close()
 
-  // Initialize crawler
-  crawlerClient := crawler.New()
-
-  // Initialize AI services
-  summarizeService := service.NewSummarizeService(client, aiManager, crawlerClient)
+  // Initialize services
+  tagExtractionService := service.NewTagExtractionService(client, aiManager)
   mindmapService := service.NewMindmapService(client, aiManager)
+  eventService := service.NewEventService(client, tagExtractionService)
 
-  // Register AI processing job (every 5 minutes)
-  aiProcessingJob := jobs.NewAIProcessingJob(client, summarizeService, mindmapService)
-  if err := sched.RegisterIntervalJob("ai-processing", 5*time.Minute, aiProcessingJob.Run); err != nil {
-      slog.Error("failed to register ai processing job", "error", err)
+  // Register relationship graph job (every 2 minutes)
+  // 세션 Stop 후 관계도 생성
+  relationshipGraphJob := jobs.NewRelationshipGraphJob(client, mindmapService)
+  if err := sched.RegisterIntervalJob("relationship-graph", 2*time.Minute, relationshipGraphJob.Run); err != nil {
+      slog.Error("failed to register relationship graph job", "error", err)
   }
   ```
 
-- [ ] **마인드맵 API 엔드포인트**
+- [ ] **관계도 API 엔드포인트**
   - [ ] `internal/controller/mindmap_controller.go`
     ```go
     package controller
@@ -1817,24 +1922,21 @@ Respond in JSON format:
     )
 
     type MindmapController struct {
-        client           *ent.Client
-        summarizeService *service.SummarizeService
-        mindmapService   *service.MindmapService
+        client         *ent.Client
+        mindmapService *service.MindmapService
     }
 
     func NewMindmapController(
         client *ent.Client,
-        summarizeService *service.SummarizeService,
         mindmapService *service.MindmapService,
     ) *MindmapController {
         return &MindmapController{
-            client:           client,
-            summarizeService: summarizeService,
-            mindmapService:   mindmapService,
+            client:         client,
+            mindmapService: mindmapService,
         }
     }
 
-    // GetBySession retrieves the mindmap for a session
+    // GetBySession retrieves the relationship graph for a session
     func (c *MindmapController) GetBySession(ctx *gin.Context) {
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
@@ -1859,7 +1961,8 @@ Respond in JSON format:
         ctx.JSON(http.StatusOK, gin.H{"mindmap": mindmap})
     }
 
-    // Generate triggers mindmap generation for a session
+    // Generate triggers relationship graph generation for a session
+    // 태그는 이미 Step 9.4에서 추출되어 있음
     func (c *MindmapController) Generate(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
@@ -1917,25 +2020,18 @@ Respond in JSON format:
             return
         }
 
-        // Start async processing (or queue it)
+        // Start async processing
+        // 태그는 이미 추출되어 있으므로 관계도만 생성
         go func() {
             bgCtx := context.Background()
-
-            // Summarize URLs first
-            if err := c.summarizeService.SummarizeSessionURLs(bgCtx, sessionID); err != nil {
-                slog.Error("failed to summarize session urls", "session_id", sessionID, "error", err)
-                return
-            }
-
-            // Generate mindmap
-            if err := c.mindmapService.GenerateMindmap(bgCtx, sessionID); err != nil {
-                slog.Error("failed to generate mindmap", "session_id", sessionID, "error", err)
+            if err := c.mindmapService.GenerateRelationshipGraph(bgCtx, sessionID); err != nil {
+                slog.Error("failed to generate relationship graph", "session_id", sessionID, "error", err)
                 return
             }
         }()
 
         ctx.JSON(http.StatusAccepted, gin.H{
-            "message":    "mindmap generation started",
+            "message":    "relationship graph generation started",
             "session_id": sessionID.String(),
         })
     }
