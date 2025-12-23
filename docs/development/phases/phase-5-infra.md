@@ -34,7 +34,7 @@
   ```
 
 - [ ] **메트릭 미들웨어 작성**
-  - [ ] `internal/infrastructure/middleware/metrics.go`
+  - [ ] `pkg/infra/middleware/metrics.go`
 
     ```go
     package middleware
@@ -143,7 +143,7 @@ curl http://localhost:8080/metrics | head -20
 ### 체크리스트
 
 - [ ] **Logger 패키지 작성**
-  - [ ] `internal/infrastructure/logger/logger.go`
+  - [ ] `pkg/infra/logger/logger.go`
 
     ```go
     package logger
@@ -216,7 +216,7 @@ curl http://localhost:8080/metrics | head -20
     ```
 
 - [ ] **Request ID 미들웨어**
-  - [ ] `internal/infrastructure/middleware/request_id.go`
+  - [ ] `pkg/infra/middleware/request_id.go`
 
     ```go
     package middleware
@@ -227,7 +227,7 @@ curl http://localhost:8080/metrics | head -20
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/internal/infrastructure/logger"
+        "github.com/mindhit/api/pkg/infra/logger"
     )
 
     const RequestIDHeader = "X-Request-ID"
@@ -384,7 +384,7 @@ ENVIRONMENT=production go run ./cmd/server
     ```
 
 - [ ] **환경 변수 문서화**
-  - [ ] `apps/api/.env.example` 업데이트
+  - [ ] `apps/backend/.env.example` 업데이트
 
     ```
     # Server
@@ -409,14 +409,14 @@ ENVIRONMENT=production go run ./cmd/server
 
 ```bash
 # 테스트
-moon run backend:test
+moonx backend:test
 
 # 빌드
-moon run backend:build-api
-moon run backend:build-worker
+moonx backend:build-api
+moonx backend:build-worker
 
 # 린트
-moon run backend:lint
+moonx backend:lint
 ```
 
 ---
@@ -428,7 +428,7 @@ moon run backend:lint
 - [ ] `/metrics` 엔드포인트 동작
 - [ ] 구조화된 로그 출력
 - [ ] Request ID 헤더 추가됨
-- [ ] Moon 태스크 동작 (`moon run backend:test`)
+- [ ] Moon 태스크 동작 (`moonx backend:test`)
 
 ### 테스트 요구사항
 
@@ -436,11 +436,11 @@ moon run backend:lint
 | ----------- | ---- | --------- |
 | 통합 테스트 | 메트릭 엔드포인트 | `curl /metrics` 응답 확인 |
 | 통합 테스트 | Request ID 미들웨어 | 응답 헤더에 X-Request-ID 포함 확인 |
-| 회귀 테스트 | 기존 테스트 통과 | `moon run backend:test` |
+| 회귀 테스트 | 기존 테스트 통과 | `moonx backend:test` |
 
 ```bash
 # Phase 5 완료 후 전체 테스트 실행
-moon run backend:test
+moonx backend:test
 ```
 
 > **Note**: Phase 5는 인프라 설정 위주이므로 기존 테스트가 깨지지 않는 것이 중요합니다.
@@ -449,9 +449,9 @@ moon run backend:test
 
 | 항목 | 위치 |
 | ---- | ---- |
-| 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
-| 로거 | `internal/infrastructure/logger/logger.go` |
-| Request ID | `internal/infrastructure/middleware/request_id.go` |
+| 메트릭 미들웨어 | `pkg/infra/middleware/metrics.go` |
+| 로거 | `pkg/infra/logger/logger.go` |
+| Request ID | `pkg/infra/middleware/request_id.go` |
 | Moon 태스크 | `apps/backend/moon.yml` |
 
 ---

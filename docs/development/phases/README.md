@@ -236,16 +236,16 @@ git commit -m "Phase 1.2: Go 백엔드 초기화"
 
 ```bash
 # Backend 테스트
-moon run backend:test
+moonx backend:test
 
 # Frontend 테스트
-moon run web:test
+moonx web:test
 
 # Extension 테스트
-moon run extension:test
+moonx extension:test
 
 # 전체 테스트
-moon run :test
+moonx :test
 ```
 
 ---
@@ -273,13 +273,13 @@ moon run :test
 
 ```bash
 # 마이그레이션 생성
-moon run backend:migrate-diff
+moonx backend:migrate-diff
 
 # 마이그레이션 적용
-moon run backend:migrate
+moonx backend:migrate
 
 # 마이그레이션 상태
-moon run backend:migrate-status
+moonx backend:migrate-status
 ```
 
 ### 안전한 스키마 변경

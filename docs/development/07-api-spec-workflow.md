@@ -5,23 +5,34 @@
 모노레포의 장점을 활용하여 **API 스펙을 단일 소스(Single Source of Truth)**로 관리합니다.
 TypeSpec으로 API를 정의하면 Backend(Go), Frontend(TypeScript), Extension에서 모두 사용할 수 있는 코드가 자동 생성됩니다.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Single Source of Truth                           │
-│                    packages/protocol/*.tsp                          │
-└─────────────────────────────────────────────────────────────────────┘
-                                │
-                    ┌───────────┼───────────┐
-                    ▼           ▼           ▼
-              ┌─────────┐ ┌─────────┐ ┌─────────┐
-              │ OpenAPI │ │ Go Types│ │   TS    │
-              │  Spec   │ │ + Server│ │ Client  │
-              └────┬────┘ └────┬────┘ └────┬────┘
-                   │           │           │
-              ┌────▼────┐ ┌────▼────┐ ┌────▼────┐
-              │  Docs   │ │apps/api │ │apps/web │
-              │ Swagger │ │         │ │extension│
-              └─────────┘ └─────────┘ └─────────┘
+```mermaid
+flowchart TB
+    subgraph SSoT["Single Source of Truth"]
+        TSP[packages/protocol/*.tsp<br/>TypeSpec 정의]
+    end
+
+    TSP --> OpenAPI
+    TSP --> GoTypes
+    TSP --> TSClient
+
+    subgraph Generated["생성된 코드"]
+        OpenAPI[OpenAPI Spec<br/>openapi.yaml]
+        GoTypes[Go Types + Server<br/>oapi-codegen]
+        TSClient[TypeScript Client<br/>openapi-generator]
+    end
+
+    OpenAPI --> Docs[Swagger UI<br/>API 문서]
+    GoTypes --> Backend[apps/backend<br/>Go 서버]
+    TSClient --> Web[apps/web<br/>Next.js]
+    TSClient --> Ext[apps/extension<br/>Chrome Extension]
+
+    style SSoT fill:#e3f2fd
+    style Generated fill:#fff3e0
+    style TSP fill:#bbdefb
+    style Docs fill:#c8e6c9
+    style Backend fill:#c8e6c9
+    style Web fill:#c8e6c9
+    style Ext fill:#c8e6c9
 ```
 
 ---
@@ -91,25 +102,37 @@ mindhit/
 
 ### 전체 흐름
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  1. TypeSpec 정의 (packages/protocol/)                               │
-│     └── src/**/*.tsp  ──  API 스펙 작성                              │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼  pnpm run build
-┌─────────────────────────────────────────────────────────────────────┐
-│  2. OpenAPI 스펙 생성                                                │
-│     └── tsp-output/openapi/openapi.yaml                             │
-└─────────────────────────────────────────────────────────────────────┘
-                    │                               │
-                    ▼                               ▼
-┌───────────────────────────────────┐ ┌───────────────────────────────┐
-│  3a. Go 서버 코드 생성             │ │  3b. TypeScript 클라이언트     │
-│      (oapi-codegen)               │ │      (openapi-generator)      │
-│      └── apps/api/internal/       │ │      └── apps/web/src/api/    │
-│          generated/               │ │          generated/           │
-└───────────────────────────────────┘ └───────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Step1["1. TypeSpec 정의"]
+        TSP_SRC[packages/protocol/src/**/*.tsp<br/>API 스펙 작성]
+    end
+
+    Step1 -->|pnpm run build| Step2
+
+    subgraph Step2["2. OpenAPI 스펙 생성"]
+        OPENAPI[tsp-output/openapi/openapi.yaml]
+    end
+
+    Step2 --> Step3a
+    Step2 --> Step3b
+
+    subgraph Step3a["3a. Go 서버 코드 생성"]
+        OAPI[oapi-codegen]
+        GO_GEN[apps/backend/internal/generated/]
+        OAPI --> GO_GEN
+    end
+
+    subgraph Step3b["3b. TypeScript 클라이언트"]
+        OPENAPI_GEN[openapi-generator]
+        TS_GEN[apps/web/src/api/generated/<br/>apps/extension/src/api/generated/]
+        OPENAPI_GEN --> TS_GEN
+    end
+
+    style Step1 fill:#e1f5fe
+    style Step2 fill:#fff3e0
+    style Step3a fill:#e8f5e9
+    style Step3b fill:#fce4ec
 ```
 
 ### 실행 순서
@@ -120,7 +143,7 @@ cd packages/protocol
 pnpm run build
 
 # 2. OpenAPI → Go 서버 코드 생성
-cd apps/api
+cd apps/backend
 pnpm run generate:api
 # 또는: make generate-api
 
@@ -140,7 +163,7 @@ pnpm run generate:api
 pnpm run generate
 
 # 또는 moon 사용
-moon run :generate
+moonx :generate
 ```
 
 ---
@@ -434,7 +457,7 @@ namespace EventRoutes {
 
 ## Go 코드 생성 (oapi-codegen)
 
-### apps/api/oapi-codegen.yaml
+### apps/backend/oapi-codegen.yaml
 
 ```yaml
 package: generated
@@ -446,7 +469,7 @@ generate:
   embedded-spec: true
 ```
 
-### apps/api/Makefile
+### apps/backend/Makefile
 
 ```makefile
 .PHONY: generate-api
@@ -663,7 +686,7 @@ on:
   pull_request:
     paths:
       - 'packages/protocol/**'
-      - 'apps/api/**'
+      - 'apps/backend/**'
       - 'apps/web/src/api/**'
 
 jobs:
@@ -689,7 +712,7 @@ jobs:
 
       - name: Generate Go code
         run: |
-          cd apps/api
+          cd apps/backend
           go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
           make generate-api
 
@@ -713,7 +736,7 @@ jobs:
 |-----|------|-------|
 | API 스펙 정의 | `packages/protocol/src/**/*.tsp` | - |
 | OpenAPI 생성 | `packages/protocol/` | `pnpm run build` |
-| Go 서버 코드 생성 | `apps/api/` | `make generate-api` |
+| Go 서버 코드 생성 | `apps/backend/` | `make generate-api` |
 | TS 클라이언트 생성 | `apps/web/` | `pnpm run generate:api` |
 | Extension 클라이언트 | `apps/extension/` | `pnpm run generate:api` |
 | 전체 생성 (루트) | `/` | `pnpm run generate` |

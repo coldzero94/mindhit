@@ -13,33 +13,41 @@
 
 ## 아키텍처 개요
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         AWS Cloud                               │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                      VPC (10.0.0.0/16)                    │  │
-│  │  ┌─────────────────┐  ┌─────────────────────────────────┐ │  │
-│  │  │  Public Subnet  │  │       Private Subnet            │ │  │
-│  │  │    (Ingress)    │  │  ┌─────────────────────────────┐│ │  │
-│  │  │                 │  │  │      EKS Cluster            ││ │  │
-│  │  │  ┌───────────┐  │  │  │  ┌───────┐  ┌───────────┐  ││ │  │
-│  │  │  │    ALB    │──┼──┼──┼─▶│  API  │  │  Worker   │  ││ │  │
-│  │  │  └───────────┘  │  │  │  └───┬───┘  └─────┬─────┘  ││ │  │
-│  │  └─────────────────┘  │  │      │            │        ││ │  │
-│  │                       │  │      ▼            ▼        ││ │  │
-│  │                       │  │  ┌───────────────────────┐ ││ │  │
-│  │                       │  │  │    Internal Services  │ ││ │  │
-│  │                       │  └──┴───────────────────────┴─┘│ │  │
-│  │                       └────────────────────────────────┘ │  │
-│  │  ┌─────────────────────────────────────────────────────┐ │  │
-│  │  │              Managed Services                        │ │  │
-│  │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  │ │  │
-│  │  │  │  RDS        │  │ ElastiCache │  │    ECR      │  │ │  │
-│  │  │  │ (PostgreSQL)│  │  (Redis)    │  │ (Registry)  │  │ │  │
-│  │  │  └─────────────┘  └─────────────┘  └─────────────┘  │ │  │
-│  │  └─────────────────────────────────────────────────────┘ │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph AWS["AWS Cloud"]
+        subgraph VPC["VPC (10.0.0.0/16)"]
+            subgraph Public["Public Subnet"]
+                ALB[ALB<br/>Ingress]
+            end
+
+            subgraph Private["Private Subnet"]
+                subgraph EKS["EKS Cluster"]
+                    API[API Server]
+                    WORKER[Worker]
+                end
+            end
+
+            subgraph Managed["Managed Services"]
+                RDS[(RDS<br/>PostgreSQL)]
+                ELASTICACHE[(ElastiCache<br/>Redis)]
+                ECR[(ECR<br/>Registry)]
+            end
+        end
+    end
+
+    ALB --> API
+    API --> RDS
+    API --> ELASTICACHE
+    WORKER --> RDS
+    WORKER --> ELASTICACHE
+
+    style AWS fill:#f5f5f5
+    style VPC fill:#e3f2fd
+    style Public fill:#fff3e0
+    style Private fill:#e8f5e9
+    style EKS fill:#c8e6c9
+    style Managed fill:#fce4ec
 ```
 
 ---
@@ -1317,9 +1325,9 @@ terraform plan
 helm lint infra/helm/mindhit
 
 # 3. 전체 테스트 통과 확인
-moon run backend:test
-moon run web:test
-moon run extension:test
+moonx backend:test
+moonx web:test
+moonx extension:test
 ```
 
 > **Note**: Phase 13은 프로덕션 배포 전 모든 Phase의 테스트가 통과해야 합니다.

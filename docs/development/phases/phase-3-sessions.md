@@ -59,7 +59,7 @@ stateDiagram-v2
 ### 체크리스트
 
 - [ ] **Session 서비스 작성**
-  - [ ] `internal/service/session_service.go`
+  - [ ] `pkg/service/session_service.go`
 
     ```go
     package service
@@ -277,7 +277,7 @@ go build ./...
 ### 체크리스트
 
 - [ ] **Session 컨트롤러 작성**
-  - [ ] `internal/controller/session_controller.go`
+  - [ ] `internal/api/controller/session_controller.go`
 
     ```go
     package controller
@@ -289,8 +289,8 @@ go build ./...
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/internal/infrastructure/middleware"
-        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/pkg/infra/middleware"
+        "github.com/mindhit/api/pkg/service"
     )
 
     type SessionController struct {
@@ -734,7 +734,7 @@ E2E 테스트로 전체 플로우 검증
 
 ```bash
 # Phase 3 테스트 실행
-moon run backend:test -- -run "TestSession"
+moonx backend:test -- -run "TestSession"
 ```
 
 > **Note**: 모든 테스트가 통과해야 Phase 3 완료로 인정됩니다.
@@ -743,9 +743,9 @@ moon run backend:test -- -run "TestSession"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Session 서비스 | `internal/service/session_service.go` |
-| Session 컨트롤러 | `internal/controller/session_controller.go` |
-| 테스트 | `internal/service/session_service_test.go` |
+| Session 서비스 | `pkg/service/session_service.go` |
+| Session 컨트롤러 | `internal/api/controller/session_controller.go` |
+| 테스트 | `pkg/service/session_service_test.go` |
 
 ---
 

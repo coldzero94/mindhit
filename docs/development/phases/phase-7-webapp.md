@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | Next.js 14 App Router 기반 웹앱 기초 구축 |
+| **목표** | Next.js 16.1 App Router 기반 웹앱 기초 구축 |
 | **선행 조건** | Phase 2 (인증), Phase 3 (세션 API), Phase 5 (인프라) 완료 |
 | **예상 소요** | 4 Steps |
 | **결과물** | 인증, 세션 목록 조회 가능한 웹앱 |
@@ -1341,7 +1341,7 @@ open http://localhost:3000/sessions
 
 ```bash
 # Phase 7 테스트 실행
-moon run web:test
+moonx web:test
 ```
 
 > **Note**: 웹앱 테스트는 API 서버가 실행 중이어야 합니다 (MSW mock 또는 실제 서버).

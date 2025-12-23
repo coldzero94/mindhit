@@ -15,8 +15,8 @@
 
 | 단계 | 용도 | 실행 방식 | Database | Redis |
 | --- | --- | --- | --- | --- |
-| **1. go run** | 빠른 개발/디버깅 | `moon run backend:dev-api` | Docker Compose | Docker Compose |
-| **2. 로컬 K8s** | 프로덕션 환경 검증 | `moon run infra:kind-deploy` | K8s StatefulSet | K8s StatefulSet |
+| **1. go run** | 빠른 개발/디버깅 | `moonx backend:dev-api` | Docker Compose | Docker Compose |
+| **2. 로컬 K8s** | 프로덕션 환경 검증 | `moonx infra:kind-deploy` | K8s StatefulSet | K8s StatefulSet |
 | **3. 프로덕션** | 실서비스 | GitHub Actions + Helm | RDS (관리형) | ElastiCache (관리형) |
 
 ### 왜 3단계인가?
@@ -225,10 +225,10 @@ Moon 태스크 러너 설치 및 모노레포 기본 설정
     "private": true,
     "packageManager": "pnpm@9.0.0",
     "scripts": {
-      "dev": "moon run :dev",
-      "build": "moon run :build",
-      "test": "moon run :test",
-      "lint": "moon run :lint",
+      "dev": "moonx :dev",
+      "build": "moonx :build",
+      "test": "moonx :test",
+      "lint": "moonx :lint",
       "ci": "moon ci"
     },
     "devDependencies": {
@@ -500,7 +500,7 @@ kind로 로컬 K8s 클러스터 구성 (프로덕션 환경 검증용)
   echo "Add to /etc/hosts:"
   echo "127.0.0.1 api.mindhit.local"
   echo ""
-  echo "Run 'moon run infra:kind-deploy' to deploy"
+  echo "Run 'moonx infra:kind-deploy' to deploy"
   ```
 
 - [ ] **실행 권한 부여**
@@ -1056,16 +1056,16 @@ Moon을 이용한 개발 워크플로우 자동화
 
 ```bash
 # go run 모드 테스트
-moon run infra:dev-up         # Docker Compose 시작
-moon run backend:dev-api      # API 서버 시작 (터미널 1)
-moon run backend:dev-worker   # Worker 시작 (터미널 2)
-moon run infra:dev-down       # Docker Compose 종료
+moonx infra:dev-up         # Docker Compose 시작
+moonx backend:dev-api      # API 서버 시작 (터미널 1)
+moonx backend:dev-worker   # Worker 시작 (터미널 2)
+moonx infra:dev-down       # Docker Compose 종료
 
 # kind 모드 테스트
-moon run infra:kind-up        # kind 클러스터 생성
-moon run infra:kind-deploy    # 빌드 + 배포
-moon run infra:kind-logs-api  # 로그 확인
-moon run infra:kind-down      # 클러스터 삭제
+moonx infra:kind-up        # kind 클러스터 생성
+moonx infra:kind-deploy    # 빌드 + 배포
+moonx infra:kind-logs-api  # 로그 확인
+moonx infra:kind-down      # 클러스터 삭제
 ```
 
 ---
@@ -1079,7 +1079,7 @@ moon run infra:kind-down      # 클러스터 삭제
 - [ ] **Docker Compose 동작**
 
   ```bash
-  moon run infra:dev-up
+  moonx infra:dev-up
   docker compose -f infra/docker/docker-compose.yml ps
   # postgres, redis 모두 running
   ```
@@ -1087,14 +1087,14 @@ moon run infra:kind-down      # 클러스터 삭제
 - [ ] **API 서버 실행** (Go 코드 작성 후)
 
   ```bash
-  moon run backend:dev-api
+  moonx backend:dev-api
   curl http://localhost:8081/health
   ```
 
 - [ ] **Worker 실행**
 
   ```bash
-  moon run backend:dev-worker
+  moonx backend:dev-worker
   ```
 
 #### 로컬 K8s (kind) 모드
@@ -1102,7 +1102,7 @@ moon run infra:kind-down      # 클러스터 삭제
 - [ ] **kind 클러스터 동작**
 
   ```bash
-  moon run infra:kind-up
+  moonx infra:kind-up
   kubectl get nodes
   ```
 
@@ -1131,7 +1131,7 @@ moon run infra:kind-down      # 클러스터 삭제
 
 ```bash
 # Phase 0 환경 검증
-moon run infra:dev-up
+moonx infra:dev-up
 docker compose -f infra/docker/docker-compose.yml ps
 ```
 
@@ -1158,16 +1158,16 @@ docker compose -f infra/docker/docker-compose.yml ps
 | 명령어 | 설명 |
 | --- | --- |
 | **go run 모드** | |
-| `moon run infra:dev-up` | Docker Compose 시작 (DB, Redis) |
-| `moon run backend:dev-api` | API 서버 실행 (Hot reload) |
-| `moon run backend:dev-worker` | Worker 실행 (Hot reload) |
-| `moon run infra:dev-down` | Docker Compose 종료 |
+| `moonx infra:dev-up` | Docker Compose 시작 (DB, Redis) |
+| `moonx backend:dev-api` | API 서버 실행 (Hot reload) |
+| `moonx backend:dev-worker` | Worker 실행 (Hot reload) |
+| `moonx infra:dev-down` | Docker Compose 종료 |
 | **로컬 K8s (kind)** | |
-| `moon run infra:kind-up` | kind 클러스터 생성 |
-| `moon run infra:kind-deploy` | 빌드 + Helm 배포 |
-| `moon run infra:kind-redeploy` | 코드 변경 후 재배포 |
-| `moon run infra:kind-logs-api` | API 로그 확인 |
-| `moon run infra:kind-down` | 클러스터 삭제 |
+| `moonx infra:kind-up` | kind 클러스터 생성 |
+| `moonx infra:kind-deploy` | 빌드 + Helm 배포 |
+| `moonx infra:kind-redeploy` | 코드 변경 후 재배포 |
+| `moonx infra:kind-logs-api` | API 로그 확인 |
+| `moonx infra:kind-down` | 클러스터 삭제 |
 
 ### 개발 흐름 권장 사항
 

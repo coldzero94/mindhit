@@ -36,14 +36,14 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
 - [ ] **Prometheus 클라이언트 의존성 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get github.com/prometheus/client_golang/prometheus
   go get github.com/prometheus/client_golang/prometheus/promauto
   go get github.com/prometheus/client_golang/prometheus/promhttp
   ```
 
 - [ ] **메트릭 미들웨어 구현**
-  - [ ] `internal/infrastructure/middleware/metrics.go`
+  - [ ] `pkg/infra/middleware/metrics.go`
 
     ```go
     package middleware
@@ -136,7 +136,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
     ```
 
 - [ ] **비즈니스 메트릭 정의**
-  - [ ] `internal/infrastructure/metrics/business.go`
+  - [ ] `pkg/infra/metrics/business.go`
 
     ```go
     package metrics
@@ -594,7 +594,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 ### 체크리스트
 
 - [ ] **구조화된 로거 설정**
-  - [ ] `internal/infrastructure/logger/logger.go`
+  - [ ] `pkg/infra/logger/logger.go`
 
     ```go
     package logger
@@ -666,7 +666,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
     ```
 
 - [ ] **요청 로깅 미들웨어**
-  - [ ] `internal/infrastructure/middleware/logging.go`
+  - [ ] `pkg/infra/middleware/logging.go`
 
     ```go
     package middleware
@@ -678,7 +678,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/internal/infrastructure/logger"
+        "github.com/mindhit/api/pkg/infra/logger"
     )
 
     func Logging() gin.HandlerFunc {
@@ -1086,12 +1086,12 @@ docker-compose start api
 | 통합 테스트 | 메트릭 수집 | Prometheus API 쿼리 |
 | 통합 테스트 | 로그 수집 | Loki API 쿼리 |
 | 알림 테스트 | 알림 규칙 | `amtool check-config` |
-| 회귀 테스트 | 기존 테스트 통과 | `moon run backend:test` |
+| 회귀 테스트 | 기존 테스트 통과 | `moonx backend:test` |
 
 ```bash
 # Phase 12 검증
 # 1. 전체 테스트 통과 확인
-moon run backend:test
+moonx backend:test
 
 # 2. 모니터링 스택 헬스 체크
 curl http://localhost:9090/-/healthy  # Prometheus
@@ -1104,9 +1104,9 @@ curl http://localhost:3001/api/health # Grafana
 
 | 항목 | 위치 |
 | ---- | ---- |
-| 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
-| 비즈니스 메트릭 | `internal/infrastructure/metrics/business.go` |
-| 로거 설정 | `internal/infrastructure/logger/logger.go` |
+| 메트릭 미들웨어 | `pkg/infra/middleware/metrics.go` |
+| 비즈니스 메트릭 | `pkg/infra/metrics/business.go` |
+| 로거 설정 | `pkg/infra/logger/logger.go` |
 | Prometheus 설정 | `monitoring/prometheus/prometheus.yml` |
 | 알림 규칙 | `monitoring/prometheus/alerts.yml` |
 | Grafana 대시보드 | `monitoring/grafana/dashboards/*.json` |

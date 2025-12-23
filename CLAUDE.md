@@ -16,10 +16,14 @@ This is a **monorepo** project. Code and documentation should be organized accor
 ```
 mindhit/
 ├── apps/
-│   ├── api/              # Go Backend (Gin + Ent)
-│   ├── web/              # Next.js 15 Web App
-│   ├── extension/        # Chrome Extension (Plasmo)
-│   └── worker/           # Background Worker (Temporal)
+│   ├── backend/          # Go Backend (API + Worker)
+│   │   ├── cmd/
+│   │   │   ├── api/      # API server entrypoint
+│   │   │   └── worker/   # Worker entrypoint
+│   │   ├── internal/     # Private code (API/Worker specific)
+│   │   └── pkg/          # Shared code (services, infra)
+│   ├── web/              # Next.js 16.1 Web App
+│   └── extension/        # Chrome Extension (Plasmo)
 ├── packages/
 │   └── shared/           # Shared types/utilities (cross-platform)
 ├── docs/
@@ -33,18 +37,18 @@ mindhit/
 
 | Component | Stack | Location |
 |-----------|-------|----------|
-| Backend API | Go + Gin + Ent + PostgreSQL | `apps/api/` |
-| Web App | Next.js 15 + TypeScript + TailwindCSS | `apps/web/` |
+| Backend API | Go + Gin + Ent + PostgreSQL | `apps/backend/` |
+| Web App | Next.js 16.1 + TypeScript + TailwindCSS | `apps/web/` |
 | Chrome Extension | TypeScript + Plasmo | `apps/extension/` |
-| Worker | Go + Temporal | `apps/worker/` |
+| Worker | Go + Asynq | `apps/backend/` (same codebase) |
 | Shared | TypeScript types, utilities | `packages/shared/` |
 
 ### Development Environment
 
 - **3-Stage Environment**: `go run` (local) → `kind` (local K8s) → `EKS` (production)
-- **Task Runner**: moonrepo (`moon run <project>:<task>`)
+- **Task Runner**: moonrepo (`moonx <project>:<task>`)
 - **Database**: PostgreSQL
-- **Queue**: Temporal
+- **Queue**: Redis + Asynq
 
 ---
 
@@ -57,10 +61,9 @@ This is a monorepo. Documentation should be **split by scope**:
 | Scope | CLAUDE.md | README.md | Language |
 |-------|-----------|-----------|----------|
 | Project-wide | `/CLAUDE.md` (this file) | `/README.md` | English |
-| Backend | `/apps/api/CLAUDE.md` | `/apps/api/README.md` | English |
+| Backend | `/apps/backend/CLAUDE.md` | `/apps/backend/README.md` | English |
 | Frontend | `/apps/web/CLAUDE.md` | `/apps/web/README.md` | English |
 | Extension | `/apps/extension/CLAUDE.md` | `/apps/extension/README.md` | English |
-| Worker | `/apps/worker/CLAUDE.md` | `/apps/worker/README.md` | English |
 | Shared | `/packages/shared/CLAUDE.md` | `/packages/shared/README.md` | English |
 | Development phases | - | `/docs/development/phases/` | Korean |
 | API specs | - | `/docs/api/` | English (OpenAPI) |
@@ -70,10 +73,9 @@ This is a monorepo. Documentation should be **split by scope**:
 Each app should have its own `CLAUDE.md` with app-specific context:
 
 ```
-apps/api/CLAUDE.md       # Backend-specific: routes, services, DB schema
+apps/backend/CLAUDE.md   # Backend-specific: routes, services, DB schema, worker jobs
 apps/web/CLAUDE.md       # Frontend-specific: components, pages, state
 apps/extension/CLAUDE.md # Extension-specific: background, content scripts
-apps/worker/CLAUDE.md    # Worker-specific: jobs, workflows
 packages/shared/CLAUDE.md # Shared types, utilities
 ```
 
@@ -175,40 +177,41 @@ For development/testing environments only:
 
 ## Common Commands
 
-### Backend (apps/api)
+### Backend (apps/backend)
 
 ```bash
-moon run api:dev          # Run dev server
-moon run api:test         # Run tests
-moon run api:generate     # Generate Ent + OpenAPI
-moon run api:migrate      # Apply migrations
-moon run api:migrate-diff # Generate migration
-moon run api:seed-test-user # Create test user
+moonx backend:dev-api     # Run API dev server
+moonx backend:dev-worker  # Run Worker dev server
+moonx backend:test        # Run tests
+moonx backend:generate    # Generate Ent + OpenAPI
+moonx backend:migrate     # Apply migrations
+moonx backend:migrate-diff # Generate migration
+moonx backend:seed-test-user # Create test user
 ```
 
 ### Frontend (apps/web)
 
 ```bash
-moon run web:dev          # Run dev server
-moon run web:test         # Run tests
-moon run web:build        # Production build
-moon run web:lint         # Lint code
+moonx web:dev          # Run dev server
+moonx web:test         # Run tests
+moonx web:build        # Production build
+moonx web:lint         # Lint code
 ```
 
 ### Extension (apps/extension)
 
 ```bash
-moon run extension:dev    # Run dev mode
-moon run extension:build  # Production build
-moon run extension:test   # Run tests
+moonx extension:dev    # Run dev mode
+moonx extension:build  # Production build
+moonx extension:test   # Run tests
 ```
 
 ### All Projects
 
 ```bash
-moon run :test            # Run all tests
-moon run :lint            # Lint all projects
-moon run :build           # Build all projects
+moonx :test            # Run all tests
+moonx :lint            # Lint all projects
+moonx :build           # Build all projects
 ```
 
 ---

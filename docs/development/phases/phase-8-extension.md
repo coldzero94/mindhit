@@ -1537,7 +1537,7 @@ pnpm build
 
 ```bash
 # Phase 8 테스트 실행
-moon run extension:test
+moonx extension:test
 ```
 
 > **Note**: Chrome Extension은 브라우저 환경 테스트가 제한적이므로 핵심 로직 단위 테스트에 집중합니다.

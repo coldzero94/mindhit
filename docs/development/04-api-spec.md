@@ -4,6 +4,67 @@ Base URL: `https://api.mindhit.app/v1`
 
 ---
 
+## API 구조 개요
+
+```mermaid
+flowchart TB
+    subgraph Client["클라이언트"]
+        EXT[Chrome Extension]
+        WEB[Web App]
+    end
+
+    subgraph API["API Server"]
+        AUTH[Auth API<br/>/v1/auth/*]
+        SESSION[Sessions API<br/>/v1/sessions/*]
+        EVENTS[Events API<br/>/v1/events/*]
+        USERS[Users API<br/>/v1/users/*]
+    end
+
+    subgraph Middleware["미들웨어"]
+        MW_AUTH[JWT 인증]
+        MW_RATE[Rate Limiting]
+    end
+
+    EXT --> MW_AUTH
+    WEB --> MW_AUTH
+    MW_AUTH --> MW_RATE
+
+    MW_RATE --> AUTH
+    MW_RATE --> SESSION
+    MW_RATE --> EVENTS
+    MW_RATE --> USERS
+```
+
+---
+
+## 인증 흐름
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API Server
+    participant DB as Database
+
+    Note over C,A: 로그인
+    C->>A: POST /auth/login
+    A->>DB: 사용자 조회
+    A->>A: JWT 토큰 생성
+    A-->>C: { token, refreshToken }
+
+    Note over C,A: API 호출
+    C->>A: GET /sessions (Authorization: Bearer token)
+    A->>A: JWT 검증
+    A->>DB: 데이터 조회
+    A-->>C: { sessions: [...] }
+
+    Note over C,A: 토큰 갱신
+    C->>A: POST /auth/refresh { refreshToken }
+    A->>A: Refresh 토큰 검증
+    A-->>C: { token, refreshToken }
+```
+
+---
+
 ## 인증
 
 모든 API 요청은 Authorization 헤더에 JWT 토큰 필요 (인증 관련 제외)

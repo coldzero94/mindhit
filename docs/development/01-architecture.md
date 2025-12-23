@@ -19,45 +19,43 @@
 
 | 단계 | 용도 | 실행 방식 | Database | Redis |
 | --- | --- | --- | --- | --- |
-| **1. go run** | 빠른 개발/디버깅 | `moon run backend:dev-api` | Docker Compose | Docker Compose |
-| **2. 로컬 K8s** | 프로덕션 환경 검증 | `moon run infra:kind-deploy` | K8s StatefulSet | K8s StatefulSet |
+| **1. go run** | 빠른 개발/디버깅 | `moonx backend:dev-api` | Docker Compose | Docker Compose |
+| **2. 로컬 K8s** | 프로덕션 환경 검증 | `moonx infra:kind-deploy` | K8s StatefulSet | K8s StatefulSet |
 | **3. 프로덕션** | 실서비스 | GitHub Actions + Helm | RDS (관리형) | ElastiCache (관리형) |
 
 ### 개발 워크플로우
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  1. go run 모드 - 빠른 반복 개발                                  │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │  moon run backend:dev-api     (터미널 1)                    ││
-│  │  moon run backend:dev-worker  (터미널 2)                    ││
-│  │  Docker Compose: PostgreSQL + Redis                         ││
-│  └─────────────────────────────────────────────────────────────┘│
-│  장점: Hot reload, 디버거 연결, 빠른 피드백                       │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  2. 로컬 K8s (kind) - 프로덕션 환경 검증                          │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │  kind cluster + Helm Chart                                  ││
-│  │  - API Deployment (Docker 이미지)                            ││
-│  │  - Worker Deployment (Docker 이미지)                         ││
-│  │  - PostgreSQL StatefulSet                                   ││
-│  │  - Redis StatefulSet                                        ││
-│  └─────────────────────────────────────────────────────────────┘│
-│  장점: 프로덕션과 동일한 K8s 환경, Helm 배포 검증                  │
-└─────────────────────────────────────────────────────────────────┘
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  3. 프로덕션 (EKS + 관리형 서비스)                                │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │  EKS + Terraform + Helm                                     ││
-│  │  - API Deployment (HPA)                                     ││
-│  │  - Worker Deployment                                        ││
-│  │  - RDS (PostgreSQL, Multi-AZ)                               ││
-│  │  - ElastiCache (Redis)                                      ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Stage1["1. go run 모드 - 빠른 반복 개발"]
+        direction LR
+        S1_CMD["moonx backend:dev-api<br/>moonx backend:dev-worker"]
+        S1_INFRA["Docker Compose<br/>PostgreSQL + Redis"]
+        S1_BENEFIT["장점: Hot reload<br/>디버거 연결, 빠른 피드백"]
+    end
+
+    Stage1 --> Stage2
+
+    subgraph Stage2["2. 로컬 K8s (kind) - 프로덕션 환경 검증"]
+        direction LR
+        S2_CLUSTER["kind cluster + Helm Chart"]
+        S2_DEPLOY["API Deployment<br/>Worker Deployment"]
+        S2_DATA["PostgreSQL StatefulSet<br/>Redis StatefulSet"]
+        S2_BENEFIT["장점: 프로덕션과 동일한<br/>K8s 환경, Helm 배포 검증"]
+    end
+
+    Stage2 --> Stage3
+
+    subgraph Stage3["3. 프로덕션 (EKS + 관리형 서비스)"]
+        direction LR
+        S3_INFRA["EKS + Terraform + Helm"]
+        S3_DEPLOY["API Deployment (HPA)<br/>Worker Deployment"]
+        S3_DATA["RDS (PostgreSQL, Multi-AZ)<br/>ElastiCache (Redis)"]
+    end
+
+    style Stage1 fill:#e1f5fe
+    style Stage2 fill:#fff3e0
+    style Stage3 fill:#e8f5e9
 ```
 
 ### 왜 kind인가?
@@ -88,7 +86,7 @@ flowchart TB
     end
   end
 
-  DEV[개발자] -->|moon run| Go
+  DEV[개발자] -->|moonx| Go
   API --> PG
   API --> REDIS
   WORKER --> PG
@@ -540,36 +538,36 @@ ingress:
 
 ```bash
 # Docker Compose로 DB/Redis 실행
-moon run infra:dev-up
+moonx infra:dev-up
 
 # API 서버 실행 (터미널 1)
-moon run backend:dev-api
+moonx backend:dev-api
 
 # Worker 실행 (터미널 2)
-moon run backend:dev-worker
+moonx backend:dev-worker
 
 # 종료
-moon run infra:dev-down
+moonx infra:dev-down
 ```
 
 ### 2단계: 로컬 K8s (kind) - 프로덕션 환경 검증
 
 ```bash
 # kind 클러스터 생성 및 설정
-moon run infra:kind-up
+moonx infra:kind-up
 
 # Docker 이미지 빌드 및 kind에 로드
-moon run infra:kind-build
+moonx infra:kind-build
 
 # Helm으로 배포
-moon run infra:kind-deploy
+moonx infra:kind-deploy
 
 # 로그 확인
 kubectl logs -f deployment/mindhit-api
 kubectl logs -f deployment/mindhit-worker
 
 # 클러스터 삭제
-moon run infra:kind-down
+moonx infra:kind-down
 ```
 
 ### 개발 흐름 권장 사항
@@ -878,7 +876,7 @@ apps/backend/
 | 영역 | 기술 |
 | --- | --- |
 | **Extension** | TypeScript, Manifest V3, IndexedDB |
-| **Web App** | Next.js 14, React, TailwindCSS, React Three Fiber |
+| **Web App** | Next.js 16.1, React, TailwindCSS, React Three Fiber |
 | **API Server** | Go 1.22+, Gin, Ent ORM, Atlas |
 | **Worker** | Go 1.22+, Asynq |
 | **Database** | PostgreSQL 16 (로컬: StatefulSet, 프로덕션: RDS) |
@@ -896,7 +894,7 @@ apps/backend/
 
 | 항목 | go run 모드 | 로컬 K8s (kind) | 프로덕션 (EKS) |
 | --- | --- | --- | --- |
-| 실행 방식 | `moon run backend:dev-*` | `moon run infra:kind-deploy` | GitHub Actions |
+| 실행 방식 | `moonx backend:dev-*` | `moonx infra:kind-deploy` | GitHub Actions |
 | K8s 클러스터 | 없음 | kind | EKS |
 | PostgreSQL | Docker Compose | StatefulSet (Helm) | RDS (Multi-AZ) |
 | Redis | Docker Compose | StatefulSet (Helm) | ElastiCache |

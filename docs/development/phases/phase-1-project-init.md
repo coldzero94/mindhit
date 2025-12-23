@@ -112,7 +112,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
 - [ ] **Go 모듈 초기화**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go mod init github.com/mindhit/api
   ```
 
@@ -170,7 +170,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
     ```
 
 - [ ] **moon.yml 설정**
-  - [ ] `apps/api/moon.yml` 생성
+  - [ ] `apps/backend/moon.yml` 생성
 
     ```yaml
     language: go
@@ -204,7 +204,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
 ### 검증
 
 ```bash
-cd apps/api
+cd apps/backend
 go build ./cmd/server
 go run ./cmd/server
 # 출력: MindHit API Server
@@ -213,7 +213,7 @@ go run ./cmd/server
 ### 결과물
 
 ```
-apps/api/
+apps/backend/
 ├── cmd/
 │   └── server/
 │       └── main.go
@@ -246,7 +246,7 @@ Ent ORM 의존성 추가 및 기본 설정
 - [ ] **Ent 의존성 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get entgo.io/ent/cmd/ent@latest
   go get entgo.io/ent@latest
   ```
@@ -278,7 +278,7 @@ Ent ORM 의존성 추가 및 기본 설정
 ### 검증
 
 ```bash
-cd apps/api
+cd apps/backend
 go generate ./ent
 # ent/ 디렉토리에 생성된 파일 확인
 ls ent/
@@ -287,7 +287,7 @@ ls ent/
 ### 결과물
 
 ```
-apps/api/ent/
+apps/backend/ent/
 ├── schema/
 │   └── user.go        # 빈 스키마
 ├── client.go          # 생성됨
@@ -317,7 +317,7 @@ Atlas CLI 설정 및 migration 워크플로우 구성
   ```
 
 - [ ] **atlas.hcl 생성**
-  - [ ] `apps/api/atlas.hcl`
+  - [ ] `apps/backend/atlas.hcl`
 
     ```hcl
     env "local" {
@@ -339,7 +339,7 @@ Atlas CLI 설정 및 migration 워크플로우 구성
 - [ ] **migration 디렉토리 생성**
 
   ```bash
-  mkdir -p apps/api/ent/migrate/migrations
+  mkdir -p apps/backend/ent/migrate/migrations
   ```
 
 - [ ] **moon.yml에 migration 태스크 추가**
@@ -368,7 +368,7 @@ atlas version
 ### 결과물
 
 ```
-apps/api/
+apps/backend/
 ├── atlas.hcl
 └── ent/
     └── migrate/
@@ -407,7 +407,7 @@ apps/api/
 
 ```bash
 # Docker Compose 실행 (Phase 0에서 설정)
-moon run infra:dev-up
+moonx infra:dev-up
 
 # 연결 테스트
 docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "SELECT 1;"
@@ -440,14 +440,14 @@ Gin 프레임워크로 기본 HTTP 서버 구성
 - [ ] **의존성 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get github.com/gin-gonic/gin
   go get github.com/gin-contrib/cors
   go get github.com/joho/godotenv
   ```
 
 - [ ] **config 패키지 작성**
-  - [ ] `internal/infrastructure/config/config.go`
+  - [ ] `pkg/infra/config/config.go`
 
     ```go
     package config
@@ -501,7 +501,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
         "github.com/gin-contrib/cors"
         "github.com/gin-gonic/gin"
 
-        "github.com/mindhit/api/internal/infrastructure/config"
+        "github.com/mindhit/api/pkg/infra/config"
     )
 
     func main() {
@@ -534,7 +534,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
 ### 검증
 
 ```bash
-cd apps/api
+cd apps/backend
 go run ./cmd/server
 
 # 다른 터미널에서
@@ -1227,14 +1227,14 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 - [ ] **코드 생성**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go generate ./ent
   ```
 
 ### 검증
 
 ```bash
-cd apps/api
+cd apps/backend
 go generate ./ent
 # 에러 없이 완료
 
@@ -1245,7 +1245,7 @@ ls ent/
 ### 결과물
 
 ```
-apps/api/ent/
+apps/backend/ent/
 ├── schema/
 │   ├── mixin/
 │   │   ├── base.go           # BaseMixin (id, created_at, updated_at)
@@ -1358,7 +1358,7 @@ sess, err := client.Session.Query().
 서비스 레이어에서 반복을 줄이기 위한 헬퍼 패턴:
 
 ```go
-// internal/service/helpers.go
+// pkg/service/helpers.go
 
 // ActiveUsers returns query for active users only
 func (s *UserService) ActiveUsers() *ent.UserQuery {
@@ -1399,7 +1399,7 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
 - [ ] **PostgreSQL 드라이버 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get github.com/lib/pq
   go get ariga.io/atlas-provider-ent
   ```
@@ -1407,7 +1407,7 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
 - [ ] **Migration 생성**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   atlas migrate diff initial_schema \
     --dir "file://ent/migrate/migrations" \
     --to "ent://ent/schema" \
@@ -1457,7 +1457,7 @@ docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
 ### 결과물
 
 ```
-apps/api/ent/migrate/migrations/
+apps/backend/ent/migrate/migrations/
 ├── 20241221000000_initial_schema.sql
 └── atlas.sum
 ```
@@ -1604,13 +1604,13 @@ apps/api/ent/migrate/migrations/
 - [ ] **SQLite 의존성 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get github.com/mattn/go-sqlite3
   go get entgo.io/ent/dialect/sql
   ```
 
 - [ ] **예제 단위 테스트 작성**
-  - [ ] `internal/service/user_test.go`
+  - [ ] `pkg/service/user_test.go`
 
     ```go
     package service_test
@@ -1730,7 +1730,7 @@ apps/api/ent/migrate/migrations/
           with:
             go-version: '1.22'
         - name: Run tests
-          run: moon run backend:test
+          run: moonx backend:test
           env:
             DATABASE_URL: postgres://postgres:password@localhost:5432/mindhit_test?sslmode=disable
     ```
@@ -1739,21 +1739,21 @@ apps/api/ent/migrate/migrations/
 
 ```bash
 # 단위 테스트 실행
-cd apps/api
-go test -v ./internal/service/...
+cd apps/backend
+go test -v ./pkg/service/...
 
 # 전체 테스트 실행
-moon run backend:test
+moonx backend:test
 
 # 커버리지 리포트
-moon run backend:test-coverage
+moonx backend:test-coverage
 open coverage.html
 ```
 
 ### 결과물
 
 ```
-apps/api/
+apps/backend/
 ├── internal/
 │   ├── testutil/
 │   │   ├── db.go              # 테스트 DB 헬퍼
@@ -1779,14 +1779,14 @@ apps/api/
 - [ ] **Go 서버 실행**
 
   ```bash
-  cd apps/api && go run ./cmd/server
+  cd apps/backend && go run ./cmd/server
   curl http://localhost:8080/health
   ```
 
 - [ ] **Ent 코드 생성**
 
   ```bash
-  cd apps/api && go generate ./ent
+  cd apps/backend && go generate ./ent
   ```
 
 - [ ] **PostgreSQL 테이블**
@@ -1798,7 +1798,7 @@ apps/api/
 - [ ] **테스트 통과**
 
   ```bash
-  moon run backend:test
+  moonx backend:test
   # 모든 테스트 PASS
   ```
 

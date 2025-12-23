@@ -62,12 +62,12 @@ flowchart LR
 - [ ] **gjson 의존성 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get github.com/tidwall/gjson
   ```
 
 - [ ] **Event 서비스 작성**
-  - [ ] `internal/service/event_service.go`
+  - [ ] `pkg/service/event_service.go`
 
     ```go
     package service
@@ -276,7 +276,7 @@ URL 중복 처리 및 콘텐츠 저장
   ```
 
 - [ ] **URL 서비스 작성**
-  - [ ] `internal/service/url_service.go`
+  - [ ] `pkg/service/url_service.go`
 
     ```go
     package service
@@ -439,7 +439,7 @@ go build ./...
 ### 체크리스트
 
 - [ ] **Event 컨트롤러 작성**
-  - [ ] `internal/controller/event_controller.go`
+  - [ ] `internal/api/controller/event_controller.go`
 
     ```go
     package controller
@@ -450,8 +450,8 @@ go build ./...
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/internal/infrastructure/middleware"
-        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/pkg/infra/middleware"
+        "github.com/mindhit/api/pkg/service"
     )
 
     type EventController struct {
@@ -662,7 +662,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 ### 체크리스트
 
 - [ ] **Event 서비스에 조회 메서드 추가**
-  - [ ] `internal/service/event_service.go`에 추가
+  - [ ] `pkg/service/event_service.go`에 추가
 
     ```go
     // GetEventsBySession retrieves all events for a session
@@ -765,7 +765,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     ```
 
 - [ ] **Event 컨트롤러에 조회 엔드포인트 추가**
-  - [ ] `internal/controller/event_controller.go`에 추가
+  - [ ] `internal/api/controller/event_controller.go`에 추가
 
     ```go
     // ListEvents retrieves events for a session with optional filtering
@@ -1004,7 +1004,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ```bash
 # Phase 4 테스트 실행
-moon run backend:test -- -run "TestEvent|TestURL"
+moonx backend:test -- -run "TestEvent|TestURL"
 ```
 
 > **Note**: 모든 테스트가 통과해야 Phase 4 완료로 인정됩니다.
@@ -1013,10 +1013,10 @@ moon run backend:test -- -run "TestEvent|TestURL"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Event 서비스 | `internal/service/event_service.go` |
-| URL 서비스 | `internal/service/url_service.go` |
-| Event 컨트롤러 | `internal/controller/event_controller.go` |
-| 테스트 | `internal/service/event_service_test.go` |
+| Event 서비스 | `pkg/service/event_service.go` |
+| URL 서비스 | `pkg/service/url_service.go` |
+| Event 컨트롤러 | `internal/api/controller/event_controller.go` |
+| 테스트 | `pkg/service/event_service_test.go` |
 
 ---
 

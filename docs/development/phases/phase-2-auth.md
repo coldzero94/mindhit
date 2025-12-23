@@ -6,8 +6,8 @@
 |-----|------|
 | **목표** | JWT 기반 인증 시스템 구현 (Access + Refresh Token) |
 | **선행 조건** | Phase 1, Phase 1.5 완료 |
-| **예상 소요** | 5 Steps |
-| **결과물** | 회원가입, 로그인, 토큰 갱신, 사용자 정보 API 동작 |
+| **예상 소요** | 7 Steps |
+| **결과물** | 회원가입, 로그인, 토큰 갱신, 비밀번호 재설정, Google OAuth, 사용자 정보 API 동작 |
 
 ---
 
@@ -52,6 +52,8 @@ sequenceDiagram
 | 2.3 | Auth 컨트롤러 구현 | ⬜ |
 | 2.4 | Auth 미들웨어 구현 | ⬜ |
 | 2.5 | 토큰 갱신 및 사용자 정보 API | ⬜ |
+| 2.6 | 비밀번호 재설정 | ⬜ |
+| 2.7 | Google OAuth | ⬜ |
 
 ---
 
@@ -109,7 +111,7 @@ sequenceDiagram
   ```
 
 - [ ] **환경별 토큰 검증**
-  - [ ] `internal/service/jwt_service.go`에 테스트 토큰 지원 추가
+  - [ ] `pkg/service/jwt_service.go`에 테스트 토큰 지원 추가
 
   ```go
   func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
@@ -191,12 +193,12 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 - [ ] **의존성 추가**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   go get github.com/golang-jwt/jwt/v5
   ```
 
 - [ ] **JWT 서비스 작성**
-  - [ ] `internal/service/jwt_service.go`
+  - [ ] `pkg/service/jwt_service.go`
 
     ```go
     package service
@@ -335,7 +337,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
     ```
 
 - [ ] **테스트 작성**
-  - [ ] `internal/service/jwt_service_test.go`
+  - [ ] `pkg/service/jwt_service_test.go`
 
     ```go
     package service_test
@@ -347,7 +349,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
         "github.com/stretchr/testify/assert"
         "github.com/stretchr/testify/require"
 
-        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/pkg/service"
     )
 
     func TestJWTService_GenerateAndValidate(t *testing.T) {
@@ -374,8 +376,8 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 ### 검증
 
 ```bash
-cd apps/api
-go test ./internal/service/... -v -run TestJWT
+cd apps/backend
+go test ./pkg/service/... -v -run TestJWT
 ```
 
 ---
@@ -395,7 +397,7 @@ go test ./internal/service/... -v -run TestJWT
   ```
 
 - [ ] **Auth 서비스 작성**
-  - [ ] `internal/service/auth_service.go`
+  - [ ] `pkg/service/auth_service.go`
 
     ```go
     package service
@@ -498,7 +500,7 @@ go test ./internal/service/... -v -run TestJWT
   ```
 
 - [ ] **테스트 작성**
-  - [ ] `internal/service/auth_service_test.go`
+  - [ ] `pkg/service/auth_service_test.go`
 
     ```go
     package service_test
@@ -512,7 +514,7 @@ go test ./internal/service/... -v -run TestJWT
         "github.com/stretchr/testify/suite"
 
         "github.com/mindhit/api/ent/enttest"
-        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/pkg/service"
 
         _ "github.com/mattn/go-sqlite3"
     )
@@ -589,8 +591,8 @@ go test ./internal/service/... -v -run TestJWT
 ### 검증
 
 ```bash
-cd apps/api
-go test ./internal/service/... -v -run TestAuthService
+cd apps/backend
+go test ./pkg/service/... -v -run TestAuthService
 ```
 
 ---
@@ -604,7 +606,7 @@ HTTP 핸들러로 API 엔드포인트 구현
 ### 체크리스트
 
 - [ ] **Auth 컨트롤러 작성**
-  - [ ] `internal/controller/auth_controller.go`
+  - [ ] `internal/api/controller/auth_controller.go`
 
     ```go
     package controller
@@ -616,7 +618,7 @@ HTTP 핸들러로 API 엔드포인트 구현
         "github.com/gin-gonic/gin"
 
         "github.com/mindhit/api/internal/generated"
-        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/pkg/service"
     )
 
     type AuthController struct {
@@ -790,7 +792,7 @@ HTTP 핸들러로 API 엔드포인트 구현
 
 ```bash
 # 서버 실행
-cd apps/api && go run ./cmd/server
+cd apps/backend && go run ./cmd/server
 
 # 회원가입 테스트
 curl -X POST http://localhost:8080/v1/auth/signup \
@@ -814,7 +816,7 @@ JWT 토큰 검증 미들웨어
 ### 체크리스트
 
 - [ ] **Auth 미들웨어 작성**
-  - [ ] `internal/infrastructure/middleware/auth.go`
+  - [ ] `pkg/infra/middleware/auth.go`
 
     ```go
     package middleware
@@ -825,7 +827,7 @@ JWT 토큰 검증 미들웨어
 
         "github.com/gin-gonic/gin"
 
-        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/pkg/service"
     )
 
     const (
@@ -881,7 +883,7 @@ JWT 토큰 검증 미들웨어
   ```
 
 - [ ] **CORS 미들웨어 업데이트**
-  - [ ] `internal/infrastructure/middleware/cors.go`
+  - [ ] `pkg/infra/middleware/cors.go`
 
     ```go
     package middleware
@@ -903,7 +905,7 @@ JWT 토큰 검증 미들웨어
     ```
 
 - [ ] **로깅 미들웨어**
-  - [ ] `internal/infrastructure/middleware/logging.go`
+  - [ ] `pkg/infra/middleware/logging.go`
 
     ```go
     package middleware
@@ -981,7 +983,7 @@ curl -X GET http://localhost:8080/v1/sessions \
 ### 체크리스트
 
 - [ ] **Auth 컨트롤러에 추가**
-  - [ ] `internal/controller/auth_controller.go`에 메서드 추가
+  - [ ] `internal/api/controller/auth_controller.go`에 메서드 추가
 
     ```go
     // RefreshRequest for token refresh
@@ -1199,6 +1201,807 @@ curl -X GET http://localhost:8080/v1/auth/me \
 
 ---
 
+## Step 2.6: 비밀번호 재설정
+
+### 목표
+
+- `POST /v1/auth/forgot-password` - 비밀번호 재설정 이메일 요청
+- `POST /v1/auth/reset-password` - 비밀번호 재설정 완료
+
+### 아키텍처
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API Server
+    participant DB as Database
+    participant E as Email Service
+
+    Note over C,E: 비밀번호 재설정 요청
+    C->>A: POST /auth/forgot-password {email}
+    A->>DB: 이메일로 사용자 조회
+    DB-->>A: User
+    A->>A: Reset Token 생성 (1시간 만료)
+    A->>DB: Reset Token 저장
+    A->>E: 재설정 링크 이메일 발송
+    A-->>C: { message: "이메일 발송됨" }
+
+    Note over C,E: 비밀번호 재설정 완료
+    C->>A: POST /auth/reset-password {token, password}
+    A->>DB: Token 검증 및 사용자 조회
+    DB-->>A: User
+    A->>A: 비밀번호 해싱
+    A->>DB: 비밀번호 업데이트, Token 삭제
+    A-->>C: { message: "비밀번호 변경됨" }
+```
+
+### 체크리스트
+
+- [ ] **Ent 스키마 추가**
+  - [ ] `pkg/ent/schema/password_reset_token.go`
+
+    ```go
+    package schema
+
+    import (
+        "time"
+
+        "entgo.io/ent"
+        "entgo.io/ent/schema/edge"
+        "entgo.io/ent/schema/field"
+        "entgo.io/ent/schema/index"
+        "github.com/google/uuid"
+    )
+
+    // PasswordResetToken holds the schema definition for password reset tokens.
+    type PasswordResetToken struct {
+        ent.Schema
+    }
+
+    func (PasswordResetToken) Fields() []ent.Field {
+        return []ent.Field{
+            field.UUID("id", uuid.UUID{}).
+                Default(uuid.New).
+                Immutable(),
+            field.String("token").
+                Unique().
+                NotEmpty(),
+            field.UUID("user_id", uuid.UUID{}),
+            field.Time("expires_at"),
+            field.Time("created_at").
+                Default(time.Now).
+                Immutable(),
+            field.Bool("used").
+                Default(false),
+        }
+    }
+
+    func (PasswordResetToken) Edges() []ent.Edge {
+        return []ent.Edge{
+            edge.From("user", User.Type).
+                Ref("password_reset_tokens").
+                Field("user_id").
+                Unique().
+                Required(),
+        }
+    }
+
+    func (PasswordResetToken) Indexes() []ent.Index {
+        return []ent.Index{
+            index.Fields("token"),
+            index.Fields("user_id"),
+            index.Fields("expires_at"),
+        }
+    }
+    ```
+
+  - [ ] `pkg/ent/schema/user.go`에 edge 추가
+
+    ```go
+    func (User) Edges() []ent.Edge {
+        return []ent.Edge{
+            // ... 기존 edges ...
+            edge.To("password_reset_tokens", PasswordResetToken.Type),
+        }
+    }
+    ```
+
+- [ ] **Auth 서비스에 메서드 추가**
+  - [ ] `pkg/service/auth_service.go`
+
+    ```go
+    import (
+        "crypto/rand"
+        "encoding/hex"
+    )
+
+    var (
+        ErrTokenExpired = errors.New("token expired")
+        ErrTokenUsed    = errors.New("token already used")
+        ErrTokenInvalid = errors.New("invalid token")
+    )
+
+    // generateSecureToken creates a cryptographically secure random token
+    func generateSecureToken() (string, error) {
+        bytes := make([]byte, 32)
+        if _, err := rand.Read(bytes); err != nil {
+            return "", err
+        }
+        return hex.EncodeToString(bytes), nil
+    }
+
+    // RequestPasswordReset creates a password reset token and returns it
+    // The caller is responsible for sending the email
+    func (s *AuthService) RequestPasswordReset(ctx context.Context, email string) (string, error) {
+        // 사용자 조회 (활성 사용자만)
+        u, err := s.activeUsers().
+            Where(user.EmailEQ(email)).
+            Only(ctx)
+        if err != nil {
+            if ent.IsNotFound(err) {
+                // 보안: 존재하지 않는 이메일도 성공으로 응답 (enumeration 방지)
+                return "", nil
+            }
+            return "", err
+        }
+
+        // 기존 미사용 토큰 무효화
+        _, err = s.client.PasswordResetToken.
+            Update().
+            Where(
+                passwordresettoken.UserIDEQ(u.ID),
+                passwordresettoken.UsedEQ(false),
+            ).
+            SetUsed(true).
+            Save(ctx)
+        if err != nil {
+            return "", err
+        }
+
+        // 새 토큰 생성
+        token, err := generateSecureToken()
+        if err != nil {
+            return "", err
+        }
+
+        // 토큰 저장 (1시간 만료)
+        _, err = s.client.PasswordResetToken.
+            Create().
+            SetToken(token).
+            SetUserID(u.ID).
+            SetExpiresAt(time.Now().Add(1 * time.Hour)).
+            Save(ctx)
+        if err != nil {
+            return "", err
+        }
+
+        return token, nil
+    }
+
+    // ResetPassword validates the token and updates the password
+    func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
+        // 토큰 조회
+        resetToken, err := s.client.PasswordResetToken.
+            Query().
+            Where(
+                passwordresettoken.TokenEQ(token),
+                passwordresettoken.UsedEQ(false),
+            ).
+            WithUser().
+            Only(ctx)
+        if err != nil {
+            if ent.IsNotFound(err) {
+                return ErrTokenInvalid
+            }
+            return err
+        }
+
+        // 만료 확인
+        if time.Now().After(resetToken.ExpiresAt) {
+            return ErrTokenExpired
+        }
+
+        // 사용자 활성 상태 확인
+        if resetToken.Edges.User.Status != "active" {
+            return ErrUserInactive
+        }
+
+        // 비밀번호 해싱
+        hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+        if err != nil {
+            return err
+        }
+
+        // 트랜잭션으로 비밀번호 업데이트 및 토큰 사용 처리
+        tx, err := s.client.Tx(ctx)
+        if err != nil {
+            return err
+        }
+
+        // 비밀번호 업데이트
+        _, err = tx.User.
+            UpdateOneID(resetToken.Edges.User.ID).
+            SetPasswordHash(string(hashedPassword)).
+            Save(ctx)
+        if err != nil {
+            tx.Rollback()
+            return err
+        }
+
+        // 토큰 사용 처리
+        _, err = tx.PasswordResetToken.
+            UpdateOneID(resetToken.ID).
+            SetUsed(true).
+            Save(ctx)
+        if err != nil {
+            tx.Rollback()
+            return err
+        }
+
+        return tx.Commit()
+    }
+    ```
+
+- [ ] **Auth 컨트롤러에 메서드 추가**
+  - [ ] `internal/api/controller/auth_controller.go`
+
+    ```go
+    // ForgotPasswordRequest for password reset request
+    type ForgotPasswordRequest struct {
+        Email string `json:"email" binding:"required,email"`
+    }
+
+    // ResetPasswordRequest for password reset
+    type ResetPasswordRequest struct {
+        Token       string `json:"token" binding:"required"`
+        NewPassword string `json:"new_password" binding:"required,min=8"`
+    }
+
+    // ForgotPassword initiates password reset flow
+    func (c *AuthController) ForgotPassword(ctx *gin.Context) {
+        var req ForgotPasswordRequest
+        if err := ctx.ShouldBindJSON(&req); err != nil {
+            ctx.JSON(http.StatusBadRequest, gin.H{
+                "error": gin.H{"message": err.Error()},
+            })
+            return
+        }
+
+        token, err := c.authService.RequestPasswordReset(ctx.Request.Context(), req.Email)
+        if err != nil {
+            // 내부 오류만 로깅, 클라이언트에는 성공 응답
+            slog.Error("failed to create reset token", "error", err)
+        }
+
+        // 토큰이 있으면 이메일 발송 (이메일 서비스 구현 필요)
+        if token != "" {
+            // TODO: 이메일 발송 (Phase 이후 구현)
+            // emailService.SendPasswordReset(req.Email, token)
+            slog.Info("password reset requested", "email", req.Email)
+        }
+
+        // 보안: 항상 같은 응답 (이메일 존재 여부 노출 방지)
+        ctx.JSON(http.StatusOK, gin.H{
+            "message": "If the email exists, a password reset link has been sent.",
+        })
+    }
+
+    // ResetPassword completes password reset
+    func (c *AuthController) ResetPassword(ctx *gin.Context) {
+        var req ResetPasswordRequest
+        if err := ctx.ShouldBindJSON(&req); err != nil {
+            ctx.JSON(http.StatusBadRequest, gin.H{
+                "error": gin.H{"message": err.Error()},
+            })
+            return
+        }
+
+        err := c.authService.ResetPassword(ctx.Request.Context(), req.Token, req.NewPassword)
+        if err != nil {
+            switch {
+            case errors.Is(err, service.ErrTokenInvalid):
+                ctx.JSON(http.StatusBadRequest, gin.H{
+                    "error": gin.H{"message": "invalid or expired token"},
+                })
+            case errors.Is(err, service.ErrTokenExpired):
+                ctx.JSON(http.StatusBadRequest, gin.H{
+                    "error": gin.H{"message": "token has expired"},
+                })
+            case errors.Is(err, service.ErrTokenUsed):
+                ctx.JSON(http.StatusBadRequest, gin.H{
+                    "error": gin.H{"message": "token has already been used"},
+                })
+            case errors.Is(err, service.ErrUserInactive):
+                ctx.JSON(http.StatusBadRequest, gin.H{
+                    "error": gin.H{"message": "user account is inactive"},
+                })
+            default:
+                ctx.JSON(http.StatusInternalServerError, gin.H{
+                    "error": gin.H{"message": "internal server error"},
+                })
+            }
+            return
+        }
+
+        ctx.JSON(http.StatusOK, gin.H{
+            "message": "Password has been reset successfully.",
+        })
+    }
+    ```
+
+- [ ] **라우트 등록**
+
+  ```go
+  // In main.go - Public auth routes
+  auth := v1.Group("/auth")
+  {
+      auth.POST("/signup", authController.Signup)
+      auth.POST("/login", authController.Login)
+      auth.POST("/refresh", authController.Refresh)
+      auth.POST("/forgot-password", authController.ForgotPassword)
+      auth.POST("/reset-password", authController.ResetPassword)
+  }
+  ```
+
+- [ ] **마이그레이션 생성**
+
+  ```bash
+  cd apps/backend
+  go generate ./pkg/ent
+  moonx backend:migrate-diff -- password_reset_tokens
+  moonx backend:migrate
+  ```
+
+### 검증
+
+```bash
+# 1. 비밀번호 재설정 요청
+curl -X POST http://localhost:8080/v1/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com"}'
+# 200 OK + message (이메일 존재 여부와 무관하게 동일 응답)
+
+# 2. 비밀번호 재설정 (토큰은 DB 또는 로그에서 확인)
+curl -X POST http://localhost:8080/v1/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<reset_token>","new_password":"newpassword123"}'
+# 200 OK + message
+
+# 3. 새 비밀번호로 로그인 확인
+curl -X POST http://localhost:8080/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"newpassword123"}'
+# 200 OK + tokens
+```
+
+### 보안 고려사항
+
+1. **이메일 열거 방지**: 존재하지 않는 이메일에도 동일한 성공 응답
+2. **토큰 보안**: 32바이트 암호학적 난수 사용
+3. **토큰 만료**: 1시간 후 자동 만료
+4. **일회성 토큰**: 사용 후 재사용 불가
+5. **Rate Limiting**: (향후) 요청 횟수 제한 필요
+
+---
+
+## Step 2.7: Google OAuth
+
+### 목표
+
+- `GET /v1/auth/google` - Google OAuth 로그인 시작 (리다이렉트)
+- `GET /v1/auth/google/callback` - Google OAuth 콜백 처리
+
+### 아키텍처
+
+```mermaid
+sequenceDiagram
+    participant C as Client (Browser)
+    participant A as API Server
+    participant G as Google OAuth
+    participant DB as Database
+
+    Note over C,DB: Google OAuth 로그인 플로우
+    C->>A: GET /auth/google
+    A->>A: state 토큰 생성 (CSRF 방지)
+    A-->>C: Redirect to Google OAuth
+
+    C->>G: Google 로그인 페이지
+    G-->>C: 사용자 인증 후 callback으로 리다이렉트
+
+    C->>A: GET /auth/google/callback?code=xxx&state=xxx
+    A->>A: state 검증 (CSRF 방지)
+    A->>G: code로 access token 교환
+    G-->>A: access_token + id_token
+
+    A->>G: 사용자 정보 요청 (userinfo)
+    G-->>A: { email, name, picture, sub }
+
+    A->>DB: 이메일로 사용자 조회 또는 생성
+    DB-->>A: User
+
+    A->>A: Access Token + Refresh Token 생성
+    A-->>C: Redirect to frontend with tokens
+```
+
+### 체크리스트
+
+- [ ] **의존성 추가**
+
+  ```bash
+  cd apps/backend
+  go get golang.org/x/oauth2
+  go get golang.org/x/oauth2/google
+  ```
+
+- [ ] **User 스키마 수정**
+  - [ ] `pkg/ent/schema/user.go`에 OAuth 필드 추가
+
+    ```go
+    func (User) Fields() []ent.Field {
+        return []ent.Field{
+            // ... 기존 필드 ...
+            field.String("password_hash").
+                Optional(), // OAuth 사용자는 비밀번호 없음
+            field.String("google_id").
+                Optional().
+                Unique(),
+            field.String("avatar_url").
+                Optional(),
+            field.Enum("auth_provider").
+                Values("email", "google").
+                Default("email"),
+        }
+    }
+    ```
+
+- [ ] **OAuth 설정**
+  - [ ] `pkg/infra/config/oauth.go`
+
+    ```go
+    package config
+
+    import (
+        "os"
+
+        "golang.org/x/oauth2"
+        "golang.org/x/oauth2/google"
+    )
+
+    type OAuthConfig struct {
+        Google *oauth2.Config
+    }
+
+    func NewOAuthConfig() *OAuthConfig {
+        return &OAuthConfig{
+            Google: &oauth2.Config{
+                ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+                ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+                RedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
+                Scopes: []string{
+                    "https://www.googleapis.com/auth/userinfo.email",
+                    "https://www.googleapis.com/auth/userinfo.profile",
+                },
+                Endpoint: google.Endpoint,
+            },
+        }
+    }
+    ```
+
+- [ ] **OAuth 서비스 작성**
+  - [ ] `pkg/service/oauth_service.go`
+
+    ```go
+    package service
+
+    import (
+        "context"
+        "crypto/rand"
+        "encoding/base64"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io"
+        "net/http"
+
+        "golang.org/x/oauth2"
+
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/ent/user"
+    )
+
+    var (
+        ErrInvalidState = errors.New("invalid oauth state")
+    )
+
+    type GoogleUserInfo struct {
+        ID            string `json:"id"`
+        Email         string `json:"email"`
+        VerifiedEmail bool   `json:"verified_email"`
+        Name          string `json:"name"`
+        Picture       string `json:"picture"`
+    }
+
+    type OAuthService struct {
+        client       *ent.Client
+        googleConfig *oauth2.Config
+    }
+
+    func NewOAuthService(client *ent.Client, googleConfig *oauth2.Config) *OAuthService {
+        return &OAuthService{
+            client:       client,
+            googleConfig: googleConfig,
+        }
+    }
+
+    // GenerateState creates a random state for CSRF protection
+    func (s *OAuthService) GenerateState() (string, error) {
+        bytes := make([]byte, 32)
+        if _, err := rand.Read(bytes); err != nil {
+            return "", err
+        }
+        return base64.URLEncoding.EncodeToString(bytes), nil
+    }
+
+    // GetGoogleAuthURL returns the Google OAuth authorization URL
+    func (s *OAuthService) GetGoogleAuthURL(state string) string {
+        return s.googleConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
+    }
+
+    // ExchangeGoogleCode exchanges the authorization code for tokens
+    func (s *OAuthService) ExchangeGoogleCode(ctx context.Context, code string) (*oauth2.Token, error) {
+        return s.googleConfig.Exchange(ctx, code)
+    }
+
+    // GetGoogleUserInfo fetches user info from Google
+    func (s *OAuthService) GetGoogleUserInfo(ctx context.Context, token *oauth2.Token) (*GoogleUserInfo, error) {
+        client := s.googleConfig.Client(ctx, token)
+        resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+        if err != nil {
+            return nil, fmt.Errorf("failed to get user info: %w", err)
+        }
+        defer resp.Body.Close()
+
+        if resp.StatusCode != http.StatusOK {
+            body, _ := io.ReadAll(resp.Body)
+            return nil, fmt.Errorf("google api error: %s", string(body))
+        }
+
+        var userInfo GoogleUserInfo
+        if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+            return nil, fmt.Errorf("failed to decode user info: %w", err)
+        }
+
+        return &userInfo, nil
+    }
+
+    // FindOrCreateGoogleUser finds or creates a user from Google OAuth
+    func (s *OAuthService) FindOrCreateGoogleUser(ctx context.Context, info *GoogleUserInfo) (*ent.User, error) {
+        // 먼저 Google ID로 조회
+        u, err := s.client.User.Query().
+            Where(user.GoogleIDEQ(info.ID)).
+            Only(ctx)
+        if err == nil {
+            return u, nil
+        }
+        if !ent.IsNotFound(err) {
+            return nil, err
+        }
+
+        // Google ID가 없으면 이메일로 조회
+        u, err = s.client.User.Query().
+            Where(
+                user.EmailEQ(info.Email),
+                user.StatusEQ("active"),
+            ).
+            Only(ctx)
+        if err == nil {
+            // 기존 이메일 계정에 Google ID 연결
+            return s.client.User.
+                UpdateOneID(u.ID).
+                SetGoogleID(info.ID).
+                SetAvatarURL(info.Picture).
+                Save(ctx)
+        }
+        if !ent.IsNotFound(err) {
+            return nil, err
+        }
+
+        // 새 사용자 생성
+        return s.client.User.
+            Create().
+            SetEmail(info.Email).
+            SetGoogleID(info.ID).
+            SetAvatarURL(info.Picture).
+            SetAuthProvider("google").
+            Save(ctx)
+    }
+    ```
+
+- [ ] **OAuth 컨트롤러 작성**
+  - [ ] `internal/api/controller/oauth_controller.go`
+
+    ```go
+    package controller
+
+    import (
+        "net/http"
+        "os"
+        "time"
+
+        "github.com/gin-gonic/gin"
+
+        "github.com/mindhit/api/pkg/service"
+    )
+
+    type OAuthController struct {
+        oauthService *service.OAuthService
+        jwtService   *service.JWTService
+        frontendURL  string
+    }
+
+    func NewOAuthController(
+        oauthService *service.OAuthService,
+        jwtService *service.JWTService,
+    ) *OAuthController {
+        return &OAuthController{
+            oauthService: oauthService,
+            jwtService:   jwtService,
+            frontendURL:  os.Getenv("FRONTEND_URL"),
+        }
+    }
+
+    // GoogleLogin initiates Google OAuth flow
+    func (c *OAuthController) GoogleLogin(ctx *gin.Context) {
+        state, err := c.oauthService.GenerateState()
+        if err != nil {
+            ctx.JSON(http.StatusInternalServerError, gin.H{
+                "error": gin.H{"message": "failed to generate state"},
+            })
+            return
+        }
+
+        // state를 쿠키에 저장 (CSRF 방지)
+        ctx.SetCookie(
+            "oauth_state",
+            state,
+            int(10*time.Minute.Seconds()),
+            "/",
+            "",
+            true,  // secure
+            true,  // httpOnly
+        )
+
+        url := c.oauthService.GetGoogleAuthURL(state)
+        ctx.Redirect(http.StatusTemporaryRedirect, url)
+    }
+
+    // GoogleCallback handles Google OAuth callback
+    func (c *OAuthController) GoogleCallback(ctx *gin.Context) {
+        // state 검증
+        state := ctx.Query("state")
+        storedState, err := ctx.Cookie("oauth_state")
+        if err != nil || state != storedState {
+            ctx.Redirect(http.StatusTemporaryRedirect, c.frontendURL+"/auth/error?error=invalid_state")
+            return
+        }
+
+        // 쿠키 삭제
+        ctx.SetCookie("oauth_state", "", -1, "/", "", true, true)
+
+        // code로 token 교환
+        code := ctx.Query("code")
+        if code == "" {
+            ctx.Redirect(http.StatusTemporaryRedirect, c.frontendURL+"/auth/error?error=no_code")
+            return
+        }
+
+        token, err := c.oauthService.ExchangeGoogleCode(ctx.Request.Context(), code)
+        if err != nil {
+            ctx.Redirect(http.StatusTemporaryRedirect, c.frontendURL+"/auth/error?error=exchange_failed")
+            return
+        }
+
+        // 사용자 정보 가져오기
+        userInfo, err := c.oauthService.GetGoogleUserInfo(ctx.Request.Context(), token)
+        if err != nil {
+            ctx.Redirect(http.StatusTemporaryRedirect, c.frontendURL+"/auth/error?error=userinfo_failed")
+            return
+        }
+
+        // 사용자 찾기/생성
+        user, err := c.oauthService.FindOrCreateGoogleUser(ctx.Request.Context(), userInfo)
+        if err != nil {
+            ctx.Redirect(http.StatusTemporaryRedirect, c.frontendURL+"/auth/error?error=user_failed")
+            return
+        }
+
+        // JWT 토큰 쌍 생성
+        tokenPair, err := c.jwtService.GenerateTokenPair(user.ID)
+        if err != nil {
+            ctx.Redirect(http.StatusTemporaryRedirect, c.frontendURL+"/auth/error?error=token_failed")
+            return
+        }
+
+        // 프론트엔드로 리다이렉트 (토큰 포함)
+        redirectURL := fmt.Sprintf(
+            "%s/auth/callback?access_token=%s&refresh_token=%s&expires_in=%d",
+            c.frontendURL,
+            tokenPair.AccessToken,
+            tokenPair.RefreshToken,
+            tokenPair.ExpiresIn,
+        )
+        ctx.Redirect(http.StatusTemporaryRedirect, redirectURL)
+    }
+    ```
+
+- [ ] **라우트 등록**
+
+  ```go
+  // In main.go
+  auth := v1.Group("/auth")
+  {
+      // ... 기존 라우트 ...
+      auth.GET("/google", oauthController.GoogleLogin)
+      auth.GET("/google/callback", oauthController.GoogleCallback)
+  }
+  ```
+
+- [ ] **환경 변수 설정**
+
+  ```bash
+  # .env.development
+  GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+  GOOGLE_CLIENT_SECRET=your-client-secret
+  GOOGLE_REDIRECT_URL=http://localhost:8080/v1/auth/google/callback
+  FRONTEND_URL=http://localhost:3000
+  ```
+
+- [ ] **마이그레이션 생성**
+
+  ```bash
+  cd apps/backend
+  go generate ./pkg/ent
+  moonx backend:migrate-diff -- add_oauth_fields
+  moonx backend:migrate
+  ```
+
+### 검증
+
+```bash
+# 1. Google OAuth 시작 (브라우저에서 접근)
+open "http://localhost:8080/v1/auth/google"
+# Google 로그인 페이지로 리다이렉트됨
+
+# 2. 로그인 후 프론트엔드로 리다이렉트
+# http://localhost:3000/auth/callback?access_token=...&refresh_token=...
+
+# 3. 받은 토큰으로 API 호출
+curl -X GET http://localhost:8080/v1/auth/me \
+  -H "Authorization: Bearer <access_token>"
+# 200 OK + user (Google 프로필 정보 포함)
+```
+
+### Google Cloud Console 설정
+
+1. [Google Cloud Console](https://console.cloud.google.com/) 접속
+2. 프로젝트 생성 또는 선택
+3. APIs & Services > Credentials > Create Credentials > OAuth client ID
+4. Application type: Web application
+5. Authorized redirect URIs 추가:
+   - 개발: `http://localhost:8080/v1/auth/google/callback`
+   - 프로덕션: `https://api.mindhit.io/v1/auth/google/callback`
+6. Client ID와 Client Secret을 환경 변수에 설정
+
+### 보안 고려사항
+
+1. **state 파라미터**: CSRF 공격 방지를 위해 랜덤 state 사용
+2. **HTTPS**: 프로덕션에서는 반드시 HTTPS 사용
+3. **HttpOnly 쿠키**: state를 HttpOnly 쿠키에 저장
+4. **토큰 저장**: 프론트엔드에서 안전하게 토큰 저장 필요
+5. **이메일 검증**: Google은 이미 이메일 검증 완료
+
+---
+
 ## Phase 2 완료 확인
 
 ### 전체 검증 체크리스트
@@ -1274,7 +2077,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
 
 ```bash
 # Phase 2 테스트 실행
-moon run backend:test -- -run "TestJWT|TestAuth"
+moonx backend:test -- -run "TestJWT|TestAuth"
 ```
 
 > **Note**: 모든 테스트가 통과해야 Phase 2 완료로 인정됩니다.
@@ -1283,11 +2086,11 @@ moon run backend:test -- -run "TestJWT|TestAuth"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| JWT 서비스 | `internal/service/jwt_service.go` |
-| Auth 서비스 | `internal/service/auth_service.go` |
-| Auth 컨트롤러 | `internal/controller/auth_controller.go` |
-| Auth 미들웨어 | `internal/infrastructure/middleware/auth.go` |
-| 테스트 | `internal/service/*_test.go` |
+| JWT 서비스 | `pkg/service/jwt_service.go` |
+| Auth 서비스 | `pkg/service/auth_service.go` |
+| Auth 컨트롤러 | `internal/api/controller/auth_controller.go` |
+| Auth 미들웨어 | `pkg/infra/middleware/auth.go` |
+| 테스트 | `pkg/service/*_test.go` |
 
 ### API 요약
 
@@ -1296,6 +2099,10 @@ moon run backend:test -- -run "TestJWT|TestAuth"
 | POST | `/v1/auth/signup` | - | 회원가입 |
 | POST | `/v1/auth/login` | - | 로그인 |
 | POST | `/v1/auth/refresh` | - | 토큰 갱신 |
+| POST | `/v1/auth/forgot-password` | - | 비밀번호 재설정 요청 |
+| POST | `/v1/auth/reset-password` | - | 비밀번호 재설정 완료 |
+| GET | `/v1/auth/google` | - | Google OAuth 로그인 시작 |
+| GET | `/v1/auth/google/callback` | - | Google OAuth 콜백 |
 | GET | `/v1/auth/me` | Bearer | 사용자 정보 |
 | POST | `/v1/auth/logout` | Bearer | 로그아웃 |
 

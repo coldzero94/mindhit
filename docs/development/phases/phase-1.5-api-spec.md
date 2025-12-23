@@ -27,25 +27,34 @@
 
 ## 워크플로우 개요
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                packages/protocol/*.tsp                       │
-│                    (TypeSpec 정의)                           │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼ tsp compile
-┌─────────────────────────────────────────────────────────────┐
-│            tsp-output/openapi/openapi.yaml                  │
-│                   (OpenAPI 3.0 스펙)                         │
-└─────────────────────────────────────────────────────────────┘
-              │                               │
-              ▼ oapi-codegen                  ▼ openapi-generator
-┌──────────────────────────────┐  ┌───────────────────────────┐
-│  apps/api/internal/generated │  │ apps/web/src/api/generated│
-│  ├── types.gen.go            │  │ apps/extension/src/api/   │
-│  └── server.gen.go           │  │ ├── api.ts                │
-│                              │  │ └── models/               │
-└──────────────────────────────┘  └───────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Source["Single Source of Truth"]
+        TSP[packages/protocol/*.tsp<br/>TypeSpec 정의]
+    end
+
+    TSP -->|tsp compile| OpenAPI
+
+    subgraph Generated["OpenAPI 스펙"]
+        OpenAPI[tsp-output/openapi/openapi.yaml<br/>OpenAPI 3.0 스펙]
+    end
+
+    OpenAPI -->|oapi-codegen| GoCode
+    OpenAPI -->|openapi-generator| TSCode
+
+    subgraph GoCode["Go 서버 코드"]
+        GO_TYPES[apps/backend/internal/generated/<br/>types.gen.go<br/>server.gen.go]
+    end
+
+    subgraph TSCode["TypeScript 클라이언트"]
+        TS_WEB[apps/web/src/api/generated/]
+        TS_EXT[apps/extension/src/api/generated/]
+    end
+
+    style Source fill:#e1f5fe
+    style Generated fill:#fff3e0
+    style GoCode fill:#e8f5e9
+    style TSCode fill:#fce4ec
 ```
 
 ---
@@ -348,7 +357,7 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
   ```
 
 - [ ] **설정 파일 작성**
-  - [ ] `apps/api/oapi-codegen.yaml`
+  - [ ] `apps/backend/oapi-codegen.yaml`
 
     ```yaml
     package: generated
@@ -363,11 +372,11 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
 - [ ] **generated 디렉토리 생성**
 
   ```bash
-  mkdir -p apps/api/internal/generated
+  mkdir -p apps/backend/internal/generated
   ```
 
 - [ ] **Makefile에 타겟 추가**
-  - [ ] `apps/api/Makefile`
+  - [ ] `apps/backend/Makefile`
 
     ```makefile
     .PHONY: generate-api build test lint run
@@ -393,7 +402,7 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
 - [ ] **코드 생성 실행**
 
   ```bash
-  cd apps/api
+  cd apps/backend
   make generate-api
   ```
 
@@ -405,7 +414,7 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
 ### 검증
 
 ```bash
-cd apps/api
+cd apps/backend
 make generate-api
 ls internal/generated/
 # api.gen.go
@@ -417,7 +426,7 @@ grep "type SignupRequest" internal/generated/api.gen.go
 ### 결과물
 
 ```
-apps/api/
+apps/backend/
 ├── Makefile
 ├── oapi-codegen.yaml
 └── internal/
@@ -551,13 +560,13 @@ apps/web/
       "name": "mindhit",
       "private": true,
       "scripts": {
-        "dev": "moon run :dev",
-        "build": "moon run :build",
-        "test": "moon run :test",
-        "lint": "moon run :lint",
+        "dev": "moonx :dev",
+        "build": "moonx :build",
+        "test": "moonx :test",
+        "lint": "moonx :lint",
         "generate": "pnpm run generate:protocol && pnpm run generate:api:go && pnpm run generate:api:ts",
         "generate:protocol": "pnpm --filter @mindhit/protocol build",
-        "generate:api:go": "cd apps/api && make generate-api",
+        "generate:api:go": "cd apps/backend && make generate-api",
         "generate:api:ts": "pnpm --filter @mindhit/web generate:api"
       }
     }
@@ -605,12 +614,12 @@ apps/web/
 
   ```
   # Generated files (commit these)
-  # apps/api/internal/generated/
+  # apps/backend/internal/generated/
   # apps/web/src/api/generated/
 
   # Or ignore if regenerating in CI
   # Uncomment below to ignore:
-  # apps/api/internal/generated/
+  # apps/backend/internal/generated/
   # apps/web/src/api/generated/
   ```
 
@@ -621,7 +630,7 @@ apps/web/
 pnpm run generate
 
 # 각 프로젝트에서 생성된 파일 확인
-ls apps/api/internal/generated/
+ls apps/backend/internal/generated/
 ls apps/web/src/api/generated/
 ```
 
@@ -646,7 +655,7 @@ ls apps/web/src/api/generated/
 - [ ] **Go 코드 생성**
 
   ```bash
-  cd apps/api && make generate-api
+  cd apps/backend && make generate-api
   grep "StrictServerInterface" internal/generated/api.gen.go
   ```
 
@@ -675,7 +684,7 @@ ls apps/web/src/api/generated/
 ```bash
 # Phase 1.5 검증
 cd packages/protocol && pnpm run build
-cd apps/api && go build ./...
+cd apps/backend && go build ./...
 cd apps/web && pnpm run typecheck
 ```
 
@@ -687,7 +696,7 @@ cd apps/web && pnpm run typecheck
 | ---- | ---- |
 | TypeSpec 소스 | `packages/protocol/src/` |
 | OpenAPI 스펙 | `packages/protocol/tsp-output/openapi/openapi.yaml` |
-| Go 생성 코드 | `apps/api/internal/generated/api.gen.go` |
+| Go 생성 코드 | `apps/backend/internal/generated/api.gen.go` |
 | TS 클라이언트 | `apps/web/src/api/generated/` |
 
 ### API 변경 시 워크플로우

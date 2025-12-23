@@ -181,7 +181,7 @@ flowchart TB
         "syscall"
 
         "github.com/mindhit/api/internal/worker/handler"
-        "github.com/mindhit/api/pkg/config"
+        "github.com/mindhit/api/pkg/infra/config"
         "github.com/mindhit/api/pkg/ent"
         "github.com/mindhit/api/pkg/infra/queue"
 
@@ -238,7 +238,7 @@ flowchart TB
     ```
 
 - [ ] **Config 업데이트**
-  - [ ] `pkg/config/config.go`에 Redis 설정 추가
+  - [ ] `pkg/infra/config/config.go`에 Redis 설정 추가
 
     ```go
     type Config struct {
@@ -659,13 +659,13 @@ go build ./cmd/worker
 
 ```bash
 # go run 모드 (Docker Compose)
-moon run infra:dev-up  # Redis 시작
+moonx infra:dev-up  # Redis 시작
 
 # Worker 실행 (터미널 1)
-moon run backend:dev-worker
+moonx backend:dev-worker
 
 # API 실행 (터미널 2)
-moon run backend:dev-api
+moonx backend:dev-api
 
 # 4. 세션 종료 API 호출 후 Worker 로그 확인
 curl -X POST http://localhost:8080/api/v1/sessions/{session_id}/stop
@@ -739,10 +739,10 @@ spec:
 
 ```bash
 # Phase 6 테스트 실행
-moon run backend:test -- -run "TestQueue|TestHandler"
+moonx backend:test -- -run "TestQueue|TestHandler"
 ```
 
-> **Note**: Worker 테스트는 Redis가 필요합니다. `moon run infra:dev-up`으로 Redis를 먼저 시작하세요.
+> **Note**: Worker 테스트는 Redis가 필요합니다. `moonx infra:dev-up`으로 Redis를 먼저 시작하세요.
 
 ### 산출물 요약
 

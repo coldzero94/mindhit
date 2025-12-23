@@ -1882,7 +1882,7 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 
 ```bash
 # Phase 10 테스트 실행
-moon run backend:test -- -run "TestAI|TestMindmap|TestUsage"
+moonx backend:test -- -run "TestAI|TestMindmap|TestUsage"
 ```
 
 > **Note**: AI Provider 테스트는 실제 API 호출 대신 Mock을 사용합니다. 통합 테스트는 별도 환경에서 수동 실행합니다.

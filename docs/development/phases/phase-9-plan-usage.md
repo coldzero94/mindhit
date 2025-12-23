@@ -234,7 +234,7 @@ INSERT INTO plans (id, name, price_cents, billing_period, token_limit, session_r
 
 ### 체크리스트
 
-- [ ] `internal/service/usage_service.go` 생성
+- [ ] `pkg/service/usage_service.go` 생성
   - [ ] RecordUsage: 토큰 사용량 기록
   - [ ] GetCurrentUsage: 현재 기간 사용량 조회
   - [ ] GetUsageHistory: 월별 히스토리 조회
@@ -259,7 +259,7 @@ INSERT INTO plans (id, name, price_cents, billing_period, token_limit, session_r
 
 ### 코드 예시
 
-**internal/service/usage_service.go:**
+**pkg/service/usage_service.go:**
 
 ```go
 package service
@@ -414,7 +414,7 @@ func (s *UsageService) calculateFreePlanPeriodStart(ctx context.Context, userID 
 
 ### 체크리스트
 
-- [ ] `internal/service/subscription_service.go` 생성
+- [ ] `pkg/service/subscription_service.go` 생성
   - [ ] GetSubscription: 현재 구독 조회
   - [ ] GetAvailablePlans: 플랜 목록 조회
   - [ ] CreateFreeSubscription: 회원가입 시 Free 구독 자동 생성
@@ -422,7 +422,7 @@ func (s *UsageService) calculateFreePlanPeriodStart(ctx context.Context, userID 
 
 ### 코드 예시
 
-**internal/service/subscription_service.go:**
+**pkg/service/subscription_service.go:**
 
 ```go
 package service
@@ -518,10 +518,10 @@ func (s *SubscriptionService) HasFeature(ctx context.Context, userID uuid.UUID, 
 
 ### 체크리스트
 
-- [ ] `internal/controller/subscription_controller.go` 생성
+- [ ] `internal/api/controller/subscription_controller.go` 생성
   - [ ] GET `/v1/subscription` - 현재 구독 조회
   - [ ] GET `/v1/subscription/plans` - 플랜 목록
-- [ ] `internal/controller/usage_controller.go` 생성
+- [ ] `internal/api/controller/usage_controller.go` 생성
   - [ ] GET `/v1/usage` - 현재 사용량
   - [ ] GET `/v1/usage/history` - 월별 히스토리
 - [ ] 라우터에 엔드포인트 등록
@@ -595,7 +595,7 @@ func (s *SubscriptionService) HasFeature(ctx context.Context, userID uuid.UUID, 
 
 ```bash
 # Phase 9 테스트 실행
-moon run backend:test -- -run "TestUsage|TestSubscription"
+moonx backend:test -- -run "TestUsage|TestSubscription"
 ```
 
 ### 산출물 요약
@@ -605,10 +605,10 @@ moon run backend:test -- -run "TestUsage|TestSubscription"
 | Plan 스키마 | `ent/schema/plan.go` |
 | Subscription 스키마 | `ent/schema/subscription.go` |
 | TokenUsage 스키마 | `ent/schema/tokenusage.go` |
-| UsageService | `internal/service/usage_service.go` |
-| SubscriptionService | `internal/service/subscription_service.go` |
-| 사용량 API | `internal/controller/usage_controller.go` |
-| 구독 API | `internal/controller/subscription_controller.go` |
+| UsageService | `pkg/service/usage_service.go` |
+| SubscriptionService | `pkg/service/subscription_service.go` |
+| 사용량 API | `internal/api/controller/usage_controller.go` |
+| 구독 API | `internal/api/controller/subscription_controller.go` |
 
 ---
 

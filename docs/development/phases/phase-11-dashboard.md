@@ -1262,8 +1262,8 @@ pnpm dev
 
 ```bash
 # Phase 11 테스트 실행
-moon run web:test
-moon run web:e2e
+moonx web:test
+moonx web:e2e
 ```
 
 > **Note**: 3D 컴포넌트는 WebGL 컨텍스트가 필요하므로 CI에서는 headless 브라우저로 E2E 테스트를 실행합니다.

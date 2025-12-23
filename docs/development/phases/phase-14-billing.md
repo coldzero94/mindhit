@@ -101,12 +101,12 @@ STRIPE_PRICE_PRO_YEARLY=price_...
   go get github.com/stripe/stripe-go/v76
   ```
 
-- [ ] `internal/service/stripe_service.go` 생성
+- [ ] `pkg/service/stripe_service.go` 생성
   - [ ] CreateCheckoutSession: Stripe Checkout 세션 생성
   - [ ] CreateCustomerPortalSession: Customer Portal 세션 생성
   - [ ] HandleWebhook: Stripe webhook 처리
 
-- [ ] `internal/controller/billing_controller.go` 생성
+- [ ] `internal/api/controller/billing_controller.go` 생성
   - [ ] POST `/v1/billing/checkout` - Checkout 세션 생성
   - [ ] POST `/v1/billing/portal` - Customer Portal URL
   - [ ] POST `/webhook/stripe` - Stripe webhook
@@ -115,7 +115,7 @@ STRIPE_PRICE_PRO_YEARLY=price_...
 
 ### 코드 예시
 
-**internal/service/stripe_service.go:**
+**pkg/service/stripe_service.go:**
 
 ```go
 package service
@@ -201,7 +201,7 @@ func (s *StripeService) VerifyWebhook(payload []byte, signature string) (*stripe
 }
 ```
 
-**internal/controller/billing_controller.go:**
+**internal/api/controller/billing_controller.go:**
 
 ```go
 package controller
@@ -587,16 +587,16 @@ curl -X POST http://localhost:8080/v1/billing/portal \
 
 ```bash
 # Phase 14 테스트 실행
-moon run backend:test -- -run "TestStripe|TestBilling"
-moon run web:e2e -- --grep "subscription"
+moonx backend:test -- -run "TestStripe|TestBilling"
+moonx web:e2e -- --grep "subscription"
 ```
 
 ### 산출물 요약
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Stripe Service | `internal/service/stripe_service.go` |
-| Billing Controller | `internal/controller/billing_controller.go` |
+| Stripe Service | `pkg/service/stripe_service.go` |
+| Billing Controller | `internal/api/controller/billing_controller.go` |
 | 구독 관리 페이지 | `apps/web/app/(dashboard)/settings/subscription/page.tsx` |
 | 사용량 컴포넌트 | `apps/web/components/usage-progress.tsx` |
 | E2E 테스트 | `apps/web/e2e/subscription.spec.ts` |

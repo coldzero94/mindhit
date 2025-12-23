@@ -9,6 +9,112 @@
 
 ---
 
+## 전체 파이프라인 흐름
+
+```mermaid
+flowchart TB
+    subgraph Extension["Chrome Extension"]
+        direction TB
+        CS[Content Script<br/>페이지 콘텐츠 추출]
+        SW[Service Worker<br/>이벤트 수집]
+        IDB[(IndexedDB<br/>이벤트 큐)]
+        BATCH[Batch Sender<br/>5초/200개]
+    end
+
+    subgraph Server["Backend Server"]
+        direction TB
+        API[API Server<br/>이벤트 수신]
+        URL_SVC[URL Service<br/>중복 처리]
+        VISIT_SVC[Visit Service<br/>체류시간 계산]
+    end
+
+    subgraph Worker["Background Worker"]
+        direction TB
+        QUEUE[(Redis Queue)]
+        AI_WORKER[AI Worker]
+        SUMMARIZE[URL 요약]
+        MINDMAP[마인드맵 생성]
+    end
+
+    subgraph Data["Data Layer"]
+        PG[(PostgreSQL)]
+    end
+
+    CS -->|텍스트 + 메타| SW
+    SW -->|이벤트 저장| IDB
+    IDB -->|5초마다 flush| BATCH
+    BATCH -->|POST /events/batch| API
+
+    API -->|URL 정규화| URL_SVC
+    URL_SVC -->|중복 체크| PG
+    API -->|방문 기록| VISIT_SVC
+    VISIT_SVC -->|page_visits| PG
+
+    API -->|세션 종료 시| QUEUE
+    QUEUE -->|Job Dequeue| AI_WORKER
+    AI_WORKER --> SUMMARIZE
+    AI_WORKER --> MINDMAP
+    SUMMARIZE -->|summary, keywords| PG
+    MINDMAP -->|mindmap_graphs| PG
+```
+
+---
+
+## 데이터 흐름 상세
+
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant Ext as Extension
+    participant API as API Server
+    participant DB as PostgreSQL
+    participant Queue as Redis
+    participant Worker as AI Worker
+    participant AI as AI Provider
+
+    Note over User,Ext: 브라우징 시작
+    User->>Ext: 세션 시작 버튼 클릭
+    Ext->>API: POST /sessions/start
+    API->>DB: Session 생성 (status: recording)
+    API-->>Ext: sessionId
+
+    Note over User,Ext: 브라우징 중 (이벤트 수집)
+    loop 페이지 방문마다
+        User->>Ext: 페이지 방문
+        Ext->>Ext: NAV_COMMITTED 이벤트
+        Ext->>Ext: Content Script → 텍스트 추출
+        Ext->>Ext: IndexedDB에 저장
+    end
+
+    loop 5초마다 또는 200개 이벤트
+        Ext->>API: POST /events/batch
+        API->>DB: urls UPSERT (중복 제거)
+        API->>DB: raw_events INSERT
+        API->>DB: page_visits UPSERT
+        API-->>Ext: ackedSeq
+        Ext->>Ext: 확인된 이벤트 삭제
+    end
+
+    Note over User,Worker: 세션 종료 및 AI 처리
+    User->>Ext: 세션 종료 버튼 클릭
+    Ext->>API: POST /sessions/:id/stop
+    API->>DB: Session 상태 → processing
+    API->>Queue: Enqueue(ai:processing)
+    API-->>Ext: 202 Accepted
+
+    Queue->>Worker: Dequeue Job
+    Worker->>DB: 세션 데이터 조회
+    Worker->>AI: URL별 요약 생성
+    AI-->>Worker: summaries
+    Worker->>DB: urls.summary 업데이트
+    Worker->>AI: 마인드맵 생성
+    AI-->>Worker: nodes, edges
+    Worker->>DB: mindmap_graphs 저장
+    Worker->>DB: Session 상태 → completed
+```
+
+---
+
 ## 1. Extension 이벤트 수집
 
 ### 1.1 수집 대상 이벤트
