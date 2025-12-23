@@ -578,16 +578,16 @@ pnpm dev
                   )}
 
                   {/* Related URLs */}
-                  {node.data.url_ids && (node.data.url_ids as string[]).length > 0 && (
+                  {node.data.urls && (node.data.urls as string[]).length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium flex items-center gap-1">
                         <ExternalLink className="h-4 w-4" />
                         관련 페이지
                       </h4>
                       <ul className="space-y-1">
-                        {(node.data.url_ids as string[]).slice(0, 5).map((urlId) => (
-                          <li key={urlId} className="text-sm text-blue-600 truncate">
-                            {urlId}
+                        {(node.data.urls as string[]).slice(0, 5).map((url) => (
+                          <li key={url} className="text-sm text-blue-600 truncate">
+                            {url}
                           </li>
                         ))}
                       </ul>
@@ -784,14 +784,15 @@ pnpm dev
     }
 
     export function SessionStats({ session }: SessionStatsProps) {
-      const totalDwellTime = session.page_visits.reduce(
-        (acc, pv) => acc + (pv.dwell_time_seconds || 0),
+      const totalDurationMs = session.page_visits.reduce(
+        (acc, pv) => acc + (pv.duration_ms || 0),
         0
       );
 
-      const formatDuration = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
+      const formatDuration = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
 
         if (hours > 0) {
           return `${hours}시간 ${minutes}분`;
@@ -832,7 +833,7 @@ pnpm dev
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{formatDuration(totalDwellTime)}</p>
+              <p className="text-2xl font-bold">{formatDuration(totalDurationMs)}</p>
             </CardContent>
           </Card>
 
@@ -909,8 +910,8 @@ pnpm dev
                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {visit.dwell_time_seconds
-                              ? `${Math.floor(visit.dwell_time_seconds / 60)}분 ${visit.dwell_time_seconds % 60}초`
+                            {visit.duration_ms
+                              ? `${Math.floor(visit.duration_ms / 60000)}분 ${Math.floor((visit.duration_ms % 60000) / 1000)}초`
                               : '-'}
                           </span>
                           <span>

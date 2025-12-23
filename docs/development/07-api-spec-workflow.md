@@ -265,7 +265,9 @@ namespace MindHit.Auth;
 model User {
   id: string;
   email: string;
+  @encodedName("application/json", "created_at")
   createdAt: utcDateTime;
+  @encodedName("application/json", "updated_at")
   updatedAt: utcDateTime;
 }
 
@@ -321,13 +323,18 @@ model Session {
   id: string;
   title?: string;
   status: SessionStatus;
+  @encodedName("application/json", "started_at")
   startedAt: utcDateTime;
+  @encodedName("application/json", "ended_at")
   endedAt?: utcDateTime;
+  @encodedName("application/json", "created_at")
   createdAt: utcDateTime;
+  @encodedName("application/json", "updated_at")
   updatedAt: utcDateTime;
 }
 
 model SessionWithDetails extends Session {
+  @encodedName("application/json", "page_visits")
   pageVisits: PageVisit[];
   highlights: Highlight[];
   mindmap?: MindmapGraph;
@@ -337,9 +344,13 @@ model PageVisit {
   id: string;
   url: string;
   title?: string;
+  @encodedName("application/json", "entered_at")
   enteredAt: utcDateTime;
+  @encodedName("application/json", "left_at")
   leftAt?: utcDateTime;
-  dwellTimeSeconds?: int32;
+  @encodedName("application/json", "duration_ms")
+  durationMs?: int32;
+  @encodedName("application/json", "max_scroll_depth")
   maxScrollDepth: float32;
 }
 
@@ -348,6 +359,7 @@ model Highlight {
   text: string;
   selector?: string;
   color: string;
+  @encodedName("application/json", "created_at")
   createdAt: utcDateTime;
 }
 
@@ -355,6 +367,7 @@ model MindmapGraph {
   id: string;
   nodes: MindmapNode[];
   edges: MindmapEdge[];
+  @encodedName("application/json", "generated_at")
   generatedAt: utcDateTime;
 }
 

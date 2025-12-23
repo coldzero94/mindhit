@@ -945,10 +945,10 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
                 Optional().
                 Nillable().
                 Comment("Page leave time"),
-            field.Int("dwell_time_seconds").
+            field.Int("duration_ms").
                 Optional().
                 Nillable().
-                Comment("Total time spent on page"),
+                Comment("Time spent on page in milliseconds"),
             field.Float("max_scroll_depth").
                 Default(0).
                 Comment("Maximum scroll depth (0-1)"),

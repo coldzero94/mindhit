@@ -548,6 +548,14 @@ open http://localhost:3000/signup
 
 ## Step 7.3: API 클라이언트 설정
 
+> **에러 처리 가이드**: Frontend 에러 처리 패턴은
+> [09-error-handling.md#10](../09-error-handling.md#10-frontend-에러-처리-nextjs)을 참조하세요.
+>
+> - Axios interceptor로 401/403/429 에러 처리
+> - Toast 메시지 헬퍼 (`useApiError` hook)
+> - Error Boundary 컴포넌트
+> - React Query 에러 재시도 설정
+
 ### 체크리스트
 
 - [ ] **OpenAPI 타입 생성 설정**
@@ -688,7 +696,7 @@ open http://localhost:3000/signup
       };
       entered_at: string;
       left_at: string | null;
-      dwell_time_seconds: number | null;
+      duration_ms: number | null;
       max_scroll_depth: number;
     }
 
@@ -1260,8 +1268,8 @@ open http://localhost:3000/signup
                         <p className="text-sm text-gray-500 truncate">{visit.url.url}</p>
                       </div>
                       <div className="text-sm text-gray-400 ml-4">
-                        {visit.dwell_time_seconds
-                          ? `${Math.floor(visit.dwell_time_seconds / 60)}분 ${visit.dwell_time_seconds % 60}초`
+                        {visit.duration_ms
+                          ? `${Math.floor(visit.duration_ms / 60000)}분 ${Math.floor((visit.duration_ms % 60000) / 1000)}초`
                           : '-'}
                       </div>
                     </li>

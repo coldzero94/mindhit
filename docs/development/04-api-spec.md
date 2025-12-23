@@ -1,6 +1,10 @@
 # API 명세
 
-Base URL: `https://api.mindhit.app/v1`
+Base URL:
+
+- **로컬 (go run)**: `http://localhost:8080/v1`
+- **로컬 (K8s)**: `http://api.mindhit.local/v1`
+- **프로덕션**: `https://api.mindhit.io/v1`
 
 ---
 
@@ -95,7 +99,7 @@ Authorization: Bearer <token>
   "user": {
     "id": "uuid",
     "email": "user@example.com",
-    "createdAt": "2024-12-20T10:00:00Z"
+    "created_at": "2024-12-20T10:00:00Z"
   },
   "token": "jwt-token"
 }
@@ -142,7 +146,7 @@ Authorization: Bearer <token>
 **Request:**
 ```json
 {
-  "refreshToken": "refresh-token"
+  "refresh_token": "refresh-token"
 }
 ```
 
@@ -150,7 +154,7 @@ Authorization: Bearer <token>
 ```json
 {
   "token": "new-jwt-token",
-  "refreshToken": "new-refresh-token"
+  "refresh_token": "new-refresh-token"
 }
 ```
 
@@ -167,8 +171,8 @@ Authorization: Bearer <token>
 **Response:** `201 Created`
 ```json
 {
-  "sessionId": "uuid",
-  "startedAt": "2024-12-20T14:30:00Z"
+  "session_id": "uuid",
+  "started_at": "2024-12-20T14:30:00Z"
 }
 ```
 
@@ -183,7 +187,7 @@ Authorization: Bearer <token>
 **Response:** `202 Accepted`
 ```json
 {
-  "sessionId": "uuid",
+  "session_id": "uuid",
   "status": "processing",
   "message": "AI processing started"
 }
@@ -210,18 +214,18 @@ Authorization: Bearer <token>
       "id": "uuid",
       "title": "AI 트렌드 리서치",
       "status": "completed",
-      "startedAt": "2024-12-20T14:30:00Z",
-      "endedAt": "2024-12-20T16:02:00Z",
-      "totalDurationMs": 5520000,
-      "pageCount": 12,
-      "topKeywords": ["AI", "LLM", "Enterprise"]
+      "started_at": "2024-12-20T14:30:00Z",
+      "ended_at": "2024-12-20T16:02:00Z",
+      "total_duration_ms": 5520000,
+      "page_count": 12,
+      "top_keywords": ["AI", "LLM", "Enterprise"]
     }
   ],
   "pagination": {
     "total": 42,
     "page": 1,
     "limit": 20,
-    "hasNext": true
+    "has_next": true
   }
 }
 ```
@@ -239,20 +243,20 @@ Authorization: Bearer <token>
     "id": "uuid",
     "title": "AI 트렌드 리서치",
     "status": "completed",
-    "startedAt": "2024-12-20T14:30:00Z",
-    "endedAt": "2024-12-20T16:02:00Z"
+    "started_at": "2024-12-20T14:30:00Z",
+    "ended_at": "2024-12-20T16:02:00Z"
   },
-  "pageVisits": [
+  "page_visits": [
     {
       "id": "uuid",
       "url": "https://techcrunch.com/2024/ai-predictions",
       "domain": "techcrunch.com",
       "title": "2024 AI Predictions",
       "favicon": "https://techcrunch.com/favicon.ico",
-      "enteredAt": "2024-12-20T14:31:00Z",
-      "leftAt": "2024-12-20T14:36:12Z",
-      "durationMs": 312000,
-      "visitOrder": 1
+      "entered_at": "2024-12-20T14:31:00Z",
+      "left_at": "2024-12-20T14:36:12Z",
+      "duration_ms": 312000,
+      "visit_order": 1
     }
   ],
   "highlights": [
@@ -260,7 +264,7 @@ Authorization: Bearer <token>
       "id": "uuid",
       "text": "LLM이 2024년 가장 큰 영향을 미칠 것으로...",
       "url": "https://techcrunch.com/2024/ai-predictions",
-      "createdAt": "2024-12-20T14:33:00Z"
+      "created_at": "2024-12-20T14:33:00Z"
     }
   ]
 }
@@ -288,7 +292,7 @@ Authorization: Bearer <token>
 {
   "id": "uuid",
   "title": "새로운 제목",
-  "updatedAt": "2024-12-20T17:00:00Z"
+  "updated_at": "2024-12-20T17:00:00Z"
 }
 ```
 
@@ -311,18 +315,18 @@ Authorization: Bearer <token>
 {
   "mindmap": {
     "id": "uuid",
-    "sessionId": "uuid",
+    "session_id": "uuid",
     "nodes": [
       {
         "id": "root",
         "label": "AI 트렌드",
         "type": "root",
         "importance": 1,
-        "relatedSegmentIds": [],
+        "related_page_visit_ids": [],
         "position": { "x": 0, "y": 0 },
         "metadata": {
-          "totalDurationMs": 5520000,
-          "highlightCount": 0
+          "total_duration_ms": 5520000,
+          "highlight_count": 0
         }
       },
       {
@@ -330,11 +334,11 @@ Authorization: Bearer <token>
         "label": "LLM",
         "type": "topic",
         "importance": 0.8,
-        "relatedSegmentIds": ["1", "3", "5"],
+        "related_page_visit_ids": ["1", "3", "5"],
         "position": { "x": -200, "y": 100 },
         "metadata": {
-          "totalDurationMs": 1800000,
-          "highlightCount": 2
+          "total_duration_ms": 1800000,
+          "highlight_count": 2
         }
       }
     ],
@@ -346,7 +350,7 @@ Authorization: Bearer <token>
         "type": "parent"
       }
     ],
-    "createdAt": "2024-12-20T16:05:00Z"
+    "created_at": "2024-12-20T16:05:00Z"
   }
 }
 ```
@@ -367,18 +371,18 @@ Authorization: Bearer <token>
 {
   "events": [
     {
-      "sessionId": "uuid",
+      "session_id": "uuid",
       "seq": 1,
       "t": 1703077800000,
       "type": "TAB_ACTIVATED",
-      "tabId": 123
+      "tab_id": 123
     },
     {
-      "sessionId": "uuid",
+      "session_id": "uuid",
       "seq": 2,
       "t": 1703077801000,
       "type": "NAV_COMMITTED",
-      "tabId": 123,
+      "tab_id": 123,
       "url": "https://example.com"
     }
   ]
@@ -388,12 +392,12 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 ```json
 {
-  "ackedSeq": 2,
+  "acked_seq": 2,
   "count": 2
 }
 ```
 
-`ackedSeq`: 서버가 확인한 마지막 시퀀스 번호. Extension은 이 번호 이하의 이벤트를 로컬에서 삭제.
+`acked_seq`: 서버가 확인한 마지막 시퀀스 번호. Extension은 이 번호 이하의 이벤트를 로컬에서 삭제.
 
 **Errors:**
 - `400` - 유효하지 않은 이벤트 형식
@@ -412,10 +416,10 @@ Authorization: Bearer <token>
 {
   "id": "uuid",
   "email": "user@example.com",
-  "createdAt": "2024-01-01T00:00:00Z",
+  "created_at": "2024-01-01T00:00:00Z",
   "settings": {
-    "emailNotification": true,
-    "excludedDomains": ["localhost", "127.0.0.1"]
+    "email_notification": true,
+    "excluded_domains": ["localhost", "127.0.0.1"]
   }
 }
 ```
@@ -429,17 +433,17 @@ Authorization: Bearer <token>
 **Request:**
 ```json
 {
-  "emailNotification": false,
-  "excludedDomains": ["localhost", "mail.google.com"]
+  "email_notification": false,
+  "excluded_domains": ["localhost", "mail.google.com"]
 }
 ```
 
 **Response:** `200 OK`
 ```json
 {
-  "emailNotification": false,
-  "excludedDomains": ["localhost", "mail.google.com"],
-  "updatedAt": "2024-12-20T17:00:00Z"
+  "email_notification": false,
+  "excluded_domains": ["localhost", "mail.google.com"],
+  "updated_at": "2024-12-20T17:00:00Z"
 }
 ```
 
@@ -477,8 +481,11 @@ Authorization: Bearer <token>
 | 403 | FORBIDDEN | 권한 없음 |
 | 404 | NOT_FOUND | 리소스 없음 |
 | 409 | CONFLICT | 충돌 (중복 등) |
+| 422 | UNPROCESSABLE_ENTITY | 비즈니스 규칙 위반 |
 | 429 | RATE_LIMITED | 요청 제한 초과 |
 | 500 | INTERNAL_ERROR | 서버 오류 |
+
+> **상세 가이드**: 에러 처리 패턴 및 응답 헬퍼는 [09-error-handling.md](./09-error-handling.md)를 참조하세요.
 
 ---
 
@@ -497,7 +504,7 @@ Authorization: Bearer <token>
   "error": {
     "code": "RATE_LIMITED",
     "message": "Too many requests",
-    "retryAfter": 30
+    "retry_after": 30
   }
 }
 ```

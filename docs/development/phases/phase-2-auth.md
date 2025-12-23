@@ -608,16 +608,21 @@ HTTP 핸들러로 API 엔드포인트 구현
 - [ ] **Auth 컨트롤러 작성**
   - [ ] `internal/api/controller/auth_controller.go`
 
+    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
+
     ```go
     package controller
 
     import (
         "errors"
+        "log/slog"
         "net/http"
 
         "github.com/gin-gonic/gin"
 
         "github.com/mindhit/api/internal/generated"
+        "github.com/mindhit/api/pkg/api/response"
         "github.com/mindhit/api/pkg/service"
     )
 
@@ -636,51 +641,25 @@ HTTP 핸들러로 API 엔드포인트 구현
     func (c *AuthController) Signup(ctx *gin.Context) {
         var req generated.SignupRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, generated.ValidationError{
-                Error: struct {
-                    Message string                              `json:"message"`
-                    Details *[]generated.ValidationDetail       `json:"details,omitempty"`
-                }{
-                    Message: err.Error(),
-                },
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
         user, err := c.authService.Signup(ctx.Request.Context(), req.Email, req.Password)
         if err != nil {
             if errors.Is(err, service.ErrEmailExists) {
-                ctx.JSON(http.StatusConflict, generated.ErrorResponse{
-                    Error: struct {
-                        Message string  `json:"message"`
-                        Code    *string `json:"code,omitempty"`
-                    }{
-                        Message: "email already exists",
-                    },
-                })
+                response.Conflict(ctx, "email already exists")
                 return
             }
-            ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
-                Error: struct {
-                    Message string  `json:"message"`
-                    Code    *string `json:"code,omitempty"`
-                }{
-                    Message: "internal server error",
-                },
-            })
+            slog.Error("signup failed", "error", err, "email", req.Email)
+            response.InternalError(ctx)
             return
         }
 
         token, err := c.jwtService.GenerateToken(user.ID)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
-                Error: struct {
-                    Message string  `json:"message"`
-                    Code    *string `json:"code,omitempty"`
-                }{
-                    Message: "failed to generate token",
-                },
-            })
+            slog.Error("failed to generate token", "error", err, "user_id", user.ID)
+            response.InternalError(ctx)
             return
         }
 
@@ -698,51 +677,25 @@ HTTP 핸들러로 API 엔드포인트 구현
     func (c *AuthController) Login(ctx *gin.Context) {
         var req generated.LoginRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, generated.ErrorResponse{
-                Error: struct {
-                    Message string  `json:"message"`
-                    Code    *string `json:"code,omitempty"`
-                }{
-                    Message: err.Error(),
-                },
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
         user, err := c.authService.Login(ctx.Request.Context(), req.Email, req.Password)
         if err != nil {
             if errors.Is(err, service.ErrInvalidCredentials) {
-                ctx.JSON(http.StatusUnauthorized, generated.ErrorResponse{
-                    Error: struct {
-                        Message string  `json:"message"`
-                        Code    *string `json:"code,omitempty"`
-                    }{
-                        Message: "invalid credentials",
-                    },
-                })
+                response.Unauthorized(ctx, "invalid email or password")
                 return
             }
-            ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
-                Error: struct {
-                    Message string  `json:"message"`
-                    Code    *string `json:"code,omitempty"`
-                }{
-                    Message: "internal server error",
-                },
-            })
+            slog.Error("login failed", "error", err, "email", req.Email)
+            response.InternalError(ctx)
             return
         }
 
         token, err := c.jwtService.GenerateToken(user.ID)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, generated.ErrorResponse{
-                Error: struct {
-                    Message string  `json:"message"`
-                    Code    *string `json:"code,omitempty"`
-                }{
-                    Message: "failed to generate token",
-                },
-            })
+            slog.Error("failed to generate token", "error", err, "user_id", user.ID)
+            response.InternalError(ctx)
             return
         }
 
@@ -906,43 +859,17 @@ JWT 토큰 검증 미들웨어
 
 - [ ] **로깅 미들웨어**
   - [ ] `pkg/infra/middleware/logging.go`
+  - 상세 코드: [09-error-handling.md#5 HTTP 로깅 미들웨어](../09-error-handling.md#5-http-로깅-미들웨어)
 
-    ```go
-    package middleware
-
-    import (
-        "log/slog"
-        "time"
-
-        "github.com/gin-gonic/gin"
-    )
-
-    func Logging() gin.HandlerFunc {
-        return func(c *gin.Context) {
-            start := time.Now()
-            path := c.Request.URL.Path
-            query := c.Request.URL.RawQuery
-
-            c.Next()
-
-            slog.Info("request",
-                "method", c.Request.Method,
-                "path", path,
-                "query", query,
-                "status", c.Writer.Status(),
-                "latency", time.Since(start),
-                "ip", c.ClientIP(),
-                "user-agent", c.Request.UserAgent(),
-            )
-        }
-    }
-    ```
+  > **Note**: 로깅 미들웨어는 환경별로 다른 포맷을 사용합니다.
+  > - 개발 환경: Compact 포맷 (터미널/k9s 친화적)
+  > - 프로덕션 환경: JSON 포맷 (로그 수집 시스템용)
 
 - [ ] **main.go에 미들웨어 적용**
 
   ```go
   r.Use(gin.Recovery())
-  r.Use(middleware.Logging())
+  r.Use(middleware.NewLoggingMiddleware(cfg.Environment))
   r.Use(middleware.CORS())
 
   // Protected routes example
@@ -985,6 +912,8 @@ curl -X GET http://localhost:8080/v1/sessions \
 - [ ] **Auth 컨트롤러에 추가**
   - [ ] `internal/api/controller/auth_controller.go`에 메서드 추가
 
+    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+
     ```go
     // RefreshRequest for token refresh
     type RefreshRequest struct {
@@ -995,36 +924,29 @@ curl -X GET http://localhost:8080/v1/sessions \
     func (c *AuthController) Refresh(ctx *gin.Context) {
         var req RefreshRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": err.Error()},
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
         // Validate refresh token
         claims, err := c.jwtService.ValidateRefreshToken(req.RefreshToken)
         if err != nil {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "invalid or expired refresh token"},
-            })
+            response.Unauthorized(ctx, "invalid or expired refresh token")
             return
         }
 
         // Verify user still exists
         user, err := c.authService.GetUserByID(ctx.Request.Context(), claims.UserID)
         if err != nil {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "user not found"},
-            })
+            response.Unauthorized(ctx, "user not found")
             return
         }
 
         // Generate new access token
         accessToken, expiresIn, err := c.jwtService.GenerateAccessToken(user.ID)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to generate token"},
-            })
+            slog.Error("failed to generate access token", "error", err, "user_id", user.ID)
+            response.InternalError(ctx)
             return
         }
 
@@ -1039,23 +961,18 @@ curl -X GET http://localhost:8080/v1/sessions \
     func (c *AuthController) Me(ctx *gin.Context) {
         userID, exists := middleware.GetUserID(ctx)
         if !exists {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         user, err := c.authService.GetUserByID(ctx.Request.Context(), userID)
         if err != nil {
             if errors.Is(err, service.ErrUserNotFound) {
-                ctx.JSON(http.StatusNotFound, gin.H{
-                    "error": gin.H{"message": "user not found"},
-                })
+                response.NotFound(ctx, "user not found")
                 return
             }
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "internal server error"},
-            })
+            slog.Error("failed to get user", "error", err, "user_id", userID)
+            response.InternalError(ctx)
             return
         }
 
@@ -1075,9 +992,7 @@ curl -X GET http://localhost:8080/v1/sessions \
     func (c *AuthController) Logout(ctx *gin.Context) {
         userID, exists := middleware.GetUserID(ctx)
         if !exists {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
@@ -1098,15 +1013,14 @@ curl -X GET http://localhost:8080/v1/sessions \
 
         user, err := c.authService.Signup(ctx.Request.Context(), req.Email, req.Password)
         if err != nil {
-            // ... error handling ...
+            // ... error handling (response 헬퍼 사용) ...
         }
 
         // Generate token pair
         tokenPair, err := c.jwtService.GenerateTokenPair(user.ID)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to generate tokens"},
-            })
+            slog.Error("failed to generate token pair", "error", err, "user_id", user.ID)
+            response.InternalError(ctx)
             return
         }
 
@@ -1147,21 +1061,30 @@ curl -X GET http://localhost:8080/v1/sessions \
 
 - [ ] **Auth 미들웨어 수정** (Access Token만 허용)
 
+  > **Note**: 미들웨어에서는 `response` 헬퍼 대신 `c.AbortWithStatusJSON`을 사용합니다.
+  > 미들웨어는 컨트롤러보다 먼저 실행되며, 요청을 중단해야 하기 때문입니다.
+
   ```go
   func Auth(jwtService *service.JWTService) gin.HandlerFunc {
       return func(c *gin.Context) {
           authHeader := c.GetHeader("Authorization")
           if authHeader == "" {
-              c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-                  "error": gin.H{"message": "missing authorization header"},
+              c.AbortWithStatusJSON(http.StatusUnauthorized, response.ErrorResponse{
+                  Error: response.ErrorBody{
+                      Code:    response.CodeUnauthorized,
+                      Message: "missing authorization header",
+                  },
               })
               return
           }
 
           parts := strings.Split(authHeader, " ")
           if len(parts) != 2 || parts[0] != "Bearer" {
-              c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-                  "error": gin.H{"message": "invalid authorization header format"},
+              c.AbortWithStatusJSON(http.StatusUnauthorized, response.ErrorResponse{
+                  Error: response.ErrorBody{
+                      Code:    response.CodeUnauthorized,
+                      Message: "invalid authorization header format",
+                  },
               })
               return
           }
@@ -1169,8 +1092,11 @@ curl -X GET http://localhost:8080/v1/sessions \
           // Only accept access tokens for API authentication
           claims, err := jwtService.ValidateAccessToken(parts[1])
           if err != nil {
-              c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-                  "error": gin.H{"message": "invalid or expired token"},
+              c.AbortWithStatusJSON(http.StatusUnauthorized, response.ErrorResponse{
+                  Error: response.ErrorBody{
+                      Code:    response.CodeUnauthorized,
+                      Message: "invalid or expired token",
+                  },
               })
               return
           }
@@ -1445,6 +1371,8 @@ sequenceDiagram
 - [ ] **Auth 컨트롤러에 메서드 추가**
   - [ ] `internal/api/controller/auth_controller.go`
 
+    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+
     ```go
     // ForgotPasswordRequest for password reset request
     type ForgotPasswordRequest struct {
@@ -1461,9 +1389,7 @@ sequenceDiagram
     func (c *AuthController) ForgotPassword(ctx *gin.Context) {
         var req ForgotPasswordRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": err.Error()},
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
@@ -1490,9 +1416,7 @@ sequenceDiagram
     func (c *AuthController) ResetPassword(ctx *gin.Context) {
         var req ResetPasswordRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": err.Error()},
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
@@ -1500,25 +1424,16 @@ sequenceDiagram
         if err != nil {
             switch {
             case errors.Is(err, service.ErrTokenInvalid):
-                ctx.JSON(http.StatusBadRequest, gin.H{
-                    "error": gin.H{"message": "invalid or expired token"},
-                })
+                response.BadRequest(ctx, "invalid or expired token", nil)
             case errors.Is(err, service.ErrTokenExpired):
-                ctx.JSON(http.StatusBadRequest, gin.H{
-                    "error": gin.H{"message": "token has expired"},
-                })
+                response.BadRequest(ctx, "token has expired", nil)
             case errors.Is(err, service.ErrTokenUsed):
-                ctx.JSON(http.StatusBadRequest, gin.H{
-                    "error": gin.H{"message": "token has already been used"},
-                })
+                response.BadRequest(ctx, "token has already been used", nil)
             case errors.Is(err, service.ErrUserInactive):
-                ctx.JSON(http.StatusBadRequest, gin.H{
-                    "error": gin.H{"message": "user account is inactive"},
-                })
+                response.BadRequest(ctx, "user account is inactive", nil)
             default:
-                ctx.JSON(http.StatusInternalServerError, gin.H{
-                    "error": gin.H{"message": "internal server error"},
-                })
+                slog.Error("password reset failed", "error", err)
+                response.InternalError(ctx)
             }
             return
         }

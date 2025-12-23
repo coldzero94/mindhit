@@ -279,16 +279,21 @@ go build ./...
 - [ ] **Session 컨트롤러 작성**
   - [ ] `internal/api/controller/session_controller.go`
 
+    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
+
     ```go
     package controller
 
     import (
         "errors"
+        "log/slog"
         "net/http"
 
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
+        "github.com/mindhit/api/pkg/api/response"
         "github.com/mindhit/api/pkg/infra/middleware"
         "github.com/mindhit/api/pkg/service"
     )
@@ -304,17 +309,14 @@ go build ./...
     func (c *SessionController) Start(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         session, err := c.sessionService.Start(ctx.Request.Context(), userID)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to create session"},
-            })
+            slog.Error("failed to create session", "error", err, "user_id", userID)
+            response.InternalError(ctx)
             return
         }
 
@@ -326,17 +328,13 @@ go build ./...
     func (c *SessionController) Pause(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
@@ -354,17 +352,13 @@ go build ./...
     func (c *SessionController) Resume(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
@@ -382,17 +376,13 @@ go build ./...
     func (c *SessionController) Stop(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
@@ -410,17 +400,13 @@ go build ./...
     func (c *SessionController) Get(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
@@ -438,9 +424,7 @@ go build ./...
     func (c *SessionController) List(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
@@ -450,9 +434,8 @@ go build ./...
 
         sessions, err := c.sessionService.ListByUser(ctx.Request.Context(), userID, limit, offset)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to list sessions"},
-            })
+            slog.Error("failed to list sessions", "error", err, "user_id", userID)
+            response.InternalError(ctx)
             return
         }
 
@@ -474,25 +457,19 @@ go build ./...
     func (c *SessionController) Update(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
         var req UpdateSessionRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid request body"},
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
@@ -510,17 +487,13 @@ go build ./...
     func (c *SessionController) Delete(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("id"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
@@ -536,31 +509,24 @@ go build ./...
     func (c *SessionController) handleError(ctx *gin.Context, err error) {
         switch {
         case errors.Is(err, service.ErrSessionNotFound):
-            ctx.JSON(http.StatusNotFound, gin.H{
-                "error": gin.H{"message": "session not found"},
-            })
+            response.NotFound(ctx, "session not found")
         case errors.Is(err, service.ErrSessionNotOwned):
-            ctx.JSON(http.StatusForbidden, gin.H{
-                "error": gin.H{"message": "access denied"},
-            })
+            response.Forbidden(ctx, "access denied")
         case errors.Is(err, service.ErrInvalidSessionState):
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session state for this operation"},
-            })
+            response.BadRequest(ctx, "invalid session state for this operation", nil)
         default:
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "internal server error"},
-            })
+            slog.Error("session operation failed", "error", err)
+            response.InternalError(ctx)
         }
     }
 
     func mapSession(s *ent.Session) map[string]interface{} {
         result := map[string]interface{}{
-            "id":            s.ID.String(),
-            "sessionStatus": string(s.SessionStatus),
-            "startedAt":     s.StartedAt,
-            "createdAt":     s.CreatedAt,
-            "updatedAt":     s.UpdatedAt,
+            "id":             s.ID.String(),
+            "session_status": string(s.SessionStatus),
+            "started_at":     s.StartedAt,
+            "created_at":     s.CreatedAt,
+            "updated_at":     s.UpdatedAt,
         }
         if s.Title != nil {
             result["title"] = *s.Title
@@ -569,7 +535,7 @@ go build ./...
             result["description"] = *s.Description
         }
         if s.EndedAt != nil {
-            result["endedAt"] = *s.EndedAt
+            result["ended_at"] = *s.EndedAt
         }
         return result
     }

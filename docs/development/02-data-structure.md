@@ -93,7 +93,7 @@ CREATE TABLE page_visits (
   url_id INTEGER NOT NULL REFERENCES urls(id),
   tab_id INTEGER,
 
-  visited_at TIMESTAMPTZ NOT NULL,    -- 방문 시작 시간
+  entered_at TIMESTAMPTZ NOT NULL,    -- 방문 시작 시간
   left_at TIMESTAMPTZ,                -- 페이지 이탈 시간
   duration_ms INTEGER,                -- 체류 시간 (ms)
   is_focused BOOLEAN DEFAULT true,    -- 창 포커스 여부
@@ -369,7 +369,7 @@ erDiagram
         uuid session_id FK
         integer url_id FK
         integer tab_id
-        timestamp visited_at
+        timestamp entered_at
         timestamp left_at
         integer duration_ms
         boolean is_focused
@@ -523,7 +523,7 @@ interface SessionListResponse {
     total: number;
     page: number;
     limit: number;
-    hasNext: boolean;
+    has_next: boolean;
   };
 }
 
@@ -531,11 +531,11 @@ interface SessionSummary {
   id: string;
   title: string | null;
   status: SessionStatus;
-  startedAt: string;           // ISO 8601
-  endedAt: string | null;
-  totalDurationMs: number;
-  pageCount: number;
-  topKeywords: string[];
+  started_at: string;           // ISO 8601
+  ended_at: string | null;
+  total_duration_ms: number;
+  page_count: number;
+  top_keywords: string[];
 }
 ```
 
@@ -547,10 +547,10 @@ interface SessionDetailResponse {
     id: string;
     title: string | null;
     status: SessionStatus;
-    startedAt: string;
-    endedAt: string | null;
+    started_at: string;
+    ended_at: string | null;
   };
-  pageVisits: PageVisitItem[];
+  page_visits: PageVisitItem[];
   highlights: HighlightItem[];
 }
 
@@ -562,17 +562,17 @@ interface PageVisitItem {
   favicon: string | null;
   summary: string | null;      // 페이지 요약 (NEW)
   keywords: string[];          // 페이지 키워드 (NEW)
-  visitedAt: string;
-  leftAt: string | null;
-  durationMs: number;
-  isFocused: boolean;
+  entered_at: string;
+  left_at: string | null;
+  duration_ms: number;
+  is_focused: boolean;
 }
 
 interface HighlightItem {
   id: string;
   text: string;
   url: string;
-  createdAt: string;
+  created_at: string;
 }
 ```
 
@@ -582,10 +582,10 @@ interface HighlightItem {
 interface MindmapResponse {
   mindmap: {
     id: string;
-    sessionId: string;
+    session_id: string;
     nodes: MindmapNode[];
     edges: MindmapEdge[];
-    createdAt: string;
+    created_at: string;
   };
 }
 
@@ -594,12 +594,12 @@ interface MindmapNode {
   label: string;
   type: 'root' | 'topic' | 'subtopic' | 'keyword';
   importance: number;          // 0-1
-  relatedPageVisitIds: string[];
+  related_page_visit_ids: string[];
   position: { x: number; y: number };
   metadata: {
-    totalDurationMs: number;
-    highlightCount: number;
-    pageCount: number;
+    total_duration_ms: number;
+    highlight_count: number;
+    page_count: number;
   };
 }
 

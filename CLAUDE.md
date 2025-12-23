@@ -256,3 +256,16 @@ _No known issues._
 - JWT-based (Access Token 15min + Refresh Token 7days)
 - Access Token: API authentication
 - Refresh Token: Token renewal only
+
+### Error Handling
+
+Unified error handling patterns are documented in `docs/development/09-error-handling.md`:
+
+| Section | Scope              | Key Patterns                                        |
+| ------- | ------------------ | --------------------------------------------------- |
+| 1-9     | Backend (Go)       | Error types, HTTP responses, logging, worker errors |
+| 10      | Frontend (Next.js) | Axios interceptor, Toast messages, Error Boundary   |
+| 11      | Extension (Chrome) | chrome.runtime.lastError, offline handling          |
+| 12      | AI                 | Provider errors, token limits, retry strategies     |
+
+All phase documents reference this central guide for consistency.

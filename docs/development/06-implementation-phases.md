@@ -19,10 +19,12 @@
 | 6 | [Worker 및 Job Queue](./phases/phase-6-worker.md) | Asynq + Redis 비동기 작업 |
 | 7 | [Next.js 웹앱](./phases/phase-7-webapp.md) | 웹 프론트엔드 |
 | 8 | [Chrome Extension](./phases/phase-8-extension.md) | 브라우저 확장 프로그램 |
-| 9 | [AI 마인드맵](./phases/phase-9-ai.md) | 다중 AI Provider, Worker 연동 |
-| 10 | [웹앱 대시보드](./phases/phase-10-dashboard.md) | 마인드맵 시각화 |
-| 11 | [모니터링 시스템](./phases/phase-11-monitoring.md) | 알림, 로깅 |
-| 12 | [배포 및 운영](./phases/phase-12-deployment.md) | Terraform, EKS, CI/CD |
+| 9 | [플랜 및 사용량 시스템](./phases/phase-9-plan-usage.md) | 구독 플랜, 토큰 사용량 추적 |
+| 10 | [AI 마인드맵](./phases/phase-10-ai.md) | 다중 AI Provider, Worker 연동 |
+| 11 | [웹앱 대시보드](./phases/phase-11-dashboard.md) | 마인드맵 시각화 |
+| 12 | [모니터링 시스템](./phases/phase-12-monitoring.md) | 알림, 로깅 |
+| 13 | [배포 및 운영](./phases/phase-13-deployment.md) | Terraform, EKS, CI/CD |
+| 14 | [Stripe 결제 연동](./phases/phase-14-billing.md) | 결제 시스템 |
 
 ## 아키텍처 개요
 

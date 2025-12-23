@@ -268,6 +268,12 @@ go build ./cmd/worker
 
 ## Step 6.2: Job 정의 및 Handler 구현
 
+> **에러 처리 가이드**: Worker 에러 처리 패턴은 [09-error-handling.md#7 Worker 에러 처리](../09-error-handling.md#7-worker-에러-처리)를 참조하세요.
+>
+> - `asynq.SkipRetry`로 재시도 불가 에러 표시
+> - 구조화된 `slog` 로깅으로 작업 추적
+> - 지수 백오프 재시도 전략
+
 ### 체크리스트
 
 - [ ] **Task 타입 정의**

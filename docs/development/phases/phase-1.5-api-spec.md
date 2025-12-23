@@ -243,7 +243,9 @@ packages/protocol/
     model User {
       id: string;
       email: string;
+      @encodedName("application/json", "created_at")
       createdAt: utcDateTime;
+      @encodedName("application/json", "updated_at")
       updatedAt: utcDateTime;
     }
 

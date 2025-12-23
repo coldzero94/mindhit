@@ -140,150 +140,35 @@ curl http://localhost:8080/metrics | head -20
 
 ## Step 5.2: 로깅 설정
 
+> **상세 가이드**: 로깅 및 에러 처리 전체 가이드는 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
+> 이 Step에서는 해당 가이드의 로깅 관련 섹션을 구현합니다.
+
 ### 체크리스트
 
 - [ ] **Logger 패키지 작성**
   - [ ] `pkg/infra/logger/logger.go`
-
-    ```go
-    package logger
-
-    import (
-        "context"
-        "log/slog"
-        "os"
-    )
-
-    type contextKey string
-
-    const (
-        RequestIDKey contextKey = "request_id"
-        UserIDKey    contextKey = "user_id"
-    )
-
-    // Setup initializes the default logger
-    func Setup(environment string) {
-        var handler slog.Handler
-
-        opts := &slog.HandlerOptions{
-            Level: slog.LevelInfo,
-        }
-
-        if environment == "development" {
-            opts.Level = slog.LevelDebug
-            handler = slog.NewTextHandler(os.Stdout, opts)
-        } else {
-            handler = slog.NewJSONHandler(os.Stdout, opts)
-        }
-
-        slog.SetDefault(slog.New(handler))
-    }
-
-    // WithContext creates a logger with context values
-    func WithContext(ctx context.Context) *slog.Logger {
-        logger := slog.Default()
-
-        if requestID, ok := ctx.Value(RequestIDKey).(string); ok {
-            logger = logger.With("request_id", requestID)
-        }
-
-        if userID, ok := ctx.Value(UserIDKey).(string); ok {
-            logger = logger.With("user_id", userID)
-        }
-
-        return logger
-    }
-
-    // Info logs at info level
-    func Info(msg string, args ...any) {
-        slog.Info(msg, args...)
-    }
-
-    // Error logs at error level
-    func Error(msg string, args ...any) {
-        slog.Error(msg, args...)
-    }
-
-    // Debug logs at debug level
-    func Debug(msg string, args ...any) {
-        slog.Debug(msg, args...)
-    }
-
-    // Warn logs at warn level
-    func Warn(msg string, args ...any) {
-        slog.Warn(msg, args...)
-    }
-    ```
+  - 상세 코드: [09-error-handling.md#3.3 로거 초기화](../09-error-handling.md#33-로거-초기화)
 
 - [ ] **Request ID 미들웨어**
   - [ ] `pkg/infra/middleware/request_id.go`
+  - 상세 코드: [09-error-handling.md#4.1 미들웨어](../09-error-handling.md#41-미들웨어)
 
-    ```go
-    package middleware
+- [ ] **HTTP 로깅 미들웨어**
+  - [ ] `pkg/infra/middleware/logging.go`
+  - 상세 코드: [09-error-handling.md#5 HTTP 로깅 미들웨어](../09-error-handling.md#5-http-로깅-미들웨어)
 
-    import (
-        "context"
+- [ ] **에러 응답 헬퍼**
+  - [ ] `pkg/api/response/error.go`
+  - 상세 코드: [09-error-handling.md#2.3 응답 헬퍼](../09-error-handling.md#23-응답-헬퍼)
 
-        "github.com/gin-gonic/gin"
-        "github.com/google/uuid"
+### 구현 요약
 
-        "github.com/mindhit/api/pkg/infra/logger"
-    )
-
-    const RequestIDHeader = "X-Request-ID"
-
-    func RequestID() gin.HandlerFunc {
-        return func(c *gin.Context) {
-            requestID := c.GetHeader(RequestIDHeader)
-            if requestID == "" {
-                requestID = uuid.New().String()
-            }
-
-            c.Header(RequestIDHeader, requestID)
-            ctx := context.WithValue(c.Request.Context(), logger.RequestIDKey, requestID)
-            c.Request = c.Request.WithContext(ctx)
-
-            c.Next()
-        }
-    }
-    ```
-
-- [ ] **로깅 미들웨어 업데이트**
-
-  ```go
-  func Logging() gin.HandlerFunc {
-      return func(c *gin.Context) {
-          start := time.Now()
-          path := c.Request.URL.Path
-          query := c.Request.URL.RawQuery
-
-          c.Next()
-
-          latency := time.Since(start)
-          status := c.Writer.Status()
-
-          log := logger.WithContext(c.Request.Context())
-
-          attrs := []any{
-              "method", c.Request.Method,
-              "path", path,
-              "query", query,
-              "status", status,
-              "latency_ms", latency.Milliseconds(),
-              "ip", c.ClientIP(),
-              "user_agent", c.Request.UserAgent(),
-          }
-
-          if status >= 500 {
-              log.Error("request completed", attrs...)
-          } else if status >= 400 {
-              log.Warn("request completed", attrs...)
-          } else {
-              log.Info("request completed", attrs...)
-          }
-      }
-  }
-  ```
+| 파일 | 설명 |
+|------|------|
+| `pkg/infra/logger/logger.go` | slog 기반 로거 초기화 (환경별 핸들러) |
+| `pkg/infra/middleware/request_id.go` | Request ID 생성 및 전파 |
+| `pkg/infra/middleware/logging.go` | HTTP 요청/응답 로깅 |
+| `pkg/api/response/error.go` | 표준 에러 응답 헬퍼 |
 
 ### 검증
 
@@ -295,6 +180,10 @@ ENVIRONMENT=development go run ./cmd/server
 # 프로덕션 환경
 ENVIRONMENT=production go run ./cmd/server
 # JSON 로그 출력
+
+# Request ID 확인
+curl -i http://localhost:8080/v1/health
+# X-Request-ID 헤더 포함 확인
 ```
 
 ---

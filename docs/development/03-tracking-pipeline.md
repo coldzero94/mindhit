@@ -407,138 +407,209 @@ class BatchSender {
 
 ## 4. Server 이벤트 처리
 
+> Go + Gin + Ent 기반 이벤트 수신 및 처리
+
 ### 4.1 이벤트 수신 및 URL 처리
 
-```typescript
-// services/event-ingest.ts
+```go
+// internal/api/controller/event_controller.go
+package controller
 
-async function ingestBatch(sessionId: string, events: TrackingEvent[]) {
-  // 1. NAV_COMMITTED 이벤트에서 URL 및 콘텐츠 처리
-  const navEvents = events.filter(e => e.type === 'NAV_COMMITTED');
+import (
+    "github.com/gin-gonic/gin"
+    "github.com/google/uuid"
+    "github.com/mindhit/backend/pkg/service"
+)
 
-  for (const event of navEvents) {
-    const urlId = await processUrlWithContent(
-      event.url!,
-      event.payload?.content,
-      event.payload?.extractionOk,
-      event.payload?.meta
-    );
-    event.urlId = urlId;
-  }
+type EventController struct {
+    eventService *service.EventService
+}
 
-  // 2. raw_events bulk insert (멱등성: ON CONFLICT DO NOTHING)
-  await prisma.$executeRaw`
-    INSERT INTO raw_events (session_id, seq, t, type, tab_id, url_id, payload)
-    SELECT * FROM UNNEST(...)
-    ON CONFLICT (session_id, seq) DO NOTHING
-  `;
+type BatchRequest struct {
+    Events []TrackingEvent `json:"events"`
+}
 
-  // 3. page_visits 생성/업데이트
-  await updatePageVisits(sessionId, events);
+func (c *EventController) IngestBatch(ctx *gin.Context) {
+    sessionID, _ := uuid.Parse(ctx.Param("sessionId"))
 
-  return { ackedSeq: Math.max(...events.map(e => e.seq)) };
+    var req BatchRequest
+    if err := ctx.ShouldBindJSON(&req); err != nil {
+        ctx.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+
+    ackedSeq, err := c.eventService.IngestBatch(ctx, sessionID, req.Events)
+    if err != nil {
+        ctx.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+
+    ctx.JSON(200, gin.H{"ackedSeq": ackedSeq})
+}
+```
+
+```go
+// pkg/service/event_service.go
+package service
+
+import (
+    "context"
+
+    "github.com/google/uuid"
+    "github.com/mindhit/backend/pkg/ent"
+)
+
+type EventService struct {
+    db         *ent.Client
+    urlService *URLService
+}
+
+func (s *EventService) IngestBatch(ctx context.Context, sessionID uuid.UUID, events []TrackingEvent) (int, error) {
+    // 1. NAV_COMMITTED 이벤트에서 URL 및 콘텐츠 처리
+    for i, event := range events {
+        if event.Type == "NAV_COMMITTED" {
+            urlID, err := s.urlService.ProcessWithContent(ctx, event.URL, event.Payload)
+            if err != nil {
+                return 0, err
+            }
+            events[i].URLID = urlID
+        }
+    }
+
+    // 2. raw_events bulk insert (멱등성: ON CONFLICT DO NOTHING)
+    if err := s.bulkInsertRawEvents(ctx, sessionID, events); err != nil {
+        return 0, err
+    }
+
+    // 3. page_visits 생성/업데이트
+    if err := s.updatePageVisits(ctx, sessionID, events); err != nil {
+        return 0, err
+    }
+
+    // 최대 seq 반환
+    maxSeq := 0
+    for _, e := range events {
+        if e.Seq > maxSeq {
+            maxSeq = e.Seq
+        }
+    }
+    return maxSeq, nil
 }
 ```
 
 ### 4.2 URL 및 콘텐츠 처리
 
-```typescript
-// services/url-service.ts
+```go
+// pkg/service/url_service.go (ProcessWithContent 메서드)
 
-async function processUrlWithContent(
-  url: string,
-  content?: string,
-  extractionOk?: boolean,
-  meta?: PageMeta
-): Promise<number> {
-  const normalized = normalizeUrl(url);
-  const hash = hashUrl(normalized);
+func (s *URLService) ProcessWithContent(ctx context.Context, rawURL string, payload *EventPayload) (int, error) {
+    normalized := normalizeURL(rawURL)
+    hash := hashURL(normalized)
 
-  // 1. 기존 URL 조회
-  const existing = await prisma.urls.findUnique({
-    where: { url_hash: hash },
-  });
+    // 1. 기존 URL 조회
+    existing, err := s.db.URL.Query().
+        Where(url.URLHash(hash)).
+        Only(ctx)
 
-  if (existing) {
-    // 이미 있으면 ID만 반환 (콘텐츠/요약 재사용)
-    // 콘텐츠가 없고 새로 추출 성공했으면 업데이트
-    if (!existing.content && extractionOk && content) {
-      await prisma.urls.update({
-        where: { id: existing.id },
-        data: {
-          content,
-          content_status: 'extracted',
-          title: meta?.title,
-        },
-      });
+    if err == nil {
+        // 이미 있으면 ID만 반환 (콘텐츠/요약 재사용)
+        // 콘텐츠가 없고 새로 추출 성공했으면 업데이트
+        if existing.Content == "" && payload != nil && payload.ExtractionOk && payload.Content != "" {
+            s.db.URL.UpdateOneID(existing.ID).
+                SetContent(payload.Content).
+                SetContentStatus("extracted").
+                SetNillableTitle(payload.Meta.Title).
+                Exec(ctx)
+        }
+        return existing.ID, nil
     }
-    return existing.id;
-  }
 
-  // 2. 새 URL 생성
-  const newUrl = await prisma.urls.create({
-    data: {
-      url_hash: hash,
-      url,
-      domain: new URL(url).hostname,
-      title: meta?.title,
-      content: extractionOk ? content : null,
-      content_status: extractionOk ? 'extracted' : 'pending',
-    },
-  });
+    // 2. 새 URL 생성
+    contentStatus := "pending"
+    content := ""
+    if payload != nil && payload.ExtractionOk {
+        contentStatus = "extracted"
+        content = payload.Content
+    }
 
-  // 3. 추출 실패 시 크롤링 큐에 추가
-  if (!extractionOk) {
-    await crawlQueue.add({ urlId: newUrl.id, url });
-  }
+    parsedURL, _ := neturl.Parse(rawURL)
+    newURL, err := s.db.URL.Create().
+        SetURLHash(hash).
+        SetURL(rawURL).
+        SetDomain(parsedURL.Hostname()).
+        SetNillableTitle(getTitle(payload)).
+        SetContent(content).
+        SetContentStatus(contentStatus).
+        Save(ctx)
 
-  return newUrl.id;
+    if err != nil {
+        return 0, err
+    }
+
+    // 3. 추출 실패 시 크롤링 큐에 추가
+    if contentStatus == "pending" {
+        s.queueClient.Enqueue(tasks.TaskCrawlURL, &tasks.CrawlPayload{
+            URLID: newURL.ID,
+            URL:   rawURL,
+        })
+    }
+
+    return newURL.ID, nil
 }
 ```
 
 ### 4.3 Page Visits 처리
 
-```typescript
-// services/page-visit-service.ts
+```go
+// pkg/service/event_service.go (updatePageVisits 메서드)
 
-async function updatePageVisits(sessionId: string, events: TrackingEvent[]) {
-  // 이벤트 순서대로 처리하면서 page_visits 생성
-  // TAB_ACTIVATED, NAV_COMMITTED → 새 visit 시작
-  // 다음 이벤트 시간 - 현재 이벤트 시간 = 체류시간
+func (s *EventService) updatePageVisits(ctx context.Context, sessionID uuid.UUID, events []TrackingEvent) error {
+    // NAV_COMMITTED 이벤트만 필터링
+    var navEvents []TrackingEvent
+    for _, e := range events {
+        if e.Type == "NAV_COMMITTED" {
+            navEvents = append(navEvents, e)
+        }
+    }
 
-  const navEvents = events
-    .filter(e => e.type === 'NAV_COMMITTED')
-    .sort((a, b) => a.seq - b.seq);
+    // seq 순으로 정렬
+    sort.Slice(navEvents, func(i, j int) bool {
+        return navEvents[i].Seq < navEvents[j].Seq
+    })
 
-  for (let i = 0; i < navEvents.length; i++) {
-    const current = navEvents[i];
-    const next = navEvents[i + 1];
+    for i, current := range navEvents {
+        var durationMs *int
+        var leftAt *time.Time
 
-    const durationMs = next ? next.t - current.t : null;
+        if i+1 < len(navEvents) {
+            next := navEvents[i+1]
+            d := int(next.Timestamp - current.Timestamp)
+            durationMs = &d
+            t := time.UnixMilli(next.Timestamp)
+            leftAt = &t
+        }
 
-    await prisma.pageVisit.upsert({
-      where: {
-        session_id_url_id_visited_at: {
-          session_id: sessionId,
-          url_id: current.urlId!,
-          visited_at: new Date(current.t),
-        },
-      },
-      create: {
-        session_id: sessionId,
-        url_id: current.urlId!,
-        tab_id: current.tabId,
-        visited_at: new Date(current.t),
-        left_at: next ? new Date(next.t) : null,
-        duration_ms: durationMs,
-        visit_order: current.seq,
-      },
-      update: {
-        left_at: next ? new Date(next.t) : null,
-        duration_ms: durationMs,
-      },
-    });
-  }
+        enteredAt := time.UnixMilli(current.Timestamp)
+
+        // Upsert: 존재하면 업데이트, 없으면 생성
+        err := s.db.PageVisit.Create().
+            SetSessionID(sessionID).
+            SetURLID(current.URLID).
+            SetTabID(current.TabID).
+            SetEnteredAt(enteredAt).
+            SetNillableLeftAt(leftAt).
+            SetNillableDurationMs(durationMs).
+            SetVisitOrder(current.Seq).
+            OnConflictColumns(pagevisit.FieldSessionID, pagevisit.FieldURLID, pagevisit.FieldEnteredAt).
+            UpdateNewValues().
+            Exec(ctx)
+
+        if err != nil {
+            return err
+        }
+    }
+
+    return nil
 }
 ```
 

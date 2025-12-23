@@ -441,15 +441,20 @@ go build ./...
 - [ ] **Event 컨트롤러 작성**
   - [ ] `internal/api/controller/event_controller.go`
 
+    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
+
     ```go
     package controller
 
     import (
+        "log/slog"
         "net/http"
 
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
+        "github.com/mindhit/api/pkg/api/response"
         "github.com/mindhit/api/pkg/infra/middleware"
         "github.com/mindhit/api/pkg/service"
     )
@@ -476,49 +481,37 @@ go build ./...
     func (c *EventController) BatchEvents(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("sessionId"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
         // Verify session ownership
         _, err = c.sessionService.Get(ctx.Request.Context(), sessionID, userID)
         if err != nil {
-            ctx.JSON(http.StatusForbidden, gin.H{
-                "error": gin.H{"message": "session not found or access denied"},
-            })
+            response.Forbidden(ctx, "session not found or access denied")
             return
         }
 
         var req BatchEventsRequest
         if err := ctx.ShouldBindJSON(&req); err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": err.Error()},
-            })
+            response.BadRequest(ctx, "invalid request body", gin.H{"validation": err.Error()})
             return
         }
 
         if len(req.Events) == 0 {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "no events provided"},
-            })
+            response.BadRequest(ctx, "no events provided", nil)
             return
         }
 
         // Limit batch size
         if len(req.Events) > 200 {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "too many events in batch (max 200)"},
-            })
+            response.BadRequest(ctx, "too many events in batch (max 200)", nil)
             return
         }
 
@@ -528,9 +521,8 @@ go build ./...
             req.Events,
         )
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to process events"},
-            })
+            slog.Error("failed to process events", "error", err, "session_id", sessionID)
+            response.InternalError(ctx)
             return
         }
 
@@ -756,10 +748,10 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
         }
 
         return map[string]interface{}{
-            "total_events":    totalEvents,
-            "page_visits":     pageVisits,
-            "highlights":      highlights,
-            "unique_urls":     uniqueURLs,
+            "total_events": totalEvents,
+            "page_visits":  pageVisits,
+            "highlights":   highlights,
+            "unique_urls":  uniqueURLs,
         }, nil
     }
     ```
@@ -767,31 +759,27 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 - [ ] **Event 컨트롤러에 조회 엔드포인트 추가**
   - [ ] `internal/api/controller/event_controller.go`에 추가
 
+    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+
     ```go
     // ListEvents retrieves events for a session with optional filtering
     func (c *EventController) ListEvents(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("sessionId"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
         // Verify session ownership
         _, err = c.sessionService.Get(ctx.Request.Context(), sessionID, userID)
         if err != nil {
-            ctx.JSON(http.StatusForbidden, gin.H{
-                "error": gin.H{"message": "session not found or access denied"},
-            })
+            response.Forbidden(ctx, "session not found or access denied")
             return
         }
 
@@ -808,9 +796,8 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
             offset,
         )
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to get events"},
-            })
+            slog.Error("failed to get events", "error", err, "session_id", sessionID)
+            response.InternalError(ctx)
             return
         }
 
@@ -828,34 +815,27 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     func (c *EventController) GetEventStats(ctx *gin.Context) {
         userID, ok := middleware.GetUserID(ctx)
         if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{
-                "error": gin.H{"message": "unauthorized"},
-            })
+            response.Unauthorized(ctx, "unauthorized")
             return
         }
 
         sessionID, err := uuid.Parse(ctx.Param("sessionId"))
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "invalid session id"},
-            })
+            response.BadRequest(ctx, "invalid session id", nil)
             return
         }
 
         // Verify session ownership
         _, err = c.sessionService.Get(ctx.Request.Context(), sessionID, userID)
         if err != nil {
-            ctx.JSON(http.StatusForbidden, gin.H{
-                "error": gin.H{"message": "session not found or access denied"},
-            })
+            response.Forbidden(ctx, "session not found or access denied")
             return
         }
 
         stats, err := c.eventService.GetEventStats(ctx.Request.Context(), sessionID)
         if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{
-                "error": gin.H{"message": "failed to get event stats"},
-            })
+            slog.Error("failed to get event stats", "error", err, "session_id", sessionID)
+            response.InternalError(ctx)
             return
         }
 

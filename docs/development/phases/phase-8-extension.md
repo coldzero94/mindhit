@@ -321,7 +321,9 @@ pnpm build
     import { create } from 'zustand';
     import { persist } from 'zustand/middleware';
 
-    export type SessionStatus = 'idle' | 'recording' | 'paused';
+    // Extension 로컬 상태 (idle: 세션 없음, recording: 기록 중, paused: 일시정지)
+    // Backend 상태: recording, paused, processing, completed, failed
+    export type SessionStatus = 'idle' | 'recording' | 'paused' | 'processing' | 'completed' | 'failed';
 
     interface SessionState {
       sessionId: string | null;
@@ -738,6 +740,14 @@ pnpm build
 
 ## Step 8.3: 인증 연동
 
+> **에러 처리 가이드**: Extension 에러 처리 패턴은
+> [09-error-handling.md#11](../09-error-handling.md#11-extension-에러-처리-chrome-extension)을 참조하세요.
+>
+> - `chrome.runtime.lastError` 처리
+> - Background-Content Script 통신 에러
+> - 오프라인 상태 처리 및 요청 큐잉
+> - Storage 용량 관리
+
 ### 체크리스트
 
 - [ ] **Auth Store**
@@ -922,7 +932,7 @@ pnpm build
 
     export interface PageLeaveEvent extends BaseEvent {
       type: 'page_leave';
-      dwell_time_ms: number;
+      duration_ms: number;
       max_scroll_depth: number;
     }
 
@@ -1208,7 +1218,7 @@ pnpm build
         type: 'page_leave',
         timestamp: Date.now(),
         url: window.location.href,
-        dwell_time_ms: Date.now() - pageEnteredAt,
+        duration_ms: Date.now() - pageEnteredAt,
         max_scroll_depth: maxScrollDepth,
       });
     }
@@ -1558,4 +1568,4 @@ moonx extension:test
 
 ## 다음 Phase
 
-Phase 8 완료 후 [Phase 9: AI 마인드맵](./phase-9-ai.md)으로 진행하세요.
+Phase 8 완료 후 [Phase 9: 플랜 및 사용량 시스템](./phase-9-plan-usage.md)으로 진행하세요.

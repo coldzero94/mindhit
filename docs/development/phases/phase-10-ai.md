@@ -163,6 +163,13 @@ flowchart TB
 
 ## Step 10.1: AI Provider 인터페이스 정의
 
+> **에러 처리 가이드**: AI 에러 처리 패턴은
+> [09-error-handling.md#12](../09-error-handling.md#12-ai-에러-처리)를 참조하세요.
+>
+> - AI Provider 에러 타입 (`ErrRateLimited`, `ErrTokenLimitExceeded` 등)
+> - Worker에서 `asynq.SkipRetry` 활용
+> - Controller에서 AI 에러 응답 처리
+
 ### 체크리스트
 
 - [ ] **공통 타입 정의**
@@ -1429,7 +1436,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
 
         // Build page data with tags
         var pageData strings.Builder
-        dwellTimeMap := make(map[string]int)
+        durationMsMap := make(map[string]int)
 
         for _, pv := range sess.Edges.PageVisits {
             if pv.Edges.URL == nil {
@@ -1437,11 +1444,11 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
             }
             u := pv.Edges.URL
 
-            dwellTime := 0
-            if pv.DwellTimeSeconds != nil {
-                dwellTime = *pv.DwellTimeSeconds
+            durationMs := 0
+            if pv.DurationMs != nil {
+                durationMs = *pv.DurationMs
             }
-            dwellTimeMap[u.ID.String()] = dwellTime
+            durationMsMap[u.ID.String()] = durationMs
 
             pageData.WriteString(fmt.Sprintf(`
 
@@ -1450,14 +1457,14 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
   URL: %s
   태그: [%s]
   요약: %s
-  체류시간: %d초
+  체류시간: %dms
 `,
                 u.ID.String(),
                 u.Title,
                 u.URL,
                 strings.Join(u.Tags, ", "),
                 u.Summary,
-                dwellTime,
+                durationMs,
             ))
         }
 
@@ -1493,7 +1500,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         }
 
         // Convert AI response to mindmap data
-        mindmapData := buildMindmapFromRelationship(aiResp, dwellTimeMap)
+        mindmapData := buildMindmapFromRelationship(aiResp, durationMsMap)
 
         // Convert to JSON for storage
         nodesJSON, _ := json.Marshal(mindmapData.Nodes)
@@ -1532,7 +1539,10 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         return nil
     }
 
-    func buildMindmapFromRelationship(resp RelationshipGraphResponse, dwellTimeMap map[string]int) service.MindmapData {
+    func buildMindmapFromRelationship(
+        resp RelationshipGraphResponse,
+        durationMsMap map[string]int,
+    ) service.MindmapData {
         var nodes []service.MindmapNode
         var edges []service.MindmapEdge
 
@@ -1595,8 +1605,8 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
                 subRadius := 60.0 + float64(j)*15
 
                 size := 15.0
-                if dwell, ok := dwellTimeMap[page.URLID]; ok {
-                    size = math.Min(40, 15+float64(dwell)/20)
+                if durationMs, ok := durationMsMap[page.URLID]; ok {
+                    size = math.Min(40, 15+float64(durationMs)/20000)
                 }
                 size = size * (0.5 + page.Relevance*0.5)
 
