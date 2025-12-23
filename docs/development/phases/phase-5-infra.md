@@ -4,7 +4,7 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | Prometheus 메트릭, 로깅, Makefile 설정 |
+| **목표** | Prometheus 메트릭, 로깅, Moon 태스크 설정 |
 | **선행 조건** | Phase 4 완료 |
 | **예상 소요** | 3 Steps |
 | **결과물** | 모니터링 가능한 서버 인프라 |
@@ -17,7 +17,7 @@
 |------|------|------|
 | 5.1 | Prometheus 메트릭 설정 | ⬜ |
 | 5.2 | 로깅 설정 | ⬜ |
-| 5.3 | Makefile 작성 | ⬜ |
+| 5.3 | Moon 태스크 설정 | ⬜ |
 
 ---
 
@@ -26,6 +26,7 @@
 ### 체크리스트
 
 - [ ] **의존성 추가**
+
   ```bash
   go get github.com/prometheus/client_golang/prometheus
   go get github.com/prometheus/client_golang/prometheus/promhttp
@@ -34,6 +35,7 @@
 
 - [ ] **메트릭 미들웨어 작성**
   - [ ] `internal/infrastructure/middleware/metrics.go`
+
     ```go
     package middleware
 
@@ -119,6 +121,7 @@
     ```
 
 - [ ] **main.go에 메트릭 엔드포인트 추가**
+
   ```go
   import "github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -127,6 +130,7 @@
   ```
 
 ### 검증
+
 ```bash
 curl http://localhost:8080/metrics | head -20
 # mindhit_http_requests_total{...} 등 메트릭 확인
@@ -140,6 +144,7 @@ curl http://localhost:8080/metrics | head -20
 
 - [ ] **Logger 패키지 작성**
   - [ ] `internal/infrastructure/logger/logger.go`
+
     ```go
     package logger
 
@@ -212,6 +217,7 @@ curl http://localhost:8080/metrics | head -20
 
 - [ ] **Request ID 미들웨어**
   - [ ] `internal/infrastructure/middleware/request_id.go`
+
     ```go
     package middleware
 
@@ -243,6 +249,7 @@ curl http://localhost:8080/metrics | head -20
     ```
 
 - [ ] **로깅 미들웨어 업데이트**
+
   ```go
   func Logging() gin.HandlerFunc {
       return func(c *gin.Context) {
@@ -279,6 +286,7 @@ curl http://localhost:8080/metrics | head -20
   ```
 
 ### 검증
+
 ```bash
 # 개발 환경
 ENVIRONMENT=development go run ./cmd/server
@@ -291,105 +299,93 @@ ENVIRONMENT=production go run ./cmd/server
 
 ---
 
-## Step 5.3: Makefile 작성
+## Step 5.3: Moon 태스크 설정
 
 ### 체크리스트
 
-- [ ] **Makefile 작성**
-  - [ ] `apps/api/Makefile`
-    ```makefile
-    .PHONY: dev build test lint run generate generate-api migrate-diff migrate-apply migrate-status docker-up docker-down clean help
+- [ ] **Moon 태스크 업데이트**
+  - [ ] `apps/backend/moon.yml`에 추가
 
-    # Variables
-    BINARY_NAME := server
-    BINARY_PATH := ./bin/$(BINARY_NAME)
-    OPENAPI_SPEC := ../../packages/protocol/tsp-output/openapi/openapi.yaml
+    ```yaml
+    # apps/backend/moon.yml
+    $schema: 'https://moonrepo.dev/schemas/project.json'
 
-    # Default target
-    .DEFAULT_GOAL := help
+    type: application
+    language: go
 
-    ## Development
-    dev: ## Run server in development mode
-    	@go run ./cmd/server
+    tasks:
+      # 개발
+      dev-api:
+        command: air
+        args: [-c, .air.api.toml]
+        env:
+          ENVIRONMENT: local
 
-    run: build ## Build and run server
-    	@$(BINARY_PATH)
+      dev-worker:
+        command: air
+        args: [-c, .air.worker.toml]
+        env:
+          ENVIRONMENT: local
 
-    ## Build
-    build: ## Build the binary
-    	@echo "Building..."
-    	@go build -o $(BINARY_PATH) ./cmd/server
+      # 빌드
+      build-api:
+        command: go
+        args: [build, -o, bin/api, ./cmd/api]
 
-    build-linux: ## Build for Linux
-    	@GOOS=linux GOARCH=amd64 go build -o $(BINARY_PATH)-linux ./cmd/server
+      build-worker:
+        command: go
+        args: [build, -o, bin/worker, ./cmd/worker]
 
-    ## Test
-    test: ## Run tests
-    	@go test -v -race -coverprofile=coverage.out ./...
+      # 테스트
+      test:
+        command: go
+        args: [test, -v, -race, -coverprofile=coverage.out, ./...]
 
-    test-coverage: test ## Run tests with coverage report
-    	@go tool cover -html=coverage.out -o coverage.html
-    	@echo "Coverage report: coverage.html"
+      test-coverage:
+        command: bash
+        args: [-c, "go test -v -race -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html"]
+        deps: [test]
 
-    ## Lint
-    lint: ## Run linter
-    	@golangci-lint run
+      # 린트
+      lint:
+        command: golangci-lint
+        args: [run, ./...]
 
-    lint-fix: ## Run linter with auto-fix
-    	@golangci-lint run --fix
+      lint-fix:
+        command: golangci-lint
+        args: [run, --fix, ./...]
 
-    ## Code Generation
-    generate: ## Generate Ent code
-    	@go generate ./ent
+      # 코드 생성
+      generate:
+        command: go
+        args: [generate, ./ent]
 
-    generate-api: ## Generate API code from OpenAPI spec
-    	@oapi-codegen -config oapi-codegen.yaml $(OPENAPI_SPEC)
+      generate-api:
+        command: oapi-codegen
+        args: [-config, oapi-codegen.yaml, ../../packages/protocol/tsp-output/openapi/openapi.yaml]
 
-    generate-all: generate generate-api ## Generate all code
-    	@echo "All code generated"
+      # DB 마이그레이션
+      migrate:
+        command: atlas
+        args: [migrate, apply, --env, local]
 
-    ## Database Migration
-    migrate-diff: ## Create migration diff (usage: make migrate-diff name=migration_name)
-    	@atlas migrate diff $(name) \
-    		--dir "file://ent/migrate/migrations" \
-    		--to "ent://ent/schema" \
-    		--dev-url "$(DEV_DATABASE_URL)"
+      migrate-diff:
+        command: atlas
+        args: [migrate, diff, --env, local]
 
-    migrate-apply: ## Apply migrations
-    	@atlas migrate apply \
-    		--dir "file://ent/migrate/migrations" \
-    		--url "$(DATABASE_URL)"
+      migrate-status:
+        command: atlas
+        args: [migrate, status, --env, local]
 
-    migrate-status: ## Check migration status
-    	@atlas migrate status \
-    		--dir "file://ent/migrate/migrations" \
-    		--url "$(DATABASE_URL)"
-
-    ## Docker
-    docker-up: ## Start Docker containers
-    	@docker-compose up -d
-
-    docker-down: ## Stop Docker containers
-    	@docker-compose down
-
-    docker-logs: ## Show Docker logs
-    	@docker-compose logs -f
-
-    ## Cleanup
-    clean: ## Clean build artifacts
-    	@rm -rf bin/
-    	@rm -f coverage.out coverage.html
-
-    ## Help
-    help: ## Show this help
-    	@echo "Usage: make [target]"
-    	@echo ""
-    	@echo "Targets:"
-    	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+      # 클린업
+      clean:
+        command: rm
+        args: [-rf, bin/, coverage.out, coverage.html]
     ```
 
 - [ ] **환경 변수 문서화**
   - [ ] `apps/api/.env.example` 업데이트
+
     ```
     # Server
     PORT=8080
@@ -410,14 +406,17 @@ ENVIRONMENT=production go run ./cmd/server
     ```
 
 ### 검증
-```bash
-cd apps/api
-make help
-# 사용 가능한 명령어 목록 출력
 
-make build
-make test
-make lint
+```bash
+# 테스트
+moon run backend:test
+
+# 빌드
+moon run backend:build-api
+moon run backend:build-worker
+
+# 린트
+moon run backend:lint
 ```
 
 ---
@@ -429,19 +428,34 @@ make lint
 - [ ] `/metrics` 엔드포인트 동작
 - [ ] 구조화된 로그 출력
 - [ ] Request ID 헤더 추가됨
-- [ ] `make help` 명령어 동작
+- [ ] Moon 태스크 동작 (`moon run backend:test`)
+
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 검증 방법 |
+| ----------- | ---- | --------- |
+| 통합 테스트 | 메트릭 엔드포인트 | `curl /metrics` 응답 확인 |
+| 통합 테스트 | Request ID 미들웨어 | 응답 헤더에 X-Request-ID 포함 확인 |
+| 회귀 테스트 | 기존 테스트 통과 | `moon run backend:test` |
+
+```bash
+# Phase 5 완료 후 전체 테스트 실행
+moon run backend:test
+```
+
+> **Note**: Phase 5는 인프라 설정 위주이므로 기존 테스트가 깨지지 않는 것이 중요합니다.
 
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
 | 로거 | `internal/infrastructure/logger/logger.go` |
 | Request ID | `internal/infrastructure/middleware/request_id.go` |
-| Makefile | `apps/api/Makefile` |
+| Moon 태스크 | `apps/backend/moon.yml` |
 
 ---
 
 ## 다음 Phase
 
-Phase 5 완료 후 [Phase 6: 스케줄러](./phase-6-scheduler.md)로 진행하세요.
+Phase 5 완료 후 [Phase 6: Worker 및 Job Queue](./phase-6-worker.md)로 진행하세요.

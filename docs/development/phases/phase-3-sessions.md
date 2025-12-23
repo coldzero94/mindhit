@@ -11,6 +11,35 @@
 
 ---
 
+## 아키텍처
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: POST /sessions (start)
+    ACTIVE --> PAUSED: PUT /sessions/:id/pause
+    PAUSED --> ACTIVE: PUT /sessions/:id/resume
+    ACTIVE --> STOPPED: PUT /sessions/:id/stop
+    PAUSED --> STOPPED: PUT /sessions/:id/stop
+    STOPPED --> [*]
+
+    note right of ACTIVE
+        세션 활성 상태
+        이벤트 수집 가능
+    end note
+
+    note right of PAUSED
+        일시 정지 상태
+        이벤트 수집 중단
+    end note
+
+    note right of STOPPED
+        종료 상태
+        마인드맵 생성 트리거
+    end note
+```
+
+---
+
 ## 진행 상황
 
 | Step | 이름 | 상태 |
@@ -24,12 +53,14 @@
 ## Step 3.1: Session 서비스 구현
 
 ### 목표
+
 세션 생성, 상태 변경, 조회 비즈니스 로직
 
 ### 체크리스트
 
 - [ ] **Session 서비스 작성**
   - [ ] `internal/service/session_service.go`
+
     ```go
     package service
 
@@ -229,6 +260,7 @@
     ```
 
 ### 검증
+
 ```bash
 go build ./...
 # 컴파일 에러 없음
@@ -239,12 +271,14 @@ go build ./...
 ## Step 3.2: Session 컨트롤러 구현
 
 ### 목표
+
 세션 API 엔드포인트 구현
 
 ### 체크리스트
 
 - [ ] **Session 컨트롤러 작성**
   - [ ] `internal/controller/session_controller.go`
+
     ```go
     package controller
 
@@ -549,6 +583,7 @@ go build ./...
     ```
 
 - [ ] **main.go에 라우트 추가**
+
   ```go
   // Session routes (protected)
   sessionController := controller.NewSessionController(sessionService)
@@ -568,6 +603,7 @@ go build ./...
   ```
 
 ### 검증
+
 ```bash
 # 서버 실행
 go run ./cmd/server
@@ -587,11 +623,13 @@ curl -X POST http://localhost:8080/v1/sessions/start \
 ## Step 3.3: Session API 테스트
 
 ### 목표
+
 E2E 테스트로 전체 플로우 검증
 
 ### 체크리스트
 
 - [ ] **E2E 테스트 시나리오**
+
   ```bash
   # 1. 사용자 생성
   curl -X POST http://localhost:8080/v1/auth/signup \
@@ -641,6 +679,7 @@ E2E 테스트로 전체 플로우 검증
   ```
 
 - [ ] **에러 케이스 테스트**
+
   ```bash
   # 인증 없이 요청
   curl -X POST http://localhost:8080/v1/sessions/start
@@ -666,6 +705,7 @@ E2E 테스트로 전체 플로우 검증
   - [ ] `test/e2e/session_test.go`
 
 ### 검증
+
 모든 테스트 시나리오가 예상대로 동작하는지 확인
 
 ---
@@ -684,12 +724,28 @@ E2E 테스트로 전체 플로우 검증
 - [ ] `DELETE /v1/sessions/:id` - 삭제
 - [ ] 상태 전환 규칙 적용됨
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 파일 |
+| ----------- | ---- | ---- |
+| 단위 테스트 | 세션 CRUD 로직 | `session_service_test.go` |
+| 단위 테스트 | 상태 전환 규칙 | `session_service_test.go` |
+| 통합 테스트 | Session API 엔드포인트 | `session_controller_test.go` |
+
+```bash
+# Phase 3 테스트 실행
+moon run backend:test -- -run "TestSession"
+```
+
+> **Note**: 모든 테스트가 통과해야 Phase 3 완료로 인정됩니다.
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | Session 서비스 | `internal/service/session_service.go` |
 | Session 컨트롤러 | `internal/controller/session_controller.go` |
+| 테스트 | `internal/service/session_service_test.go` |
 
 ---
 

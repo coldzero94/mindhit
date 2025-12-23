@@ -5,9 +5,47 @@
 | 항목 | 내용 |
 |-----|------|
 | **목표** | Next.js 14 App Router 기반 웹앱 기초 구축 |
-| **선행 조건** | Phase 5 완료 |
+| **선행 조건** | Phase 2 (인증), Phase 3 (세션 API), Phase 5 (인프라) 완료 |
 | **예상 소요** | 4 Steps |
 | **결과물** | 인증, 세션 목록 조회 가능한 웹앱 |
+
+---
+
+## 아키텍처
+
+```mermaid
+flowchart TB
+    subgraph Next.js App
+        subgraph Pages
+            LOGIN[/auth/login]
+            DASH[/dashboard]
+            SESS[/sessions]
+            MM[/mindmaps/:id]
+        end
+
+        subgraph Components
+            AUTH[AuthProvider]
+            QUERY[QueryProvider]
+        end
+
+        subgraph State
+            STORE[Zustand Store]
+            CACHE[React Query Cache]
+        end
+    end
+
+    subgraph API Server
+        BACKEND[Go Backend]
+    end
+
+    LOGIN --> AUTH
+    DASH --> QUERY
+    SESS --> QUERY
+    MM --> QUERY
+    AUTH --> STORE
+    QUERY --> CACHE
+    CACHE -->|API Calls| BACKEND
+```
 
 ---
 
@@ -27,12 +65,14 @@
 ### 체크리스트
 
 - [ ] **프로젝트 생성**
+
   ```bash
   cd apps
   pnpm create next-app@latest web --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
   ```
 
 - [ ] **추가 의존성 설치**
+
   ```bash
   cd apps/web
   pnpm add @tanstack/react-query axios zustand
@@ -40,6 +80,7 @@
   ```
 
 - [ ] **shadcn/ui 설정**
+
   ```bash
   pnpm dlx shadcn@latest init
 
@@ -48,6 +89,7 @@
   ```
 
 - [ ] **프로젝트 구조 생성**
+
   ```
   apps/web/
   ├── src/
@@ -90,11 +132,13 @@
 
 - [ ] **환경 변수 설정**
   - [ ] `.env.local`
+
     ```env
     NEXT_PUBLIC_API_URL=http://localhost:8080
     ```
 
 - [ ] **next.config.js 설정**
+
   ```javascript
   /** @type {import('next').NextConfig} */
   const nextConfig = {
@@ -113,6 +157,7 @@
   ```
 
 - [ ] **moon.yml 설정**
+
   ```yaml
   language: typescript
   type: application
@@ -149,6 +194,7 @@
   ```
 
 ### 검증
+
 ```bash
 cd apps/web
 pnpm dev
@@ -163,6 +209,7 @@ pnpm dev
 
 - [ ] **Auth Store (Zustand)**
   - [ ] `src/stores/auth-store.ts`
+
     ```typescript
     import { create } from 'zustand';
     import { persist } from 'zustand/middleware';
@@ -200,6 +247,7 @@ pnpm dev
 
 - [ ] **로그인 폼 컴포넌트**
   - [ ] `src/components/auth/login-form.tsx`
+
     ```tsx
     'use client';
 
@@ -303,6 +351,7 @@ pnpm dev
 
 - [ ] **회원가입 폼 컴포넌트**
   - [ ] `src/components/auth/signup-form.tsx`
+
     ```tsx
     'use client';
 
@@ -424,6 +473,7 @@ pnpm dev
 
 - [ ] **로그인 페이지**
   - [ ] `src/app/(auth)/login/page.tsx`
+
     ```tsx
     import Link from 'next/link';
     import { LoginForm } from '@/components/auth/login-form';
@@ -447,6 +497,7 @@ pnpm dev
 
 - [ ] **회원가입 페이지**
   - [ ] `src/app/(auth)/signup/page.tsx`
+
     ```tsx
     import Link from 'next/link';
     import { SignupForm } from '@/components/auth/signup-form';
@@ -470,6 +521,7 @@ pnpm dev
 
 - [ ] **Auth Layout**
   - [ ] `src/app/(auth)/layout.tsx`
+
     ```tsx
     export default function AuthLayout({
       children,
@@ -485,6 +537,7 @@ pnpm dev
     ```
 
 ### 검증
+
 ```bash
 # 로그인/회원가입 페이지 접속
 open http://localhost:3000/login
@@ -498,6 +551,7 @@ open http://localhost:3000/signup
 ### 체크리스트
 
 - [ ] **OpenAPI 타입 생성 설정**
+
   ```bash
   # packages/protocol에서 타입 생성
   cd packages/protocol
@@ -510,6 +564,7 @@ open http://localhost:3000/signup
 
 - [ ] **Axios 클라이언트**
   - [ ] `src/lib/api/client.ts`
+
     ```typescript
     import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
     import { useAuthStore } from '@/stores/auth-store';
@@ -560,6 +615,7 @@ open http://localhost:3000/signup
 
 - [ ] **Auth API**
   - [ ] `src/lib/api/auth.ts`
+
     ```typescript
     import { apiClient } from './client';
 
@@ -601,6 +657,7 @@ open http://localhost:3000/signup
 
 - [ ] **Sessions API**
   - [ ] `src/lib/api/sessions.ts`
+
     ```typescript
     import { apiClient } from './client';
 
@@ -695,6 +752,7 @@ open http://localhost:3000/signup
 
 - [ ] **React Query 설정**
   - [ ] `src/lib/hooks/use-sessions.ts`
+
     ```typescript
     import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
     import { sessionsApi, Session, SessionWithDetails } from '@/lib/api/sessions';
@@ -736,6 +794,7 @@ open http://localhost:3000/signup
 
 - [ ] **Providers 설정**
   - [ ] `src/app/providers.tsx`
+
     ```tsx
     'use client';
 
@@ -769,6 +828,7 @@ open http://localhost:3000/signup
 
 - [ ] **Root Layout 업데이트**
   - [ ] `src/app/layout.tsx`
+
     ```tsx
     import type { Metadata } from 'next';
     import { Inter } from 'next/font/google';
@@ -798,6 +858,7 @@ open http://localhost:3000/signup
     ```
 
 ### 검증
+
 ```bash
 # API 연동 테스트 (백엔드 실행 필요)
 # 1. 회원가입 후 로그인
@@ -813,6 +874,7 @@ open http://localhost:3000/signup
 
 - [ ] **Dashboard Layout**
   - [ ] `src/app/(dashboard)/layout.tsx`
+
     ```tsx
     'use client';
 
@@ -875,6 +937,7 @@ open http://localhost:3000/signup
 
 - [ ] **세션 카드 컴포넌트**
   - [ ] `src/components/sessions/session-card.tsx`
+
     ```tsx
     import Link from 'next/link';
     import { formatDistanceToNow } from 'date-fns';
@@ -924,6 +987,7 @@ open http://localhost:3000/signup
 
 - [ ] **세션 목록 컴포넌트**
   - [ ] `src/components/sessions/session-list.tsx`
+
     ```tsx
     'use client';
 
@@ -1006,6 +1070,7 @@ open http://localhost:3000/signup
 
 - [ ] **세션 목록 페이지**
   - [ ] `src/app/(dashboard)/sessions/page.tsx`
+
     ```tsx
     'use client';
 
@@ -1028,6 +1093,7 @@ open http://localhost:3000/signup
 
 - [ ] **세션 상세 페이지 (기본)**
   - [ ] `src/app/(dashboard)/sessions/[id]/page.tsx`
+
     ```tsx
     'use client';
 
@@ -1232,12 +1298,14 @@ open http://localhost:3000/signup
     ```
 
 - [ ] **추가 의존성 설치**
+
   ```bash
   pnpm add date-fns lucide-react
   pnpm dlx shadcn@latest add alert-dialog skeleton badge
   ```
 
 ### 검증
+
 ```bash
 # 세션 목록 페이지 접속
 open http://localhost:3000/sessions
@@ -1263,16 +1331,32 @@ open http://localhost:3000/sessions
 - [ ] 세션 삭제
 - [ ] 페이지네이션 동작
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 도구 |
+| ----------- | ---- | ---- |
+| 컴포넌트 테스트 | Auth 컴포넌트 | Vitest + React Testing Library |
+| 컴포넌트 테스트 | Session 컴포넌트 | Vitest + React Testing Library |
+| E2E 테스트 | 로그인 플로우 | Playwright (Phase 10 이후) |
+
+```bash
+# Phase 7 테스트 실행
+moon run web:test
+```
+
+> **Note**: 웹앱 테스트는 API 서버가 실행 중이어야 합니다 (MSW mock 또는 실제 서버).
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | Next.js 프로젝트 | `apps/web/` |
 | Auth Store | `src/stores/auth-store.ts` |
 | API 클라이언트 | `src/lib/api/` |
 | React Query Hooks | `src/lib/hooks/` |
 | 인증 컴포넌트 | `src/components/auth/` |
 | 세션 컴포넌트 | `src/components/sessions/` |
+| 테스트 | `src/**/*.test.tsx` |
 
 ---
 

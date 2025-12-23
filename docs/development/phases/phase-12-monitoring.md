@@ -1,13 +1,16 @@
-# Phase 11: 모니터링 시스템
+# Phase 12: 프로덕션 모니터링 시스템
 
 ## 개요
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | 시스템 관측 가능성 (Observability) 구축 |
-| **선행 조건** | Phase 5 (인프라) 완료 |
+| **목표** | 프로덕션 레벨 관측 가능성 (Observability) 구축 |
+| **선행 조건** | Phase 11 (대시보드) 완료 |
 | **예상 소요** | 4 Steps |
-| **결과물** | Prometheus + Grafana 기반 모니터링, 로깅, 알림 시스템 |
+| **결과물** | Grafana 대시보드, 중앙 집중 로깅, 알림/온콜 시스템 |
+
+> **Note**: Phase 5에서 기본 Prometheus 메트릭과 구조화된 로깅을 설정했습니다.
+> 이 Phase에서는 프로덕션 환경에서의 모니터링, 대시보드 시각화, 알림 시스템을 구축합니다.
 
 ---
 
@@ -15,21 +18,23 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 11.1 | Prometheus 메트릭 수집 | ⬜ |
-| 11.2 | Grafana 대시보드 구성 | ⬜ |
-| 11.3 | 구조화된 로깅 시스템 | ⬜ |
-| 11.4 | 알림 시스템 구성 | ⬜ |
+| 12.1 | Prometheus 메트릭 수집 | ⬜ |
+| 12.2 | Grafana 대시보드 구성 | ⬜ |
+| 12.3 | 구조화된 로깅 시스템 | ⬜ |
+| 12.4 | 알림 시스템 구성 | ⬜ |
 
 ---
 
-## Step 11.1: Prometheus 메트릭 수집
+## Step 12.1: Prometheus 메트릭 수집
 
 ### 목표
+
 API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
 
 ### 체크리스트
 
 - [ ] **Prometheus 클라이언트 의존성 추가**
+
   ```bash
   cd apps/api
   go get github.com/prometheus/client_golang/prometheus
@@ -39,6 +44,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
 
 - [ ] **메트릭 미들웨어 구현**
   - [ ] `internal/infrastructure/middleware/metrics.go`
+
     ```go
     package middleware
 
@@ -131,6 +137,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
 
 - [ ] **비즈니스 메트릭 정의**
   - [ ] `internal/infrastructure/metrics/business.go`
+
     ```go
     package metrics
 
@@ -254,6 +261,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
     ```
 
 - [ ] **main.go에 메트릭 엔드포인트 추가**
+
   ```go
   import "github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -263,6 +271,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
 
 - [ ] **Docker Compose에 Prometheus 추가**
   - [ ] `docker-compose.monitoring.yml`
+
     ```yaml
     version: '3.8'
 
@@ -293,6 +302,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
 
 - [ ] **Prometheus 설정 파일 생성**
   - [ ] `monitoring/prometheus/prometheus.yml`
+
     ```yaml
     global:
       scrape_interval: 15s
@@ -328,6 +338,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
     ```
 
 ### 검증
+
 ```bash
 # API 서버 실행 후 메트릭 확인
 curl http://localhost:8080/metrics
@@ -338,15 +349,17 @@ curl http://localhost:8080/metrics
 
 ---
 
-## Step 11.2: Grafana 대시보드 구성
+## Step 12.2: Grafana 대시보드 구성
 
 ### 목표
+
 Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 ### 체크리스트
 
 - [ ] **Docker Compose에 Grafana 추가**
   - [ ] `docker-compose.monitoring.yml`에 추가
+
     ```yaml
     grafana:
       image: grafana/grafana:10.2.0
@@ -369,6 +382,7 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 - [ ] **Grafana 데이터소스 자동 설정**
   - [ ] `monitoring/grafana/provisioning/datasources/datasource.yml`
+
     ```yaml
     apiVersion: 1
 
@@ -383,6 +397,7 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 - [ ] **대시보드 자동 프로비저닝**
   - [ ] `monitoring/grafana/provisioning/dashboards/dashboard.yml`
+
     ```yaml
     apiVersion: 1
 
@@ -399,6 +414,7 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 - [ ] **API 서버 대시보드**
   - [ ] `monitoring/grafana/dashboards/api-overview.json`
+
     ```json
     {
       "title": "MindHit API Overview",
@@ -450,6 +466,7 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 - [ ] **세션/비즈니스 메트릭 대시보드**
   - [ ] `monitoring/grafana/dashboards/business-metrics.json`
+
     ```json
     {
       "title": "MindHit Business Metrics",
@@ -508,6 +525,7 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 - [ ] **인프라 대시보드**
   - [ ] `monitoring/grafana/dashboards/infrastructure.json`
+
     ```json
     {
       "title": "MindHit Infrastructure",
@@ -555,6 +573,7 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
     ```
 
 ### 검증
+
 ```bash
 # Grafana 접속
 # http://localhost:3001
@@ -566,15 +585,17 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
 
 ---
 
-## Step 11.3: 구조화된 로깅 시스템
+## Step 12.3: 구조화된 로깅 시스템
 
 ### 목표
+
 JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 
 ### 체크리스트
 
 - [ ] **구조화된 로거 설정**
   - [ ] `internal/infrastructure/logger/logger.go`
+
     ```go
     package logger
 
@@ -646,6 +667,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 
 - [ ] **요청 로깅 미들웨어**
   - [ ] `internal/infrastructure/middleware/logging.go`
+
     ```go
     package middleware
 
@@ -698,6 +720,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 
 - [ ] **로그 집계 (Loki) 설정**
   - [ ] `docker-compose.monitoring.yml`에 추가
+
     ```yaml
     loki:
       image: grafana/loki:2.9.0
@@ -725,6 +748,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 
 - [ ] **Loki 설정**
   - [ ] `monitoring/loki/loki-config.yaml`
+
     ```yaml
     auth_enabled: false
 
@@ -758,6 +782,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 
 - [ ] **Promtail 설정**
   - [ ] `monitoring/promtail/promtail-config.yaml`
+
     ```yaml
     server:
       http_listen_port: 9080
@@ -798,6 +823,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 
 - [ ] **Grafana에 Loki 데이터소스 추가**
   - [ ] `monitoring/grafana/provisioning/datasources/datasource.yml`에 추가
+
     ```yaml
     - name: Loki
       type: loki
@@ -808,6 +834,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
     ```
 
 ### 검증
+
 ```bash
 # 로그 확인 (콘솔)
 docker-compose logs -f api
@@ -819,15 +846,17 @@ docker-compose logs -f api
 
 ---
 
-## Step 11.4: 알림 시스템 구성
+## Step 12.4: 알림 시스템 구성
 
 ### 목표
+
 Alertmanager를 통한 알림 시스템 구축
 
 ### 체크리스트
 
 - [ ] **Prometheus 알림 규칙 정의**
   - [ ] `monitoring/prometheus/alerts.yml`
+
     ```yaml
     groups:
       - name: mindhit-api
@@ -936,6 +965,7 @@ Alertmanager를 통한 알림 시스템 구축
 
 - [ ] **Alertmanager 추가**
   - [ ] `docker-compose.monitoring.yml`에 추가
+
     ```yaml
     alertmanager:
       image: prom/alertmanager:v0.26.0
@@ -954,6 +984,7 @@ Alertmanager를 통한 알림 시스템 구축
 
 - [ ] **Alertmanager 설정**
   - [ ] `monitoring/alertmanager/alertmanager.yml`
+
     ```yaml
     global:
       resolve_timeout: 5m
@@ -999,12 +1030,14 @@ Alertmanager를 통한 알림 시스템 구축
 
 - [ ] **환경 변수 파일 업데이트**
   - [ ] `.env.example`에 추가
+
     ```env
     # Alerting
     SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx
     ```
 
 ### 검증
+
 ```bash
 # Alertmanager UI 확인
 # http://localhost:9093
@@ -1021,7 +1054,7 @@ docker-compose start api
 
 ---
 
-## Phase 11 완료 확인
+## Phase 12 완료 확인
 
 ### 전체 검증 체크리스트
 
@@ -1046,10 +1079,31 @@ docker-compose start api
   - [ ] Alertmanager 실행 중
   - [ ] 테스트 알림 수신
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 검증 방법 |
+| ----------- | ---- | --------- |
+| 통합 테스트 | 메트릭 수집 | Prometheus API 쿼리 |
+| 통합 테스트 | 로그 수집 | Loki API 쿼리 |
+| 알림 테스트 | 알림 규칙 | `amtool check-config` |
+| 회귀 테스트 | 기존 테스트 통과 | `moon run backend:test` |
+
+```bash
+# Phase 12 검증
+# 1. 전체 테스트 통과 확인
+moon run backend:test
+
+# 2. 모니터링 스택 헬스 체크
+curl http://localhost:9090/-/healthy  # Prometheus
+curl http://localhost:3001/api/health # Grafana
+```
+
+> **Note**: Phase 12는 운영 인프라 설정이므로 기능 테스트보다 시스템 헬스 체크가 중요합니다.
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
 | 비즈니스 메트릭 | `internal/infrastructure/metrics/business.go` |
 | 로거 설정 | `internal/infrastructure/logger/logger.go` |
@@ -1083,4 +1137,4 @@ docker-compose start api
 
 ## 다음 Phase
 
-Phase 11 완료 후 [Phase 12: 배포/운영](./phase-12-deployment.md)으로 진행하세요.
+Phase 12 완료 후 [Phase 13: 배포/운영](./phase-13-deployment.md)으로 진행하세요.

@@ -1,13 +1,15 @@
-# Phase 9: AI 마인드맵 생성
+# Phase 10: AI 마인드맵 생성
 
 ## 개요
 
 | 항목 | 내용 |
 |-----|------|
 | **목표** | 다중 AI 프로바이더(OpenAI, Google Gemini, Anthropic Claude)를 지원하는 태그 추출 및 마인드맵 생성 |
-| **선행 조건** | Phase 6 완료 (스케줄러) |
+| **선행 조건** | Phase 9 완료 (플랜 및 사용량 시스템) |
 | **예상 소요** | 5 Steps |
 | **결과물** | 페이지 방문 시 태그 추출, 세션 종료 시 관계도 JSON 생성 |
+
+> **Note**: 이 Phase에서는 Phase 9의 UsageService를 연동하여 AI 호출 시 토큰 사용량을 추적합니다.
 
 ---
 
@@ -18,47 +20,54 @@
 1. **페이지 방문 시**: LLM으로 태그/키워드 추출 (페이지당 1회, 중복 URL은 재사용)
 2. **세션 종료 시**: 추출된 태그들을 기반으로 LLM이 관계도 JSON 생성 (세션당 1회)
 
-### 처리 흐름
+### 처리 흐름 (Asynq Worker 기반)
 
 ```mermaid
 sequenceDiagram
     participant EXT as Extension
     participant API as API Server
+    participant Redis as Redis Queue
+    participant Worker as Asynq Worker
     participant DB as Database
     participant AI as AI Provider
 
-    Note over EXT,AI: 1. 페이지 방문 시 (실시간)
+    Note over EXT,AI: 1. 페이지 방문 시 (비동기 처리)
     EXT->>API: 이벤트 배치 전송 (URL, content)
     API->>DB: URL 중복 체크 (url_hash)
     alt URL이 새로운 경우
-        API->>AI: 태그 추출 요청 (content)
-        AI-->>API: { tags: [...], summary: "..." }
-        API->>DB: urls 테이블에 tags, summary 저장
+        API->>Redis: Enqueue TagExtraction Task
+        Redis->>Worker: Consume Task
+        Worker->>AI: 태그 추출 요청 (content)
+        AI-->>Worker: { tags: [...], summary: "..." }
+        Worker->>DB: urls 테이블에 tags, summary 저장
     else URL이 이미 존재
         API->>DB: 기존 tags 재사용
     end
 
-    Note over EXT,AI: 2. 세션 종료 시 (1회)
+    Note over EXT,AI: 2. 세션 종료 시 (비동기 처리)
     EXT->>API: 세션 Stop 요청
     API->>DB: 세션 상태 → processing
-    API->>DB: 세션의 모든 URL + tags 조회
-    API->>AI: 관계도 생성 요청 (tags 목록)
-    AI-->>API: { nodes: [...], edges: [...] }
-    API->>DB: mindmap_graphs 저장
-    API->>DB: 세션 상태 → completed
+    API->>Redis: Enqueue MindmapGenerate Task
+    Redis->>Worker: Consume Task
+    Worker->>DB: 세션의 모든 URL + tags 조회
+    Worker->>AI: 관계도 생성 요청 (tags 목록)
+    AI-->>Worker: { nodes: [...], edges: [...] }
+    Worker->>DB: mindmap_graphs 저장
+    Worker->>DB: 세션 상태 → completed
 ```
 
 ### 태그 추출 (페이지당)
 
 | 항목 | 설명 |
 |-----|------|
-| **트리거** | 이벤트 배치 수신 시 새로운 URL 감지 |
+| **트리거** | 이벤트 배치 수신 시 새로운 URL 감지 → Asynq Task Enqueue |
 | **입력** | 페이지 제목, 콘텐츠 (최대 10,000자) |
 | **출력** | 3-5개 태그, 1-2문장 요약 |
 | **저장** | `urls.tags`, `urls.summary` |
 | **중복 처리** | url_hash로 중복 체크, 기존 URL은 재처리 안 함 |
 
 **프롬프트 예시:**
+
 ```
 웹 페이지를 분석하고 다음을 추출하세요:
 1. 핵심 태그 3-5개 (한국어, 명사형)
@@ -75,44 +84,17 @@ JSON 형식으로 응답:
 
 | 항목 | 설명 |
 |-----|------|
-| **트리거** | 세션 종료 (Stop) 시 |
+| **트리거** | 세션 종료 (Stop) 시 → Asynq Task Enqueue |
 | **입력** | 세션의 모든 URL + tags + 체류시간 + 하이라이트 |
 | **출력** | 마인드맵 JSON (nodes, edges) |
 | **저장** | `mindmap_graphs` 테이블 |
-
-**프롬프트 예시:**
-```
-브라우징 세션 데이터를 분석하고 마인드맵 구조를 생성하세요.
-
-세션 데이터:
-- URL 1: [태그: AI, 머신러닝] 체류시간: 5분
-- URL 2: [태그: 딥러닝, 신경망] 체류시간: 3분
-- URL 3: [태그: AI, 자연어처리] 체류시간: 8분
-- 하이라이트: "GPT-4는 가장 강력한..."
-
-다음 JSON 형식으로 응답:
-{
-  "core": { "label": "핵심 주제" },
-  "topics": [
-    {
-      "label": "주요 토픽",
-      "subtopics": [
-        { "label": "하위 토픽", "url_ids": ["uuid1"] }
-      ]
-    }
-  ],
-  "connections": [
-    { "from": "토픽1", "to": "토픽2", "reason": "연결 이유" }
-  ]
-}
-```
 
 ### 비용 최적화
 
 | 전략 | 설명 |
 |-----|------|
 | **URL 중복 제거** | 같은 URL은 태그 1번만 추출 (url_hash 기반) |
-| **배치 처리** | 이벤트 수신 시 여러 URL 한 번에 처리 |
+| **비동기 처리** | Asynq Worker에서 처리하여 API 응답 속도 유지 |
 | **경량 모델 사용** | 태그 추출은 GPT-3.5/Gemini Flash로 충분 |
 | **관계도만 고급 모델** | 세션당 1회이므로 GPT-4/Claude 사용 가능 |
 
@@ -122,27 +104,38 @@ JSON 형식으로 응답:
 
 ```mermaid
 flowchart TB
-    subgraph Service_Layer
-        TS[TagExtractionService]
-        MS[MindmapService]
+    subgraph API_Server
+        API[API Controller]
+        QC[Queue Client]
     end
 
-    subgraph AI_Provider_Layer
-        IF[AIProvider Interface]
-        IF --> OAI[OpenAI Provider]
-        IF --> GEM[Google Gemini Provider]
-        IF --> CLA[Anthropic Claude Provider]
+    subgraph Worker_Server
+        WS[Asynq Server]
+        TH[Tag Handler]
+        MH[Mindmap Handler]
+    end
+
+    subgraph AI_Layer
+        PM[ProviderManager]
+        PM --> OAI[OpenAI Provider]
+        PM --> GEM[Gemini Provider]
+        PM --> CLA[Claude Provider]
     end
 
     subgraph Infrastructure
-        PM[ProviderManager]
-        CFG[Config]
+        Redis[(Redis)]
+        DB[(PostgreSQL)]
     end
 
-    TS --> PM
-    MS --> PM
-    PM --> IF
-    CFG --> PM
+    API --> QC
+    QC --> Redis
+    Redis --> WS
+    WS --> TH
+    WS --> MH
+    TH --> PM
+    MH --> PM
+    TH --> DB
+    MH --> DB
 ```
 
 ### 설계 원칙
@@ -151,6 +144,7 @@ flowchart TB
 2. **런타임 프로바이더 전환**: 환경변수 또는 설정으로 프로바이더 변경 가능
 3. **Fallback 지원**: 기본 프로바이더 실패 시 대체 프로바이더 사용
 4. **용도별 프로바이더 분리**: 태그 추출과 관계도 생성에 다른 모델 사용 가능
+5. **비동기 처리**: Asynq Worker를 통한 백그라운드 AI 처리
 
 ---
 
@@ -158,20 +152,22 @@ flowchart TB
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 9.1 | AI Provider 인터페이스 정의 | ⬜ |
-| 9.2 | 개별 Provider 구현 (OpenAI, Gemini, Claude) | ⬜ |
-| 9.3 | Provider Manager 및 Config | ⬜ |
-| 9.4 | 태그 추출 서비스 (페이지당) | ⬜ |
-| 9.5 | 마인드맵 생성 서비스 (세션당) | ⬜ |
+| 10.1 | AI Provider 인터페이스 정의 | ⬜ |
+| 10.2 | 개별 Provider 구현 (OpenAI, Gemini, Claude) | ⬜ |
+| 10.3 | Provider Manager 및 Config | ⬜ |
+| 10.4 | 태그 추출 Worker Handler | ⬜ |
+| 10.5 | 마인드맵 생성 Worker Handler | ⬜ |
+| 10.6 | UsageService 연동 (토큰 측정) | ⬜ |
 
 ---
 
-## Step 9.1: AI Provider 인터페이스 정의
+## Step 10.1: AI Provider 인터페이스 정의
 
 ### 체크리스트
 
 - [ ] **공통 타입 정의**
-  - [ ] `internal/infrastructure/ai/types.go`
+  - [ ] `pkg/infra/ai/types.go`
+
     ```go
     package ai
 
@@ -239,7 +235,8 @@ flowchart TB
     ```
 
 - [ ] **AIProvider 인터페이스 정의**
-  - [ ] `internal/infrastructure/ai/provider.go`
+  - [ ] `pkg/infra/ai/provider.go`
+
     ```go
     package ai
 
@@ -297,19 +294,23 @@ flowchart TB
     ```
 
 ### 검증
+
 ```bash
+cd apps/backend
 go build ./...
 # 컴파일 성공
 ```
 
 ---
 
-## Step 9.2: 개별 Provider 구현
+## Step 10.2: 개별 Provider 구현
 
 ### 체크리스트
 
 - [ ] **의존성 추가**
+
   ```bash
+  cd apps/backend
   # OpenAI
   go get github.com/sashabaranov/go-openai
 
@@ -321,7 +322,8 @@ go build ./...
   ```
 
 - [ ] **OpenAI Provider 구현**
-  - [ ] `internal/infrastructure/ai/openai.go`
+  - [ ] `pkg/infra/ai/openai.go`
+
     ```go
     package ai
 
@@ -425,7 +427,6 @@ go build ./...
     }
 
     func (p *OpenAIProvider) IsHealthy(ctx context.Context) bool {
-        // Simple health check with minimal tokens
         _, err := p.Chat(ctx, []Message{
             {Role: RoleUser, Content: "ping"},
         }, ChatOptions{MaxTokens: 5})
@@ -434,7 +435,8 @@ go build ./...
     ```
 
 - [ ] **Google Gemini Provider 구현**
-  - [ ] `internal/infrastructure/ai/gemini.go`
+  - [ ] `pkg/infra/ai/gemini.go`
+
     ```go
     package ai
 
@@ -475,7 +477,6 @@ go build ./...
     func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
         model := p.client.GenerativeModel(p.model)
 
-        // Set generation config
         model.SetTemperature(float32(opts.Temperature))
         model.SetMaxOutputTokens(int32(opts.MaxTokens))
         model.SetTopP(float32(opts.TopP))
@@ -484,7 +485,6 @@ go build ./...
             model.StopSequences = opts.StopSequences
         }
 
-        // Convert messages to Gemini format
         var parts []genai.Part
         var systemPrompt string
 
@@ -512,7 +512,6 @@ go build ./...
             return nil, ErrNoResponse
         }
 
-        // Extract text from response
         var content strings.Builder
         for _, part := range resp.Candidates[0].Content.Parts {
             if text, ok := part.(genai.Text); ok {
@@ -532,15 +531,11 @@ go build ./...
     func (p *GeminiProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
         model := p.client.GenerativeModel(p.model)
 
-        // Set generation config
         model.SetTemperature(float32(opts.Temperature))
         model.SetMaxOutputTokens(int32(opts.MaxTokens))
         model.SetTopP(float32(opts.TopP))
-
-        // Force JSON output
         model.ResponseMIMEType = "application/json"
 
-        // Convert messages
         var parts []genai.Part
         var systemPrompt string
 
@@ -575,7 +570,6 @@ go build ./...
             }
         }
 
-        // Validate JSON
         var js json.RawMessage
         if err := json.Unmarshal([]byte(content.String()), &js); err != nil {
             return nil, fmt.Errorf("invalid json response: %w", err)
@@ -603,7 +597,8 @@ go build ./...
     ```
 
 - [ ] **Anthropic Claude Provider 구현**
-  - [ ] `internal/infrastructure/ai/claude.go`
+  - [ ] `pkg/infra/ai/claude.go`
+
     ```go
     package ai
 
@@ -640,7 +635,6 @@ go build ./...
     }
 
     func (p *ClaudeProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
-        // Separate system message from conversation
         var systemPrompt string
         var anthropicMessages []anthropic.MessageParam
 
@@ -692,7 +686,6 @@ go build ./...
             return nil, ErrNoResponse
         }
 
-        // Extract text content
         var content string
         for _, block := range resp.Content {
             if block.Type == anthropic.ContentBlockTypeText {
@@ -710,7 +703,6 @@ go build ./...
     }
 
     func (p *ClaudeProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
-        // Add JSON instruction to the last user message
         modifiedMessages := make([]Message, len(messages))
         copy(modifiedMessages, messages)
 
@@ -726,7 +718,6 @@ go build ./...
             return nil, err
         }
 
-        // Validate JSON
         var js json.RawMessage
         if err := json.Unmarshal([]byte(resp.Content), &js); err != nil {
             return nil, fmt.Errorf("invalid json response: %w", err)
@@ -744,25 +735,28 @@ go build ./...
     ```
 
 ### 검증
+
 ```bash
+cd apps/backend
 go build ./...
 # 컴파일 성공
 ```
 
 ---
 
-## Step 9.3: Provider Manager 및 Config
+## Step 10.3: Provider Manager 및 Config
 
 ### 체크리스트
 
 - [ ] **환경 변수 설정**
+
   ```env
   # AI Provider 설정
   AI_DEFAULT_PROVIDER=openai
   AI_FALLBACK_PROVIDERS=gemini,claude
 
   # 용도별 프로바이더 (선택적)
-  AI_SUMMARIZE_PROVIDER=gemini
+  AI_TAG_EXTRACTION_PROVIDER=gemini
   AI_MINDMAP_PROVIDER=openai
 
   # OpenAI
@@ -771,7 +765,7 @@ go build ./...
 
   # Google Gemini
   GEMINI_API_KEY=...
-  GEMINI_MODEL=gemini-1.5-pro
+  GEMINI_MODEL=gemini-1.5-flash
 
   # Anthropic Claude
   CLAUDE_API_KEY=sk-ant-...
@@ -779,25 +773,20 @@ go build ./...
   ```
 
 - [ ] **Config 업데이트**
-  - [ ] `internal/infrastructure/config/config.go`
+  - [ ] `pkg/config/config.go`에 AI 설정 추가
+
     ```go
     type Config struct {
         // ... 기존 필드
-
-        // AI Settings
         AI AIConfig
     }
 
     type AIConfig struct {
-        // Default provider for general use
-        DefaultProvider   string   `json:"default_provider"`
-        FallbackProviders []string `json:"fallback_providers"`
+        DefaultProvider      string   `json:"default_provider"`
+        FallbackProviders    []string `json:"fallback_providers"`
+        TagExtractionProvider string  `json:"tag_extraction_provider"`
+        MindmapProvider      string   `json:"mindmap_provider"`
 
-        // Task-specific providers (optional override)
-        SummarizeProvider string `json:"summarize_provider"`
-        MindmapProvider   string `json:"mindmap_provider"`
-
-        // Provider configurations
         OpenAI  OpenAIConfig  `json:"openai"`
         Gemini  GeminiConfig  `json:"gemini"`
         Claude  ClaudeConfig  `json:"claude"`
@@ -820,47 +809,11 @@ go build ./...
         Model   string `json:"model"`
         Enabled bool   `json:"enabled"`
     }
-
-    func Load() *Config {
-        return &Config{
-            // ... 기존 필드
-
-            AI: AIConfig{
-                DefaultProvider:   getEnv("AI_DEFAULT_PROVIDER", "openai"),
-                FallbackProviders: getEnvSlice("AI_FALLBACK_PROVIDERS", []string{}),
-                SummarizeProvider: getEnv("AI_SUMMARIZE_PROVIDER", ""),
-                MindmapProvider:   getEnv("AI_MINDMAP_PROVIDER", ""),
-
-                OpenAI: OpenAIConfig{
-                    APIKey:  getEnv("OPENAI_API_KEY", ""),
-                    Model:   getEnv("OPENAI_MODEL", "gpt-4-turbo-preview"),
-                    Enabled: getEnv("OPENAI_API_KEY", "") != "",
-                },
-                Gemini: GeminiConfig{
-                    APIKey:  getEnv("GEMINI_API_KEY", ""),
-                    Model:   getEnv("GEMINI_MODEL", "gemini-1.5-pro"),
-                    Enabled: getEnv("GEMINI_API_KEY", "") != "",
-                },
-                Claude: ClaudeConfig{
-                    APIKey:  getEnv("CLAUDE_API_KEY", ""),
-                    Model:   getEnv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022"),
-                    Enabled: getEnv("CLAUDE_API_KEY", "") != "",
-                },
-            },
-        }
-    }
-
-    func getEnvSlice(key string, defaultVal []string) []string {
-        val := os.Getenv(key)
-        if val == "" {
-            return defaultVal
-        }
-        return strings.Split(val, ",")
-    }
     ```
 
 - [ ] **Provider Manager 구현**
-  - [ ] `internal/infrastructure/ai/manager.go`
+  - [ ] `pkg/infra/ai/manager.go`
+
     ```go
     package ai
 
@@ -869,30 +822,28 @@ go build ./...
         "fmt"
         "log/slog"
         "sync"
-
-        "github.com/mindhit/api/internal/infrastructure/config"
     )
 
     // TaskType identifies the AI task for provider selection
     type TaskType string
 
     const (
-        TaskSummarize TaskType = "summarize"
-        TaskMindmap   TaskType = "mindmap"
-        TaskGeneral   TaskType = "general"
+        TaskTagExtraction TaskType = "tag_extraction"
+        TaskMindmap       TaskType = "mindmap"
+        TaskGeneral       TaskType = "general"
     )
 
     // ProviderManager manages multiple AI providers with fallback support
     type ProviderManager struct {
-        providers         map[ProviderType]AIProvider
-        defaultProvider   ProviderType
-        fallbackOrder     []ProviderType
-        taskProviders     map[TaskType]ProviderType
-        mu                sync.RWMutex
+        providers       map[ProviderType]AIProvider
+        defaultProvider ProviderType
+        fallbackOrder   []ProviderType
+        taskProviders   map[TaskType]ProviderType
+        mu              sync.RWMutex
     }
 
     // NewProviderManager creates a new provider manager from config
-    func NewProviderManager(ctx context.Context, cfg config.AIConfig) (*ProviderManager, error) {
+    func NewProviderManager(ctx context.Context, cfg AIConfig) (*ProviderManager, error) {
         pm := &ProviderManager{
             providers:     make(map[ProviderType]AIProvider),
             taskProviders: make(map[TaskType]ProviderType),
@@ -926,7 +877,6 @@ go build ./...
         // Set default provider
         pm.defaultProvider = ProviderType(cfg.DefaultProvider)
         if _, ok := pm.providers[pm.defaultProvider]; !ok {
-            // Fall back to first available provider
             for pt := range pm.providers {
                 pm.defaultProvider = pt
                 break
@@ -942,10 +892,10 @@ go build ./...
         }
 
         // Set task-specific providers
-        if cfg.SummarizeProvider != "" {
-            pt := ProviderType(cfg.SummarizeProvider)
+        if cfg.TagExtractionProvider != "" {
+            pt := ProviderType(cfg.TagExtractionProvider)
             if _, ok := pm.providers[pt]; ok {
-                pm.taskProviders[TaskSummarize] = pt
+                pm.taskProviders[TaskTagExtraction] = pt
             }
         }
 
@@ -963,36 +913,6 @@ go build ./...
         )
 
         return pm, nil
-    }
-
-    // GetProvider returns the provider for a specific task
-    func (pm *ProviderManager) GetProvider(task TaskType) AIProvider {
-        pm.mu.RLock()
-        defer pm.mu.RUnlock()
-
-        // Check task-specific provider first
-        if pt, ok := pm.taskProviders[task]; ok {
-            if provider, ok := pm.providers[pt]; ok {
-                return provider
-            }
-        }
-
-        // Return default provider
-        return pm.providers[pm.defaultProvider]
-    }
-
-    // GetProviderByType returns a specific provider by type
-    func (pm *ProviderManager) GetProviderByType(pt ProviderType) (AIProvider, bool) {
-        pm.mu.RLock()
-        defer pm.mu.RUnlock()
-
-        provider, ok := pm.providers[pt]
-        return provider, ok
-    }
-
-    // Chat executes chat with automatic fallback
-    func (pm *ProviderManager) Chat(ctx context.Context, task TaskType, messages []Message, opts ChatOptions) (*ChatResponse, error) {
-        return pm.chatWithFallback(ctx, task, messages, opts, false)
     }
 
     // ChatWithJSON executes chat with JSON mode and automatic fallback
@@ -1046,7 +966,6 @@ go build ./...
         var result []AIProvider
         seen := make(map[ProviderType]bool)
 
-        // Task-specific provider first
         if pt, ok := pm.taskProviders[task]; ok {
             if p, ok := pm.providers[pt]; ok {
                 result = append(result, p)
@@ -1054,7 +973,6 @@ go build ./...
             }
         }
 
-        // Default provider
         if !seen[pm.defaultProvider] {
             if p, ok := pm.providers[pm.defaultProvider]; ok {
                 result = append(result, p)
@@ -1062,7 +980,6 @@ go build ./...
             }
         }
 
-        // Fallback providers
         for _, pt := range pm.fallbackOrder {
             if !seen[pt] {
                 if p, ok := pm.providers[pt]; ok {
@@ -1075,19 +992,7 @@ go build ./...
         return result
     }
 
-    // HealthCheck checks all providers
-    func (pm *ProviderManager) HealthCheck(ctx context.Context) map[ProviderType]bool {
-        pm.mu.RLock()
-        defer pm.mu.RUnlock()
-
-        results := make(map[ProviderType]bool)
-        for pt, provider := range pm.providers {
-            results[pt] = provider.IsHealthy(ctx)
-        }
-        return results
-    }
-
-    // Close closes all providers that implement io.Closer
+    // Close closes all providers
     func (pm *ProviderManager) Close() error {
         pm.mu.Lock()
         defer pm.mu.Unlock()
@@ -1103,39 +1008,48 @@ go build ./...
     }
     ```
 
-- [ ] **main.go에 Provider Manager 초기화**
-  ```go
-  import "github.com/mindhit/api/internal/infrastructure/ai"
-
-  // Initialize AI Provider Manager
-  aiManager, err := ai.NewProviderManager(ctx, cfg.AI)
-  if err != nil {
-      slog.Error("failed to initialize ai manager", "error", err)
-      os.Exit(1)
-  }
-  defer aiManager.Close()
-  ```
-
 ### 검증
+
 ```bash
+cd apps/backend
 go build ./...
 # 컴파일 성공
 ```
 
 ---
 
-## Step 9.4: 태그 추출 서비스 (페이지당)
+## Step 10.4: 태그 추출 Worker Handler
 
 ### 목표
 
-이벤트 배치 수신 시 새로운 URL에 대해 실시간으로 태그를 추출합니다.
+이벤트 배치 수신 시 새로운 URL에 대해 Asynq Task를 생성하고, Worker에서 태그를 추출합니다.
 
 ### 체크리스트
 
-- [ ] **태그 추출 서비스**
-  - [ ] `internal/service/tag_extraction_service.go`
+- [ ] **태그 추출 Task 정의 (Phase 6에서 이미 정의됨)**
+  - [ ] `pkg/infra/queue/tasks.go`에 추가 확인
+
     ```go
-    package service
+    const TypeURLTagExtraction = "url:tag_extraction"
+
+    type URLTagExtractionPayload struct {
+        URLID string `json:"url_id"`
+    }
+
+    func NewURLTagExtractionTask(urlID string) (*asynq.Task, error) {
+        payload, err := json.Marshal(URLTagExtractionPayload{URLID: urlID})
+        if err != nil {
+            return nil, err
+        }
+        return asynq.NewTask(TypeURLTagExtraction, payload), nil
+    }
+    ```
+
+- [ ] **태그 추출 Handler 구현**
+  - [ ] `internal/worker/handler/tag_extraction.go`
+
+    ```go
+    package handler
 
     import (
         "context"
@@ -1144,29 +1058,15 @@ go build ./...
         "log/slog"
 
         "github.com/google/uuid"
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/url"
-        "github.com/mindhit/api/internal/infrastructure/ai"
+        "github.com/hibiken/asynq"
+
+        "github.com/mindhit/api/pkg/ent"
+        "github.com/mindhit/api/pkg/infra/ai"
+        "github.com/mindhit/api/pkg/infra/queue"
     )
 
-    type TagExtractionService struct {
-        client    *ent.Client
-        aiManager *ai.ProviderManager
-    }
-
-    func NewTagExtractionService(client *ent.Client, aiManager *ai.ProviderManager) *TagExtractionService {
-        return &TagExtractionService{
-            client:    client,
-            aiManager: aiManager,
-        }
-    }
-
-    type TagResult struct {
-        Tags    []string `json:"tags"`
-        Summary string   `json:"summary"`
-    }
-
     const tagExtractionPrompt = `웹 페이지를 분석하고 다음을 추출하세요:
+
 1. 핵심 태그 3-5개 (한국어, 명사형)
 2. 1-2문장 요약 (한국어)
 
@@ -1180,28 +1080,43 @@ JSON 형식으로 응답:
   "summary": "페이지 요약"
 }`
 
-    // ExtractTags extracts tags from a URL's content
-    // Called when a new URL is received in event batch
-    func (s *TagExtractionService) ExtractTags(ctx context.Context, urlID uuid.UUID) error {
+    type TagResult struct {
+        Tags    []string `json:"tags"`
+        Summary string   `json:"summary"`
+    }
+
+    func (h *handlers) HandleURLTagExtraction(ctx context.Context, t *asynq.Task) error {
+        var payload queue.URLTagExtractionPayload
+        if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+            return fmt.Errorf("unmarshal payload: %w", err)
+        }
+
+        urlID, err := uuid.Parse(payload.URLID)
+        if err != nil {
+            return fmt.Errorf("parse url id: %w", err)
+        }
+
+        slog.Info("extracting tags", "url_id", payload.URLID)
+
         // Get URL from database
-        u, err := s.client.URL.Get(ctx, urlID)
+        u, err := h.client.URL.Get(ctx, urlID)
         if err != nil {
             return fmt.Errorf("get url: %w", err)
         }
 
-        // Skip if already has tags (중복 URL 처리)
+        // Skip if already has tags
         if len(u.Tags) > 0 {
             slog.Debug("url already has tags, skipping", "url", u.URL)
             return nil
         }
 
-        // Skip if no content (Extension에서 추출 실패한 경우)
+        // Skip if no content
         if u.Content == "" {
-            slog.Warn("url has no content, skipping tag extraction", "url", u.URL)
+            slog.Warn("url has no content, skipping", "url", u.URL)
             return nil
         }
 
-        // Generate tags using AI (경량 모델 사용)
+        // Generate tags using AI
         messages := []ai.Message{
             {
                 Role:    ai.RoleUser,
@@ -1210,9 +1125,9 @@ JSON 형식으로 응답:
         }
 
         opts := ai.DefaultChatOptions()
-        opts.MaxTokens = 500 // 태그 추출은 짧은 응답
+        opts.MaxTokens = 500
 
-        response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskTagExtraction, messages, opts)
+        response, err := h.aiManager.ChatWithJSON(ctx, ai.TaskTagExtraction, messages, opts)
         if err != nil {
             return fmt.Errorf("ai tag extraction: %w", err)
         }
@@ -1223,7 +1138,7 @@ JSON 형식으로 응답:
         }
 
         // Update URL with tags and summary
-        _, err = s.client.URL.UpdateOneID(urlID).
+        _, err = h.client.URL.UpdateOneID(urlID).
             SetTags(result.Tags).
             SetSummary(result.Summary).
             Save(ctx)
@@ -1241,20 +1156,6 @@ JSON 형식으로 응답:
         return nil
     }
 
-    // ExtractTagsForNewURLs processes multiple new URLs from an event batch
-    func (s *TagExtractionService) ExtractTagsForNewURLs(ctx context.Context, urlIDs []uuid.UUID) error {
-        for _, urlID := range urlIDs {
-            if err := s.ExtractTags(ctx, urlID); err != nil {
-                slog.Error("failed to extract tags",
-                    "url_id", urlID,
-                    "error", err,
-                )
-                // Continue with other URLs (graceful degradation)
-            }
-        }
-        return nil
-    }
-
     func truncateContent(content string, maxLen int) string {
         if len(content) <= maxLen {
             return content
@@ -1263,128 +1164,105 @@ JSON 형식으로 응답:
     }
     ```
 
-- [ ] **이벤트 서비스에 태그 추출 통합**
-  - [ ] `internal/service/event_service.go` 수정
+- [ ] **Handler 등록 업데이트**
+  - [ ] `internal/worker/handler/handler.go`
+
+    ```go
+    package handler
+
+    import (
+        "github.com/mindhit/api/pkg/ent"
+        "github.com/mindhit/api/pkg/infra/ai"
+        "github.com/mindhit/api/pkg/infra/queue"
+    )
+
+    type handlers struct {
+        client    *ent.Client
+        aiManager *ai.ProviderManager
+    }
+
+    func RegisterHandlers(server *queue.Server, client *ent.Client, aiManager *ai.ProviderManager) {
+        h := &handlers{
+            client:    client,
+            aiManager: aiManager,
+        }
+
+        server.HandleFunc(queue.TypeSessionProcess, h.HandleSessionProcess)
+        server.HandleFunc(queue.TypeSessionCleanup, h.HandleSessionCleanup)
+        server.HandleFunc(queue.TypeURLTagExtraction, h.HandleURLTagExtraction)
+        server.HandleFunc(queue.TypeMindmapGenerate, h.HandleMindmapGenerate)
+    }
+    ```
+
+- [ ] **API에서 새 URL 발견 시 Task Enqueue**
+  - [ ] `pkg/service/event_service.go`
+
     ```go
     type EventService struct {
-        client               *ent.Client
-        tagExtractionService *TagExtractionService
+        client      *ent.Client
+        queueClient *queue.Client
     }
 
     func (s *EventService) ProcessBatchEvents(ctx context.Context, sessionID uuid.UUID, events []Event) error {
-        var newURLIDs []uuid.UUID
-
         for _, event := range events {
             if event.Type == "page_visit" {
-                // URL 저장 또는 조회
                 urlID, isNew, err := s.upsertURL(ctx, event)
                 if err != nil {
                     slog.Error("failed to upsert url", "error", err)
                     continue
                 }
 
-                // 새 URL인 경우 태그 추출 대상에 추가
+                // Enqueue tag extraction for new URLs
                 if isNew {
-                    newURLIDs = append(newURLIDs, urlID)
+                    task, err := queue.NewURLTagExtractionTask(urlID.String())
+                    if err != nil {
+                        slog.Error("failed to create tag extraction task", "error", err)
+                        continue
+                    }
+
+                    _, err = s.queueClient.Enqueue(task, asynq.MaxRetry(3))
+                    if err != nil {
+                        slog.Error("failed to enqueue tag extraction task", "error", err)
+                    }
                 }
 
-                // page_visit 저장
-                // ...
+                // Save page visit...
             }
         }
-
-        // 새 URL들에 대해 비동기로 태그 추출
-        if len(newURLIDs) > 0 {
-            go func() {
-                bgCtx := context.Background()
-                if err := s.tagExtractionService.ExtractTagsForNewURLs(bgCtx, newURLIDs); err != nil {
-                    slog.Error("failed to extract tags for new urls", "error", err)
-                }
-            }()
-        }
-
         return nil
     }
-
-    func (s *EventService) upsertURL(ctx context.Context, event Event) (uuid.UUID, bool, error) {
-        urlHash := hashURL(event.URL)
-
-        // 기존 URL 조회
-        existing, err := s.client.URL.Query().
-            Where(url.URLHashEQ(urlHash)).
-            Only(ctx)
-
-        if err == nil {
-            // 이미 존재하는 URL
-            return existing.ID, false, nil
-        }
-
-        if !ent.IsNotFound(err) {
-            return uuid.Nil, false, err
-        }
-
-        // 새 URL 생성
-        newURL, err := s.client.URL.Create().
-            SetURL(event.URL).
-            SetURLHash(urlHash).
-            SetTitle(event.Title).
-            SetContent(event.Content). // Extension에서 추출한 콘텐츠
-            Save(ctx)
-
-        if err != nil {
-            return uuid.Nil, false, err
-        }
-
-        return newURL.ID, true, nil
-    }
     ```
-
-- [ ] **AI Config에 TaskTagExtraction 추가**
-  ```go
-  // internal/infrastructure/ai/manager.go
-  const (
-      TaskSummarize      TaskType = "summarize"
-      TaskMindmap        TaskType = "mindmap"
-      TaskTagExtraction  TaskType = "tag_extraction"  // NEW
-      TaskGeneral        TaskType = "general"
-  )
-  ```
-
-- [ ] **환경변수에 태그 추출 프로바이더 설정**
-  ```env
-  # 태그 추출은 경량 모델 사용 (비용 최적화)
-  AI_TAG_EXTRACTION_PROVIDER=gemini
-  GEMINI_MODEL=gemini-1.5-flash  # 빠르고 저렴한 모델
-  ```
 
 ### 검증
 
 ```bash
-go build ./...
-# 컴파일 성공
+# Worker 실행
+cd apps/backend
+REDIS_ADDR=localhost:6379 go run ./cmd/worker
 
-# 테스트 (유닛 테스트)
-go test ./internal/service/...
+# API 실행 후 이벤트 전송
+curl -X POST http://localhost:8080/api/v1/events/batch \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"session_id": "...", "events": [{"type": "page_visit", ...}]}'
 
-# 로그에서 태그 추출 확인
-# "extracted tags" url=https://... tags=["AI", "머신러닝"] provider=gemini
+# Worker 로그 확인
+# "extracting tags" url_id=...
+# "extracted tags" url=https://... tags=["AI", "머신러닝"]
 ```
 
 ---
 
-## Step 9.5: 관계도 생성 서비스 (세션 종료 시 1회)
+## Step 10.5: 마인드맵 생성 Worker Handler
 
 ### 목표
 
-세션 종료 시 추출된 태그들을 기반으로 LLM이 관계도 JSON을 생성합니다.
-- **입력**: 세션 내 모든 URL + 각 URL의 태그/요약
-- **출력**: 마인드맵 구조 JSON (nodes, edges, layout)
-- **호출 시점**: 세션 Stop 시 1회만 호출
+세션 종료 시 Asynq Task를 생성하고, Worker에서 관계도 JSON을 생성합니다.
 
 ### 체크리스트
 
 - [ ] **마인드맵 타입 정의**
-  - [ ] `internal/service/mindmap_types.go`
+  - [ ] `pkg/service/mindmap_types.go`
+
     ```go
     package service
 
@@ -1408,7 +1286,7 @@ go test ./internal/service/...
         Source string  `json:"source"`
         Target string  `json:"target"`
         Weight float64 `json:"weight"`
-        Label  string  `json:"label,omitempty"` // 연결 이유
+        Label  string  `json:"label,omitempty"`
     }
 
     type MindmapLayout struct {
@@ -1423,10 +1301,11 @@ go test ./internal/service/...
     }
     ```
 
-- [ ] **관계도 생성 서비스** (태그 기반)
-  - [ ] `internal/service/mindmap_service.go`
+- [ ] **마인드맵 생성 Handler 구현**
+  - [ ] `internal/worker/handler/mindmap.go`
+
     ```go
-    package service
+    package handler
 
     import (
         "context"
@@ -1437,32 +1316,25 @@ go test ./internal/service/...
         "strings"
 
         "github.com/google/uuid"
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/session"
-        "github.com/mindhit/api/internal/infrastructure/ai"
+        "github.com/hibiken/asynq"
+
+        "github.com/mindhit/api/pkg/ent"
+        "github.com/mindhit/api/pkg/ent/session"
+        "github.com/mindhit/api/pkg/infra/ai"
+        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/pkg/service"
     )
 
-    type MindmapService struct {
-        client    *ent.Client
-        aiManager *ai.ProviderManager
-    }
-
-    func NewMindmapService(client *ent.Client, aiManager *ai.ProviderManager) *MindmapService {
-        return &MindmapService{
-            client:    client,
-            aiManager: aiManager,
-        }
-    }
-
-    // 태그 기반 관계도 생성 프롬프트
     const relationshipGraphPrompt = `브라우징 세션의 페이지들과 추출된 태그를 분석하여 관계도를 생성하세요.
 
 ## 세션 데이터
 
 ### 방문한 페이지들 (URL + 태그 + 요약)
+
 %s
 
 ### 하이라이트 (사용자가 선택한 텍스트)
+
 %s
 
 ## 요청사항
@@ -1504,7 +1376,6 @@ go test ./internal/service/...
   ]
 }`
 
-    // AI 응답 타입 (태그 기반)
     type RelationshipGraphResponse struct {
         Core struct {
             Label       string `json:"label"`
@@ -1529,11 +1400,21 @@ go test ./internal/service/...
         } `json:"connections"`
     }
 
-    // GenerateRelationshipGraph generates a mindmap from extracted tags
-    // Called once when session is stopped
-    func (s *MindmapService) GenerateRelationshipGraph(ctx context.Context, sessionID uuid.UUID) error {
-        // Get session with all related data (URLs already have tags from Step 9.4)
-        sess, err := s.client.Session.
+    func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
+        var payload queue.MindmapGeneratePayload
+        if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+            return fmt.Errorf("unmarshal payload: %w", err)
+        }
+
+        sessionID, err := uuid.Parse(payload.SessionID)
+        if err != nil {
+            return fmt.Errorf("parse session id: %w", err)
+        }
+
+        slog.Info("generating mindmap", "session_id", payload.SessionID)
+
+        // Get session with all related data
+        sess, err := h.client.Session.
             Query().
             Where(session.IDEQ(sessionID)).
             WithPageVisits(func(q *ent.PageVisitQuery) {
@@ -1546,9 +1427,8 @@ go test ./internal/service/...
             return fmt.Errorf("get session: %w", err)
         }
 
-        // Build page data with tags (Step 9.4에서 추출된 태그 사용)
+        // Build page data with tags
         var pageData strings.Builder
-        urlMap := make(map[string]*ent.URL)
         dwellTimeMap := make(map[string]int)
 
         for _, pv := range sess.Edges.PageVisits {
@@ -1556,7 +1436,6 @@ go test ./internal/service/...
                 continue
             }
             u := pv.Edges.URL
-            urlMap[u.ID.String()] = u
 
             dwellTime := 0
             if pv.DwellTimeSeconds != nil {
@@ -1564,8 +1443,8 @@ go test ./internal/service/...
             }
             dwellTimeMap[u.ID.String()] = dwellTime
 
-            // 태그와 요약 포함 (Step 9.4에서 이미 추출됨)
             pageData.WriteString(fmt.Sprintf(`
+
 - ID: %s
   제목: %s
   URL: %s
@@ -1592,7 +1471,7 @@ go test ./internal/service/...
             highlights.WriteString("(하이라이트 없음)")
         }
 
-        // Generate relationship graph using AI (프리미엄 모델 사용)
+        // Generate relationship graph using AI
         messages := []ai.Message{
             {
                 Role:    ai.RoleUser,
@@ -1601,11 +1480,11 @@ go test ./internal/service/...
         }
 
         opts := ai.DefaultChatOptions()
-        opts.MaxTokens = 4096 // 관계도 JSON은 적당한 크기
+        opts.MaxTokens = 4096
 
-        response, err := s.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
+        response, err := h.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
         if err != nil {
-            return fmt.Errorf("ai generate relationship graph: %w", err)
+            return fmt.Errorf("ai generate mindmap: %w", err)
         }
 
         var aiResp RelationshipGraphResponse
@@ -1614,61 +1493,64 @@ go test ./internal/service/...
         }
 
         // Convert AI response to mindmap data
-        mindmapData := s.buildMindmapFromRelationship(aiResp, urlMap, dwellTimeMap)
+        mindmapData := buildMindmapFromRelationship(aiResp, dwellTimeMap)
+
+        // Convert to JSON for storage
+        nodesJSON, _ := json.Marshal(mindmapData.Nodes)
+        edgesJSON, _ := json.Marshal(mindmapData.Edges)
+        layoutJSON, _ := json.Marshal(mindmapData.Layout)
 
         // Save mindmap to database
-        _, err = s.client.MindmapGraph.
+        _, err = h.client.MindmapGraph.
             Create().
             SetSessionID(sessionID).
-            SetNodes(mindmapData.Nodes).
-            SetEdges(mindmapData.Edges).
-            SetLayout(mindmapData.Layout).
+            SetNodes(nodesJSON).
+            SetEdges(edgesJSON).
+            SetLayout(layoutJSON).
             Save(ctx)
 
         if err != nil {
             return fmt.Errorf("save mindmap: %w", err)
         }
 
-        // Update session status
-        _, err = s.client.Session.
+        // Update session status to completed
+        _, err = h.client.Session.
             UpdateOneID(sessionID).
-            SetSessionStatus(session.SessionStatusCompleted).
+            SetStatus(session.StatusCompleted).
             Save(ctx)
 
         if err != nil {
             return fmt.Errorf("update session status: %w", err)
         }
 
-        slog.Info("generated relationship graph",
-            "session_id", sessionID,
+        slog.Info("mindmap generated",
+            "session_id", payload.SessionID,
             "topics", len(aiResp.Topics),
             "connections", len(aiResp.Connections),
             "provider", response.Provider,
-            "tokens", response.InputTokens+response.OutputTokens,
         )
         return nil
     }
 
-    // buildMindmapFromRelationship converts AI response to mindmap data structure
-    func (s *MindmapService) buildMindmapFromRelationship(resp RelationshipGraphResponse, urlMap map[string]*ent.URL, dwellTimeMap map[string]int) MindmapData {
-        var nodes []MindmapNode
-        var edges []MindmapEdge
+    func buildMindmapFromRelationship(resp RelationshipGraphResponse, dwellTimeMap map[string]int) service.MindmapData {
+        var nodes []service.MindmapNode
+        var edges []service.MindmapEdge
 
-        // Create core node (center of galaxy - 태양)
+        // Core node
         coreID := "core"
-        nodes = append(nodes, MindmapNode{
-            ID:    coreID,
-            Label: resp.Core.Label,
-            Type:  "core",
-            Size:  100,
-            Color: "#FFD700", // Gold for core
-            Position: &Position{X: 0, Y: 0, Z: 0},
+        nodes = append(nodes, service.MindmapNode{
+            ID:       coreID,
+            Label:    resp.Core.Label,
+            Type:     "core",
+            Size:     100,
+            Color:    "#FFD700",
+            Position: &service.Position{X: 0, Y: 0, Z: 0},
             Data: map[string]interface{}{
                 "description": resp.Core.Description,
             },
         })
 
-        // Create topic nodes (planets orbiting the sun - 행성)
+        // Topic nodes
         topicCount := len(resp.Topics)
         for i, topic := range resp.Topics {
             topicID := topic.ID
@@ -1676,23 +1558,20 @@ go test ./internal/service/...
                 topicID = fmt.Sprintf("topic-%d", i)
             }
 
-            // Position in orbit around core
             angle := (float64(i) / float64(topicCount)) * 2 * math.Pi
             radius := 200.0
-
-            // 토픽 크기 = 연결된 페이지 수에 비례
             topicSize := 40.0 + float64(len(topic.Pages))*10
             if topicSize > 80 {
                 topicSize = 80
             }
 
-            nodes = append(nodes, MindmapNode{
+            nodes = append(nodes, service.MindmapNode{
                 ID:    topicID,
                 Label: topic.Label,
                 Type:  "topic",
                 Size:  topicSize,
                 Color: getTopicColor(i),
-                Position: &Position{
+                Position: &service.Position{
                     X: radius * math.Cos(angle),
                     Y: radius * math.Sin(angle),
                     Z: 0,
@@ -1703,37 +1582,31 @@ go test ./internal/service/...
                 },
             })
 
-            // Edge from core to topic
-            edges = append(edges, MindmapEdge{
+            edges = append(edges, service.MindmapEdge{
                 Source: coreID,
                 Target: topicID,
                 Weight: 1.0,
             })
 
-            // Create page nodes (moons - 위성)
+            // Page nodes
             for j, page := range topic.Pages {
                 pageID := page.URLID
-
-                // Position around parent topic
                 subAngle := angle + (float64(j)-float64(len(topic.Pages))/2)*0.4
                 subRadius := 60.0 + float64(j)*15
 
-                // Calculate size based on dwell time
                 size := 15.0
                 if dwell, ok := dwellTimeMap[page.URLID]; ok {
                     size = math.Min(40, 15+float64(dwell)/20)
                 }
-
-                // relevance가 높을수록 더 큰 크기
                 size = size * (0.5 + page.Relevance*0.5)
 
-                nodes = append(nodes, MindmapNode{
+                nodes = append(nodes, service.MindmapNode{
                     ID:    pageID,
                     Label: page.Title,
                     Type:  "page",
                     Size:  size,
                     Color: getTopicColor(i),
-                    Position: &Position{
+                    Position: &service.Position{
                         X: radius*math.Cos(angle) + subRadius*math.Cos(subAngle),
                         Y: radius*math.Sin(angle) + subRadius*math.Sin(subAngle),
                         Z: 0,
@@ -1744,7 +1617,7 @@ go test ./internal/service/...
                     },
                 })
 
-                edges = append(edges, MindmapEdge{
+                edges = append(edges, service.MindmapEdge{
                     Source: topicID,
                     Target: pageID,
                     Weight: page.Relevance,
@@ -1752,20 +1625,20 @@ go test ./internal/service/...
             }
         }
 
-        // Add cross-topic connections (공통 태그 기반 연결)
+        // Cross-topic connections
         for _, conn := range resp.Connections {
-            edges = append(edges, MindmapEdge{
+            edges = append(edges, service.MindmapEdge{
                 Source: conn.From,
                 Target: conn.To,
-                Weight: float64(len(conn.SharedTags)) * 0.2, // 공통 태그 수에 비례
+                Weight: float64(len(conn.SharedTags)) * 0.2,
                 Label:  conn.Reason,
             })
         }
 
-        return MindmapData{
+        return service.MindmapData{
             Nodes: nodes,
             Edges: edges,
-            Layout: MindmapLayout{
+            Layout: service.MindmapLayout{
                 Type: "galaxy",
                 Params: map[string]interface{}{
                     "center": []float64{0, 0, 0},
@@ -1777,380 +1650,122 @@ go test ./internal/service/...
 
     func getTopicColor(index int) string {
         colors := []string{
-            "#3B82F6", // Blue
-            "#10B981", // Green
-            "#F59E0B", // Amber
-            "#EF4444", // Red
-            "#8B5CF6", // Purple
-            "#EC4899", // Pink
-            "#14B8A6", // Teal
-            "#F97316", // Orange
+            "#3B82F6", "#10B981", "#F59E0B", "#EF4444",
+            "#8B5CF6", "#EC4899", "#14B8A6", "#F97316",
         }
         return colors[index%len(colors)]
     }
+
     ```
 
-- [ ] **관계도 생성 Job** (세션 종료 시 실행)
-  - [ ] `internal/jobs/relationship_graph_job.go`
+- [ ] **세션 Stop 시 Task Enqueue**
+  - [ ] `pkg/service/session_service.go`
+
     ```go
-    package jobs
-
-    import (
-        "context"
-        "log/slog"
-        "time"
-
-        "github.com/google/uuid"
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/session"
-        "github.com/mindhit/api/internal/service"
-    )
-
-    // RelationshipGraphJob processes stopped sessions to generate relationship graphs
-    // 태그 추출은 이미 Step 9.4에서 실시간으로 처리됨
-    // 이 Job은 관계도 생성만 담당
-    type RelationshipGraphJob struct {
-        client         *ent.Client
-        mindmapService *service.MindmapService
-    }
-
-    func NewRelationshipGraphJob(
-        client *ent.Client,
-        mindmapService *service.MindmapService,
-    ) *RelationshipGraphJob {
-        return &RelationshipGraphJob{
-            client:         client,
-            mindmapService: mindmapService,
-        }
-    }
-
-    func (j *RelationshipGraphJob) Run() {
-        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-        defer cancel()
-
-        // Find sessions in "processing" status (세션이 Stop되면 processing 상태)
-        sessions, err := j.client.Session.
-            Query().
-            Where(session.SessionStatusEQ(session.SessionStatusProcessing)).
-            Limit(5). // Process 5 at a time
-            All(ctx)
-
+    func (s *SessionService) StopSession(ctx context.Context, sessionID string) (*ent.Session, error) {
+        sess, err := s.client.Session.Query().
+            Where(session.IDEQ(sessionID)).
+            Only(ctx)
         if err != nil {
-            slog.Error("failed to get processing sessions", "error", err)
-            return
+            return nil, err
         }
 
-        for _, sess := range sessions {
-            slog.Info("generating relationship graph", "session_id", sess.ID)
-
-            // 관계도 생성 (태그는 이미 추출되어 있음)
-            if err := j.mindmapService.GenerateRelationshipGraph(ctx, sess.ID); err != nil {
-                slog.Error("failed to generate relationship graph",
-                    "session_id", sess.ID,
-                    "error", err,
-                )
-                j.markSessionFailed(ctx, sess.ID)
-                continue
-            }
-
-            slog.Info("relationship graph generated", "session_id", sess.ID)
-        }
-    }
-
-    func (j *RelationshipGraphJob) markSessionFailed(ctx context.Context, sessionID uuid.UUID) {
-        _, err := j.client.Session.
-            UpdateOneID(sessionID).
-            SetSessionStatus(session.SessionStatusFailed).
+        // Update status to processing
+        sess, err = s.client.Session.UpdateOne(sess).
+            SetStatus(session.StatusProcessing).
             Save(ctx)
-
         if err != nil {
-            slog.Error("failed to mark session as failed",
-                "session_id", sessionID,
-                "error", err,
-            )
+            return nil, err
         }
+
+        // Enqueue mindmap generation task
+        task, err := queue.NewMindmapGenerateTask(sessionID)
+        if err != nil {
+            slog.Error("failed to create mindmap task", "error", err)
+            return sess, nil
+        }
+
+        _, err = s.queueClient.Enqueue(task, asynq.MaxRetry(3))
+        if err != nil {
+            slog.Error("failed to enqueue mindmap task", "error", err)
+            return sess, nil
+        }
+
+        slog.Info("mindmap generation enqueued", "session_id", sessionID)
+        return sess, nil
     }
     ```
 
-- [ ] **main.go에 서비스 및 Job 등록**
-  ```go
-  import (
-      "github.com/mindhit/api/internal/infrastructure/ai"
-      "github.com/mindhit/api/internal/jobs"
-      "github.com/mindhit/api/internal/service"
-  )
+- [ ] **Worker main.go 업데이트**
+  - [ ] `cmd/worker/main.go`
 
-  // Initialize AI Provider Manager
-  aiManager, err := ai.NewProviderManager(ctx, cfg.AI)
-  if err != nil {
-      slog.Error("failed to initialize ai manager", "error", err)
-      os.Exit(1)
-  }
-  defer aiManager.Close()
-
-  // Initialize services
-  tagExtractionService := service.NewTagExtractionService(client, aiManager)
-  mindmapService := service.NewMindmapService(client, aiManager)
-  eventService := service.NewEventService(client, tagExtractionService)
-
-  // Register relationship graph job (every 2 minutes)
-  // 세션 Stop 후 관계도 생성
-  relationshipGraphJob := jobs.NewRelationshipGraphJob(client, mindmapService)
-  if err := sched.RegisterIntervalJob("relationship-graph", 2*time.Minute, relationshipGraphJob.Run); err != nil {
-      slog.Error("failed to register relationship graph job", "error", err)
-  }
-  ```
-
-- [ ] **관계도 API 엔드포인트**
-  - [ ] `internal/controller/mindmap_controller.go`
     ```go
-    package controller
+    func main() {
+        cfg := config.Load()
 
-    import (
-        "context"
-        "log/slog"
-        "net/http"
+        // Setup logger
+        slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+            Level: slog.LevelInfo,
+        })))
 
-        "github.com/gin-gonic/gin"
-        "github.com/google/uuid"
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/mindmapgraph"
-        "github.com/mindhit/api/ent/session"
-        "github.com/mindhit/api/ent/user"
-        "github.com/mindhit/api/internal/infrastructure/middleware"
-        "github.com/mindhit/api/internal/service"
-    )
-
-    type MindmapController struct {
-        client         *ent.Client
-        mindmapService *service.MindmapService
-    }
-
-    func NewMindmapController(
-        client *ent.Client,
-        mindmapService *service.MindmapService,
-    ) *MindmapController {
-        return &MindmapController{
-            client:         client,
-            mindmapService: mindmapService,
-        }
-    }
-
-    // GetBySession retrieves the relationship graph for a session
-    func (c *MindmapController) GetBySession(ctx *gin.Context) {
-        sessionID, err := uuid.Parse(ctx.Param("id"))
+        // Connect to database
+        client, err := ent.Open("postgres", cfg.DatabaseURL)
         if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "invalid session id"}})
-            return
+            slog.Error("failed to connect to database", "error", err)
+            os.Exit(1)
         }
+        defer client.Close()
 
-        mindmap, err := c.client.MindmapGraph.
-            Query().
-            Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
-            Only(ctx.Request.Context())
-
+        // Initialize AI Provider Manager
+        ctx := context.Background()
+        aiManager, err := ai.NewProviderManager(ctx, cfg.AI)
         if err != nil {
-            if ent.IsNotFound(err) {
-                ctx.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "mindmap not found"}})
-                return
-            }
-            ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
-            return
+            slog.Error("failed to initialize ai manager", "error", err)
+            os.Exit(1)
         }
+        defer aiManager.Close()
 
-        ctx.JSON(http.StatusOK, gin.H{"mindmap": mindmap})
-    }
+        // Create worker server
+        server := queue.NewServer(queue.ServerConfig{
+            RedisAddr:   cfg.RedisAddr,
+            Concurrency: cfg.WorkerConcurrency,
+        })
 
-    // Generate triggers relationship graph generation for a session
-    // 태그는 이미 Step 9.4에서 추출되어 있음
-    func (c *MindmapController) Generate(ctx *gin.Context) {
-        userID, ok := middleware.GetUserID(ctx)
-        if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "unauthorized"}})
-            return
-        }
+        // Register handlers with AI manager
+        handler.RegisterHandlers(server, client, aiManager)
 
-        sessionID, err := uuid.Parse(ctx.Param("id"))
-        if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "invalid session id"}})
-            return
-        }
-
-        // Verify session ownership and status
-        sess, err := c.client.Session.
-            Query().
-            Where(
-                session.IDEQ(sessionID),
-                session.HasUserWith(user.IDEQ(userID)),
-            ).
-            Only(ctx.Request.Context())
-
-        if err != nil {
-            if ent.IsNotFound(err) {
-                ctx.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "session not found"}})
-                return
-            }
-            ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
-            return
-        }
-
-        // Check if session is in valid state for mindmap generation
-        if sess.SessionStatus != session.SessionStatusProcessing && sess.SessionStatus != session.SessionStatusCompleted {
-            ctx.JSON(http.StatusBadRequest, gin.H{
-                "error": gin.H{"message": "session must be stopped before generating mindmap"},
-            })
-            return
-        }
-
-        // Check if mindmap already exists
-        exists, err := c.client.MindmapGraph.
-            Query().
-            Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
-            Exist(ctx.Request.Context())
-
-        if err != nil {
-            ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
-            return
-        }
-
-        if exists {
-            ctx.JSON(http.StatusConflict, gin.H{
-                "error": gin.H{"message": "mindmap already exists for this session"},
-            })
-            return
-        }
-
-        // Start async processing
-        // 태그는 이미 추출되어 있으므로 관계도만 생성
+        // Graceful shutdown
         go func() {
-            bgCtx := context.Background()
-            if err := c.mindmapService.GenerateRelationshipGraph(bgCtx, sessionID); err != nil {
-                slog.Error("failed to generate relationship graph", "session_id", sessionID, "error", err)
-                return
-            }
+            sigCh := make(chan os.Signal, 1)
+            signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+            <-sigCh
+            slog.Info("shutting down worker")
+            server.Shutdown()
         }()
 
-        ctx.JSON(http.StatusAccepted, gin.H{
-            "message":    "relationship graph generation started",
-            "session_id": sessionID.String(),
-        })
-    }
-
-    // Regenerate regenerates the mindmap for a session (replaces existing)
-    func (c *MindmapController) Regenerate(ctx *gin.Context) {
-        userID, ok := middleware.GetUserID(ctx)
-        if !ok {
-            ctx.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "unauthorized"}})
-            return
+        if err := server.Run(); err != nil {
+            slog.Error("worker server error", "error", err)
+            os.Exit(1)
         }
-
-        sessionID, err := uuid.Parse(ctx.Param("id"))
-        if err != nil {
-            ctx.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"message": "invalid session id"}})
-            return
-        }
-
-        // Verify session ownership
-        _, err = c.client.Session.
-            Query().
-            Where(
-                session.IDEQ(sessionID),
-                session.HasUserWith(user.IDEQ(userID)),
-            ).
-            Only(ctx.Request.Context())
-
-        if err != nil {
-            if ent.IsNotFound(err) {
-                ctx.JSON(http.StatusNotFound, gin.H{"error": gin.H{"message": "session not found"}})
-                return
-            }
-            ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
-            return
-        }
-
-        // Delete existing mindmap if exists
-        _, err = c.client.MindmapGraph.
-            Delete().
-            Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
-            Exec(ctx.Request.Context())
-
-        if err != nil && !ent.IsNotFound(err) {
-            ctx.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{"message": err.Error()}})
-            return
-        }
-
-        // Start async processing
-        go func() {
-            bgCtx := context.Background()
-
-            if err := c.mindmapService.GenerateMindmap(bgCtx, sessionID); err != nil {
-                slog.Error("failed to regenerate mindmap", "session_id", sessionID, "error", err)
-                return
-            }
-        }()
-
-        ctx.JSON(http.StatusAccepted, gin.H{
-            "message":    "mindmap regeneration started",
-            "session_id": sessionID.String(),
-        })
     }
     ```
-
-- [ ] **라우터에 마인드맵 엔드포인트 추가**
-  ```go
-  // In main.go or router setup
-  mindmapController := controller.NewMindmapController(client, summarizeService, mindmapService)
-
-  sessions := v1.Group("/sessions")
-  sessions.Use(middleware.Auth(jwtService))
-  {
-      // ... 기존 세션 라우트
-
-      // Mindmap
-      sessions.GET("/:id/mindmap", mindmapController.GetBySession)
-      sessions.POST("/:id/mindmap/generate", mindmapController.Generate)
-      sessions.POST("/:id/mindmap/regenerate", mindmapController.Regenerate)
-  }
-  ```
-
-- [ ] **AI 헬스체크 엔드포인트** (선택)
-  ```go
-  // Health check for AI providers
-  r.GET("/health/ai", func(ctx *gin.Context) {
-      health := aiManager.HealthCheck(ctx.Request.Context())
-      allHealthy := true
-      for _, ok := range health {
-          if !ok {
-              allHealthy = false
-              break
-          }
-      }
-
-      status := http.StatusOK
-      if !allHealthy {
-          status = http.StatusServiceUnavailable
-      }
-
-      ctx.JSON(status, gin.H{"providers": health})
-  })
-  ```
 
 ### 검증
+
 ```bash
-# 서버 실행
-go run ./cmd/server
+# Worker 실행
+cd apps/backend
+REDIS_ADDR=localhost:6379 \
+OPENAI_API_KEY=sk-... \
+go run ./cmd/worker
 
-# 세션 종료 후 5분 이내 마인드맵 생성 확인
-# 로그에서 provider와 model 정보 확인
-# "generated mindmap" session_id=... provider=openai model=gpt-4-turbo
+# API에서 세션 종료
+curl -X POST http://localhost:8080/api/v1/sessions/{id}/stop \
+  -H "Authorization: Bearer $TOKEN"
 
-# AI 헬스체크
-curl http://localhost:8080/health/ai
-# {"providers":{"claude":true,"gemini":true,"openai":true}}
-
-# API로 마인드맵 조회
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/v1/sessions/{session_id}/mindmap
+# Worker 로그 확인
+# "generating mindmap" session_id=...
+# "mindmap generated" session_id=... topics=4 connections=2 provider=openai
 ```
 
 ---
@@ -2160,7 +1775,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 | 프로바이더 | 모델 | 장점 | 단점 | 권장 용도 |
 |-----------|------|------|------|----------|
 | **OpenAI** | gpt-4-turbo | JSON mode 네이티브 지원, 안정적 | 비용 높음 | 마인드맵 생성 |
-| **Gemini** | gemini-1.5-pro | 긴 컨텍스트, 비용 효율적 | JSON 출력 불안정할 수 있음 | URL 요약 |
+| **Gemini** | gemini-1.5-flash | 빠르고 저렴, 긴 컨텍스트 | JSON 불안정 가능 | 태그 추출 |
 | **Claude** | claude-3-5-sonnet | 뛰어난 분석력, 한국어 우수 | JSON mode 없음 | 복잡한 분석 |
 
 ### 권장 설정
@@ -2168,72 +1783,80 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```env
 # 비용 최적화 설정
 AI_DEFAULT_PROVIDER=gemini
-AI_FALLBACK_PROVIDERS=openai,claude
-AI_SUMMARIZE_PROVIDER=gemini      # 저비용
-AI_MINDMAP_PROVIDER=openai        # JSON 안정성
-
-# 품질 최적화 설정
-AI_DEFAULT_PROVIDER=openai
-AI_FALLBACK_PROVIDERS=claude,gemini
-AI_SUMMARIZE_PROVIDER=claude      # 분석력
-AI_MINDMAP_PROVIDER=openai        # JSON mode
+AI_TAG_EXTRACTION_PROVIDER=gemini   # 저비용, 빠름
+AI_MINDMAP_PROVIDER=openai          # JSON 안정성
+GEMINI_MODEL=gemini-1.5-flash
 ```
 
 ---
 
-## API 요약
+## Step 10.6: UsageService 연동 (토큰 측정)
 
-| Method | Endpoint | 설명 | 인증 |
-|--------|----------|------|------|
-| GET | `/v1/sessions/:id/mindmap` | 세션의 마인드맵 조회 | Bearer Token |
-| POST | `/v1/sessions/:id/mindmap/generate` | 마인드맵 생성 시작 (비동기) | Bearer Token |
-| POST | `/v1/sessions/:id/mindmap/regenerate` | 마인드맵 재생성 (기존 삭제 후 새로 생성) | Bearer Token |
-| GET | `/health/ai` | AI 프로바이더 헬스체크 | - |
+### 목표
 
-### 응답 예시
+AI 서비스에서 토큰 사용량을 **정확하게** 추적하고 제한을 체크합니다.
 
-**GET /v1/sessions/:id/mindmap** (성공)
-```json
-{
-  "mindmap": {
-    "id": "uuid",
-    "session_id": "uuid",
-    "nodes": [
-      {
-        "id": "node-1",
-        "label": "핵심 주제",
-        "type": "core",
-        "size": 100,
-        "color": "#FFD700",
-        "position": {"x": 0, "y": 0, "z": 0}
-      }
-    ],
-    "edges": [
-      {"source": "node-1", "target": "node-2", "weight": 1.0}
-    ],
-    "layout": {
-      "type": "galaxy",
-      "params": {"center": [0, 0, 0], "scale": 1.0}
-    },
-    "generated_at": "2024-01-01T00:00:00Z"
-  }
-}
-```
+### 토큰 측정 원리
 
-**GET /health/ai** (성공)
-```json
-{
-  "providers": {
-    "openai": true,
-    "gemini": true,
-    "claude": false
-  }
+AI API는 응답에 **실제 사용된 토큰 수**를 포함하여 반환합니다. 예상치가 아닌 정확한 값입니다.
+
+**AI 제공업체별 응답 필드:**
+
+| 제공업체 | 응답 필드 | 예시 값 |
+|---------|----------|--------|
+| OpenAI | `response.Usage.TotalTokens` | 3847 |
+| Google Gemini | `response.UsageMetadata.TotalTokenCount` | 3847 |
+| Anthropic Claude | `response.Usage.InputTokens + OutputTokens` | 3847 |
+
+### 체크리스트
+
+- [ ] AI 서비스에 UsageService 의존성 주입
+- [ ] 요청 전 사용량 제한 체크
+- [ ] API 호출 후 **응답에서 토큰 사용량 추출**
+- [ ] token_usage 테이블에 정확한 값 기록
+- [ ] 제한 초과 시 적절한 에러 반환
+
+### 코드 예시
+
+```go
+// internal/worker/handler/mindmap.go
+func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
+    // ... 기존 코드 ...
+
+    // 1. 제한 체크
+    status, err := h.usageService.CheckLimit(ctx, userID)
+    if err != nil {
+        return err
+    }
+    if !status.CanUseAI {
+        return ErrTokenLimitExceeded
+    }
+
+    // 2. AI 호출
+    response, err := h.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
+    if err != nil {
+        return err
+    }
+
+    // 3. 토큰 사용량 기록
+    tokensUsed := response.InputTokens + response.OutputTokens
+    if err := h.usageService.RecordUsage(ctx, service.UsageRecord{
+        UserID:    userID,
+        SessionID: sessionID,
+        Operation: "mindmap",
+        Tokens:    tokensUsed,
+        AIModel:   response.Model,
+    }); err != nil {
+        slog.Error("failed to record usage", "error", err)
+    }
+
+    // ... 나머지 처리 ...
 }
 ```
 
 ---
 
-## Phase 9 완료 확인
+## Phase 10 완료 확인
 
 ### 전체 검증 체크리스트
 
@@ -2242,32 +1865,45 @@ AI_MINDMAP_PROVIDER=openai        # JSON mode
 - [ ] Google Gemini Provider 구현
 - [ ] Anthropic Claude Provider 구현
 - [ ] Provider Manager 구현 (Fallback 지원)
-- [ ] URL 콘텐츠 크롤링
-- [ ] URL 요약 생성 (다중 프로바이더)
-- [ ] 마인드맵 구조 생성 (다중 프로바이더)
-- [ ] 마인드맵 저장
-- [ ] 마인드맵 API 조회
-- [ ] 5분마다 자동 처리
-- [ ] AI 헬스체크 엔드포인트
+- [ ] 태그 추출 Worker Handler
+- [ ] 마인드맵 생성 Worker Handler
+- [ ] API에서 Task Enqueue 연동
+- [ ] Worker에서 AI 처리 완료
+- [ ] **UsageService 연동 (토큰 측정)**
+
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 파일 |
+| ----------- | ---- | ---- |
+| 단위 테스트 | Provider Manager Fallback | `ai/manager_test.go` |
+| 단위 테스트 | 마인드맵 그래프 생성 | `handler/mindmap_test.go` |
+| Mock 테스트 | AI Provider (Mock 응답) | `ai/mock_provider_test.go` |
+| 단위 테스트 | 토큰 사용량 기록 | `service/usage_service_test.go` |
+
+```bash
+# Phase 10 테스트 실행
+moon run backend:test -- -run "TestAI|TestMindmap|TestUsage"
+```
+
+> **Note**: AI Provider 테스트는 실제 API 호출 대신 Mock을 사용합니다. 통합 테스트는 별도 환경에서 수동 실행합니다.
 
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
-| AI 타입 정의 | `internal/infrastructure/ai/types.go` |
-| Provider 인터페이스 | `internal/infrastructure/ai/provider.go` |
-| OpenAI Provider | `internal/infrastructure/ai/openai.go` |
-| Gemini Provider | `internal/infrastructure/ai/gemini.go` |
-| Claude Provider | `internal/infrastructure/ai/claude.go` |
-| Provider Manager | `internal/infrastructure/ai/manager.go` |
-| 크롤러 | `internal/infrastructure/crawler/crawler.go` |
-| 요약 서비스 | `internal/service/summarize_service.go` |
-| 마인드맵 서비스 | `internal/service/mindmap_service.go` |
-| AI 처리 Job | `internal/jobs/ai_processing.go` |
-| 마인드맵 API | `internal/controller/mindmap_controller.go` |
+| ---- | ---- |
+| AI 타입 정의 | `pkg/infra/ai/types.go` |
+| Provider 인터페이스 | `pkg/infra/ai/provider.go` |
+| OpenAI Provider | `pkg/infra/ai/openai.go` |
+| Gemini Provider | `pkg/infra/ai/gemini.go` |
+| Claude Provider | `pkg/infra/ai/claude.go` |
+| Provider Manager | `pkg/infra/ai/manager.go` |
+| 태그 추출 Handler | `internal/worker/handler/tag_extraction.go` |
+| 마인드맵 Handler | `internal/worker/handler/mindmap.go` |
+| 마인드맵 타입 | `pkg/service/mindmap_types.go` |
+| 테스트 | `pkg/infra/ai/*_test.go` |
 
 ---
 
 ## 다음 Phase
 
-Phase 9 완료 후 [Phase 10: 웹앱 대시보드](./phase-10-dashboard.md)으로 진행하세요.
+Phase 10 완료 후 [Phase 11: 웹앱 대시보드](./phase-11-dashboard.md)으로 진행하세요.

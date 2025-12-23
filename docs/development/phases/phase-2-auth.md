@@ -11,6 +11,38 @@
 
 ---
 
+## 아키텍처
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API Server
+    participant DB as Database
+
+    Note over C,DB: 회원가입/로그인 플로우
+    C->>A: POST /auth/register or /auth/login
+    A->>DB: 사용자 생성/조회
+    DB-->>A: User
+    A->>A: Access Token (15분) 생성
+    A->>A: Refresh Token (7일) 생성
+    A-->>C: { accessToken, refreshToken }
+
+    Note over C,DB: 인증된 API 요청
+    C->>A: GET /api/* (Authorization: Bearer {accessToken})
+    A->>A: JWT 검증 (Middleware)
+    A->>DB: 데이터 조회
+    DB-->>A: Data
+    A-->>C: Response
+
+    Note over C,DB: 토큰 갱신
+    C->>A: POST /auth/refresh (refreshToken)
+    A->>A: Refresh Token 검증
+    A->>A: 새 Access Token 생성
+    A-->>C: { accessToken }
+```
+
+---
+
 ## 진행 상황
 
 | Step | 이름 | 상태 |
@@ -23,9 +55,128 @@
 
 ---
 
+## 개발 테스트용 계정/토큰
+
+### 목적
+
+개발 및 테스트 환경에서 일관된 인증 테스트를 위해 고정된 테스트 계정과 토큰을 제공합니다.
+
+### 테스트 계정
+
+| 항목 | 값 |
+|-----|-----|
+| **Email** | `test@mindhit.dev` |
+| **Password** | `test1234!` |
+
+> Note: User ID는 seed 스크립트 실행 시 데이터베이스에서 자동 생성됩니다.
+
+### 테스트 토큰
+
+개발 환경에서만 유효한 고정 토큰 (실제 JWT 서명 검증 통과):
+
+| 토큰 유형 | 환경 변수 | 만료 |
+|----------|----------|------|
+| **Access Token** | `TEST_ACCESS_TOKEN` | 만료 없음 (개발 환경만) |
+| **Refresh Token** | `TEST_REFRESH_TOKEN` | 만료 없음 (개발 환경만) |
+
+### 구현 요구사항
+
+- [ ] **Seed 데이터 생성**
+  - [ ] `scripts/seed_test_user.go` - 테스트 사용자 생성 스크립트
+
+  ```go
+  const TestUserEmail = "test@mindhit.dev"
+
+  func SeedTestUser(ctx context.Context, client *ent.Client) (*ent.User, error) {
+      // 이미 존재하면 기존 사용자 반환
+      existing, err := client.User.Query().
+          Where(user.EmailEQ(TestUserEmail)).
+          Only(ctx)
+      if err == nil {
+          return existing, nil
+      }
+
+      hashedPassword, _ := bcrypt.GenerateFromPassword(
+          []byte("test1234!"),
+          bcrypt.DefaultCost,
+      )
+
+      return client.User.Create().
+          SetEmail(TestUserEmail).
+          SetPasswordHash(string(hashedPassword)).
+          Save(ctx)
+  }
+  ```
+
+- [ ] **환경별 토큰 검증**
+  - [ ] `internal/service/jwt_service.go`에 테스트 토큰 지원 추가
+
+  ```go
+  func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
+      // 개발 환경에서 테스트 토큰 허용
+      if s.isDev && tokenString == os.Getenv("TEST_ACCESS_TOKEN") {
+          // 테스트 사용자 조회
+          testUser, err := s.userRepo.GetByEmail(ctx, "test@mindhit.dev")
+          if err != nil {
+              return nil, err
+          }
+          return &Claims{
+              UserID:    testUser.ID,
+              TokenType: AccessToken,
+          }, nil
+      }
+
+      // 일반 JWT 검증
+      // ...
+  }
+  ```
+
+- [ ] **환경 변수 설정** (`.env.development`)
+  ```bash
+  # 테스트 인증
+  TEST_ACCESS_TOKEN=mindhit-test-access-token-dev-only
+  TEST_REFRESH_TOKEN=mindhit-test-refresh-token-dev-only
+  ```
+
+- [ ] **moonrepo task 추가** (`moon.yml`)
+  ```yaml
+  tasks:
+    seed-test-user:
+      command: go run ./scripts/seed_test_user.go
+      deps:
+        - migrate
+  ```
+
+### 사용 예시
+
+```bash
+# 테스트 토큰으로 API 호출
+curl -X GET http://localhost:8080/v1/auth/me \
+  -H "Authorization: Bearer mindhit-test-access-token-dev-only"
+
+# 또는 환경 변수 사용
+curl -X GET http://localhost:8080/v1/auth/me \
+  -H "Authorization: Bearer $TEST_ACCESS_TOKEN"
+```
+
+### 보안 주의사항
+
+> **WARNING**: 테스트 토큰은 반드시 개발/테스트 환경에서만 활성화되어야 합니다.
+> 프로덕션 환경에서는 `APP_ENV=production`으로 설정하여 테스트 토큰이 무효화됩니다.
+
+```go
+// 프로덕션에서는 테스트 토큰 비활성화
+if os.Getenv("APP_ENV") == "production" {
+    s.isDev = false
+}
+```
+
+---
+
 ## Step 2.1: JWT 서비스 구현 (Access + Refresh Token)
 
 ### 목표
+
 Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 
 ### 토큰 전략
@@ -38,6 +189,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 ### 체크리스트
 
 - [ ] **의존성 추가**
+
   ```bash
   cd apps/api
   go get github.com/golang-jwt/jwt/v5
@@ -45,6 +197,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 
 - [ ] **JWT 서비스 작성**
   - [ ] `internal/service/jwt_service.go`
+
     ```go
     package service
 
@@ -183,6 +336,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 
 - [ ] **테스트 작성**
   - [ ] `internal/service/jwt_service_test.go`
+
     ```go
     package service_test
 
@@ -218,6 +372,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
     ```
 
 ### 검증
+
 ```bash
 cd apps/api
 go test ./internal/service/... -v -run TestJWT
@@ -228,17 +383,20 @@ go test ./internal/service/... -v -run TestJWT
 ## Step 2.2: Auth 서비스 구현
 
 ### 목표
+
 회원가입, 로그인 비즈니스 로직
 
 ### 체크리스트
 
 - [ ] **bcrypt 의존성 추가**
+
   ```bash
   go get golang.org/x/crypto/bcrypt
   ```
 
 - [ ] **Auth 서비스 작성**
   - [ ] `internal/service/auth_service.go`
+
     ```go
     package service
 
@@ -334,12 +492,14 @@ go test ./internal/service/... -v -run TestJWT
     ```
 
 - [ ] **import 추가**
+
   ```go
   import "github.com/google/uuid"
   ```
 
 - [ ] **테스트 작성**
   - [ ] `internal/service/auth_service_test.go`
+
     ```go
     package service_test
 
@@ -420,12 +580,14 @@ go test ./internal/service/... -v -run TestJWT
     ```
 
 - [ ] **SQLite 드라이버 추가** (테스트용)
+
   ```bash
   go get github.com/mattn/go-sqlite3
   go get github.com/stretchr/testify
   ```
 
 ### 검증
+
 ```bash
 cd apps/api
 go test ./internal/service/... -v -run TestAuthService
@@ -436,12 +598,14 @@ go test ./internal/service/... -v -run TestAuthService
 ## Step 2.3: Auth 컨트롤러 구현
 
 ### 목표
+
 HTTP 핸들러로 API 엔드포인트 구현
 
 ### 체크리스트
 
 - [ ] **Auth 컨트롤러 작성**
   - [ ] `internal/controller/auth_controller.go`
+
     ```go
     package controller
 
@@ -594,6 +758,7 @@ HTTP 핸들러로 API 엔드포인트 구현
 
 - [ ] **main.go 업데이트**
   - [ ] `cmd/server/main.go`에 라우트 등록
+
     ```go
     // Ent Client 초기화
     client, err := ent.Open("postgres", cfg.DatabaseURL)
@@ -622,6 +787,7 @@ HTTP 핸들러로 API 엔드포인트 구현
     ```
 
 ### 검증
+
 ```bash
 # 서버 실행
 cd apps/api && go run ./cmd/server
@@ -642,12 +808,14 @@ curl -X POST http://localhost:8080/v1/auth/login \
 ## Step 2.4: Auth 미들웨어 구현
 
 ### 목표
+
 JWT 토큰 검증 미들웨어
 
 ### 체크리스트
 
 - [ ] **Auth 미들웨어 작성**
   - [ ] `internal/infrastructure/middleware/auth.go`
+
     ```go
     package middleware
 
@@ -707,12 +875,14 @@ JWT 토큰 검증 미들웨어
     ```
 
 - [ ] **import 추가**
+
   ```go
   import "github.com/google/uuid"
   ```
 
 - [ ] **CORS 미들웨어 업데이트**
   - [ ] `internal/infrastructure/middleware/cors.go`
+
     ```go
     package middleware
 
@@ -734,6 +904,7 @@ JWT 토큰 검증 미들웨어
 
 - [ ] **로깅 미들웨어**
   - [ ] `internal/infrastructure/middleware/logging.go`
+
     ```go
     package middleware
 
@@ -766,6 +937,7 @@ JWT 토큰 검증 미들웨어
     ```
 
 - [ ] **main.go에 미들웨어 적용**
+
   ```go
   r.Use(gin.Recovery())
   r.Use(middleware.Logging())
@@ -780,6 +952,7 @@ JWT 토큰 검증 미들웨어
   ```
 
 ### 검증
+
 ```bash
 # 토큰 없이 요청 (401 예상)
 curl -X GET http://localhost:8080/v1/sessions \
@@ -801,6 +974,7 @@ curl -X GET http://localhost:8080/v1/sessions \
 ## Step 2.5: 토큰 갱신 및 사용자 정보 API
 
 ### 목표
+
 - `POST /v1/auth/refresh` - Refresh Token으로 Access Token 갱신
 - `GET /v1/auth/me` - 현재 사용자 정보 조회
 
@@ -808,6 +982,7 @@ curl -X GET http://localhost:8080/v1/sessions \
 
 - [ ] **Auth 컨트롤러에 추가**
   - [ ] `internal/controller/auth_controller.go`에 메서드 추가
+
     ```go
     // RefreshRequest for token refresh
     type RefreshRequest struct {
@@ -914,6 +1089,7 @@ curl -X GET http://localhost:8080/v1/sessions \
     ```
 
 - [ ] **Signup/Login 응답 수정** (TokenPair 반환)
+
     ```go
     func (c *AuthController) Signup(ctx *gin.Context) {
         // ... validation code ...
@@ -948,6 +1124,7 @@ curl -X GET http://localhost:8080/v1/sessions \
     ```
 
 - [ ] **라우트 등록**
+
   ```go
   // In main.go
   auth := v1.Group("/auth")
@@ -967,6 +1144,7 @@ curl -X GET http://localhost:8080/v1/sessions \
   ```
 
 - [ ] **Auth 미들웨어 수정** (Access Token만 허용)
+
   ```go
   func Auth(jwtService *service.JWTService) gin.HandlerFunc {
       return func(c *gin.Context) {
@@ -1002,6 +1180,7 @@ curl -X GET http://localhost:8080/v1/sessions \
   ```
 
 ### 검증
+
 ```bash
 # 1. 회원가입 (access + refresh token 반환)
 curl -X POST http://localhost:8080/v1/auth/signup \
@@ -1025,6 +1204,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
 ### 전체 검증 체크리스트
 
 - [ ] **회원가입 API**
+
   ```bash
   curl -X POST http://localhost:8080/v1/auth/signup \
     -H "Content-Type: application/json" \
@@ -1033,6 +1213,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
   ```
 
 - [ ] **로그인 API**
+
   ```bash
   curl -X POST http://localhost:8080/v1/auth/login \
     -H "Content-Type: application/json" \
@@ -1041,6 +1222,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
   ```
 
 - [ ] **토큰 갱신 API**
+
   ```bash
   curl -X POST http://localhost:8080/v1/auth/refresh \
     -H "Content-Type: application/json" \
@@ -1049,6 +1231,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
   ```
 
 - [ ] **사용자 정보 API**
+
   ```bash
   curl -X GET http://localhost:8080/v1/auth/me \
     -H "Authorization: Bearer <access_token>"
@@ -1056,6 +1239,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
   ```
 
 - [ ] **잘못된 자격증명**
+
   ```bash
   curl -X POST http://localhost:8080/v1/auth/login \
     -H "Content-Type: application/json" \
@@ -1064,6 +1248,7 @@ curl -X GET http://localhost:8080/v1/auth/me \
   ```
 
 - [ ] **중복 이메일**
+
   ```bash
   curl -X POST http://localhost:8080/v1/auth/signup \
     -H "Content-Type: application/json" \
@@ -1072,16 +1257,32 @@ curl -X GET http://localhost:8080/v1/auth/me \
   ```
 
 - [ ] **만료된 토큰**
+
   ```bash
   curl -X GET http://localhost:8080/v1/auth/me \
     -H "Authorization: Bearer <expired_access_token>"
   # 401 Unauthorized
   ```
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 파일 |
+| ----------- | ---- | ---- |
+| 단위 테스트 | JWT 토큰 생성/검증 | `jwt_service_test.go` |
+| 단위 테스트 | 회원가입/로그인 로직 | `auth_service_test.go` |
+| 통합 테스트 | Auth API 엔드포인트 | `auth_controller_test.go` |
+
+```bash
+# Phase 2 테스트 실행
+moon run backend:test -- -run "TestJWT|TestAuth"
+```
+
+> **Note**: 모든 테스트가 통과해야 Phase 2 완료로 인정됩니다.
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | JWT 서비스 | `internal/service/jwt_service.go` |
 | Auth 서비스 | `internal/service/auth_service.go` |
 | Auth 컨트롤러 | `internal/controller/auth_controller.go` |

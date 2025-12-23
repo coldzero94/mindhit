@@ -5,9 +5,40 @@
 | 항목 | 내용 |
 |-----|------|
 | **목표** | Side Panel 기반 Chrome Extension으로 브라우징 세션 녹화 |
-| **선행 조건** | Phase 4 완료 (이벤트 API) |
+| **선행 조건** | Phase 2 (인증), Phase 4 (이벤트 API) 완료 |
 | **예상 소요** | 5 Steps |
 | **결과물** | 세션 시작/일시정지/종료, 이벤트 수집 기능 |
+
+---
+
+## 아키텍처
+
+```mermaid
+flowchart TB
+    subgraph Chrome Extension
+        SP[Side Panel<br/>React UI]
+        BG[Service Worker<br/>Background Script]
+        CS[Content Script]
+    end
+
+    subgraph Browser
+        TAB[Active Tab]
+    end
+
+    subgraph API
+        AUTH[Auth API]
+        SESS[Session API]
+        EVT[Events API]
+    end
+
+    SP <-->|상태 관리| BG
+    BG <-->|DOM 이벤트| CS
+    CS <-->|페이지 모니터링| TAB
+
+    BG -->|로그인/로그아웃| AUTH
+    BG -->|세션 시작/종료| SESS
+    BG -->|이벤트 배치 전송| EVT
+```
 
 ---
 
@@ -28,6 +59,7 @@
 ### 체크리스트
 
 - [ ] **프로젝트 생성**
+
   ```bash
   cd apps
   mkdir extension
@@ -36,6 +68,7 @@
   ```
 
 - [ ] **의존성 설치**
+
   ```bash
   pnpm add -D typescript vite @crxjs/vite-plugin@beta
   pnpm add -D @types/chrome
@@ -43,6 +76,7 @@
   ```
 
 - [ ] **프로젝트 구조**
+
   ```
   apps/extension/
   ├── src/
@@ -79,6 +113,7 @@
   ```
 
 - [ ] **manifest.json**
+
   ```json
   {
     "manifest_version": 3,
@@ -121,6 +156,7 @@
   ```
 
 - [ ] **vite.config.ts**
+
   ```typescript
   import { defineConfig } from 'vite';
   import { crx } from '@crxjs/vite-plugin';
@@ -141,6 +177,7 @@
   ```
 
 - [ ] **tsconfig.json**
+
   ```json
   {
     "compilerOptions": {
@@ -166,6 +203,7 @@
   ```
 
 - [ ] **moon.yml**
+
   ```yaml
   language: typescript
   type: application
@@ -190,6 +228,7 @@
   ```
 
 ### 검증
+
 ```bash
 cd apps/extension
 pnpm build
@@ -210,6 +249,7 @@ pnpm build
 
 - [ ] **Side Panel HTML**
   - [ ] `src/sidepanel/index.html`
+
     ```html
     <!DOCTYPE html>
     <html lang="ko">
@@ -239,6 +279,7 @@ pnpm build
 
 - [ ] **Side Panel Entry**
   - [ ] `src/sidepanel/index.tsx`
+
     ```tsx
     import { createRoot } from 'react-dom/client';
     import { App } from './App';
@@ -252,6 +293,7 @@ pnpm build
 
 - [ ] **스타일**
   - [ ] `src/sidepanel/styles.css`
+
     ```css
     @tailwind base;
     @tailwind components;
@@ -274,6 +316,7 @@ pnpm build
 
 - [ ] **Session Store**
   - [ ] `src/stores/session-store.ts`
+
     ```typescript
     import { create } from 'zustand';
     import { persist } from 'zustand/middleware';
@@ -361,6 +404,7 @@ pnpm build
 
 - [ ] **Main App Component**
   - [ ] `src/sidepanel/App.tsx`
+
     ```tsx
     import { useEffect } from 'react';
     import { useAuthStore } from '../stores/auth-store';
@@ -405,6 +449,7 @@ pnpm build
 
 - [ ] **Session Control Component**
   - [ ] `src/sidepanel/components/SessionControl.tsx`
+
     ```tsx
     import { useState } from 'react';
     import { useSessionStore } from '../../stores/session-store';
@@ -546,6 +591,7 @@ pnpm build
 
 - [ ] **Session Stats Component**
   - [ ] `src/sidepanel/components/SessionStats.tsx`
+
     ```tsx
     import { useSessionStore } from '../../stores/session-store';
 
@@ -586,6 +632,7 @@ pnpm build
 
 - [ ] **Login Prompt Component**
   - [ ] `src/sidepanel/components/LoginPrompt.tsx`
+
     ```tsx
     import { useState } from 'react';
     import { useAuthStore } from '../../stores/auth-store';
@@ -680,6 +727,7 @@ pnpm build
     ```
 
 ### 검증
+
 ```bash
 pnpm build
 # Chrome Extension 리로드
@@ -694,6 +742,7 @@ pnpm build
 
 - [ ] **Auth Store**
   - [ ] `src/stores/auth-store.ts`
+
     ```typescript
     import { create } from 'zustand';
     import { persist } from 'zustand/middleware';
@@ -743,6 +792,7 @@ pnpm build
 
 - [ ] **API Client**
   - [ ] `src/lib/api.ts`
+
     ```typescript
     const API_BASE_URL = 'http://localhost:8080/v1';
 
@@ -832,6 +882,7 @@ pnpm build
     ```
 
 ### 검증
+
 ```bash
 # Side Panel에서 로그인 테스트
 # 1. 이메일/비밀번호 입력
@@ -848,6 +899,7 @@ pnpm build
 
 - [ ] **이벤트 타입 정의**
   - [ ] `src/types/index.ts`
+
     ```typescript
     export type EventType =
       | 'page_visit'
@@ -901,6 +953,7 @@ pnpm build
 
 - [ ] **Background Service Worker**
   - [ ] `src/background/index.ts`
+
     ```typescript
     import { BrowsingEvent } from '../types';
 
@@ -1027,6 +1080,7 @@ pnpm build
 
 - [ ] **Content Script**
   - [ ] `src/content/index.ts`
+
     ```typescript
     import { BrowsingEvent, PageVisitEvent, ScrollEvent, HighlightEvent } from '../types';
 
@@ -1198,6 +1252,7 @@ pnpm build
     ```
 
 ### 검증
+
 ```bash
 # 1. 세션 시작
 # 2. 여러 페이지 방문
@@ -1215,6 +1270,7 @@ pnpm build
 
 - [ ] **이벤트 큐 개선**
   - [ ] `src/lib/events.ts`
+
     ```typescript
     import { BrowsingEvent } from '../types';
 
@@ -1345,6 +1401,7 @@ pnpm build
 
 - [ ] **오프라인 지원**
   - [ ] `src/lib/storage.ts`
+
     ```typescript
     const STORAGE_KEY_PREFIX = 'mindhit';
 
@@ -1395,6 +1452,7 @@ pnpm build
 
 - [ ] **Background에서 오프라인 처리**
   - Background Service Worker 업데이트
+
     ```typescript
     // src/background/index.ts에 추가
 
@@ -1441,6 +1499,7 @@ pnpm build
     ```
 
 ### 검증
+
 ```bash
 # 오프라인 테스트
 # 1. 세션 시작
@@ -1467,16 +1526,33 @@ pnpm build
 - [ ] 이벤트 배치 전송
 - [ ] 오프라인 이벤트 저장 및 재전송
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 도구 |
+| ----------- | ---- | ---- |
+| 단위 테스트 | 이벤트 큐 로직 | Vitest |
+| 단위 테스트 | IndexedDB 저장소 | Vitest + fake-indexeddb |
+| 통합 테스트 | API 통신 | Vitest + MSW |
+| E2E 테스트 | Extension 전체 플로우 | Puppeteer (수동 검증) |
+
+```bash
+# Phase 8 테스트 실행
+moon run extension:test
+```
+
+> **Note**: Chrome Extension은 브라우저 환경 테스트가 제한적이므로 핵심 로직 단위 테스트에 집중합니다.
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | Extension 프로젝트 | `apps/extension/` |
 | Manifest | `manifest.json` |
 | Background Worker | `src/background/index.ts` |
 | Content Script | `src/content/index.ts` |
 | Side Panel | `src/sidepanel/` |
 | 이벤트 큐 | `src/lib/events.ts` |
+| 테스트 | `src/**/*.test.ts` |
 
 ---
 

@@ -11,6 +11,35 @@
 
 ---
 
+## 아키텍처
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        EXT[Chrome Extension]
+    end
+
+    subgraph API
+        CTRL[Event Controller]
+        SVC[Event Service]
+        URL[URL Service]
+    end
+
+    subgraph Database
+        PV[(PageVisit)]
+        HL[(Highlight)]
+    end
+
+    EXT -->|POST /events/batch| CTRL
+    CTRL --> SVC
+    SVC --> URL
+    URL -->|중복 URL 처리| PV
+    SVC -->|이벤트 저장| PV
+    SVC -->|하이라이트 저장| HL
+```
+
+---
+
 ## 진행 상황
 
 | Step | 이름 | 상태 |
@@ -25,11 +54,13 @@
 ## Step 4.1: Event 서비스 구현
 
 ### 목표
+
 이벤트 배치 처리 및 저장 로직
 
 ### 체크리스트
 
 - [ ] **gjson 의존성 추가**
+
   ```bash
   cd apps/api
   go get github.com/tidwall/gjson
@@ -37,6 +68,7 @@
 
 - [ ] **Event 서비스 작성**
   - [ ] `internal/service/event_service.go`
+
     ```go
     package service
 
@@ -222,6 +254,7 @@
     ```
 
 ### 검증
+
 ```bash
 go build ./...
 ```
@@ -231,17 +264,20 @@ go build ./...
 ## Step 4.2: URL 서비스 구현
 
 ### 목표
+
 URL 중복 처리 및 콘텐츠 저장
 
 ### 체크리스트
 
 - [ ] **crypto 의존성** (해싱용)
+
   ```bash
   # 표준 라이브러리 사용
   ```
 
 - [ ] **URL 서비스 작성**
   - [ ] `internal/service/url_service.go`
+
     ```go
     package service
 
@@ -381,11 +417,13 @@ URL 중복 처리 및 콘텐츠 저장
     ```
 
 - [ ] **uuid import 추가**
+
   ```go
   import "github.com/google/uuid"
   ```
 
 ### 검증
+
 ```bash
 go build ./...
 ```
@@ -395,12 +433,14 @@ go build ./...
 ## Step 4.3: Event 컨트롤러 구현
 
 ### 목표
+
 이벤트 배치 수신 API 엔드포인트
 
 ### 체크리스트
 
 - [ ] **Event 컨트롤러 작성**
   - [ ] `internal/controller/event_controller.go`
+
     ```go
     package controller
 
@@ -502,6 +542,7 @@ go build ./...
     ```
 
 - [ ] **main.go에 라우트 추가**
+
   ```go
   // Services
   urlService := service.NewURLService(client)
@@ -516,6 +557,7 @@ go build ./...
 
 - [ ] **Sessions TypeSpec 업데이트** (Phase 1.5에서 추가)
   - [ ] `packages/protocol/src/events/events.tsp`
+
     ```typespec
     import "../common/errors.tsp";
 
@@ -564,6 +606,7 @@ go build ./...
     ```
 
 ### 검증
+
 ```bash
 # 서버 실행
 go run ./cmd/server
@@ -613,12 +656,14 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 ## Step 4.4: 이벤트 조회 API 구현
 
 ### 목표
+
 세션의 이벤트 목록 조회 및 통계 API
 
 ### 체크리스트
 
 - [ ] **Event 서비스에 조회 메서드 추가**
   - [ ] `internal/service/event_service.go`에 추가
+
     ```go
     // GetEventsBySession retrieves all events for a session
     func (s *EventService) GetEventsBySession(
@@ -721,6 +766,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 
 - [ ] **Event 컨트롤러에 조회 엔드포인트 추가**
   - [ ] `internal/controller/event_controller.go`에 추가
+
     ```go
     // ListEvents retrieves events for a session with optional filtering
     func (c *EventController) ListEvents(ctx *gin.Context) {
@@ -820,6 +866,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     ```
 
 - [ ] **main.go에 조회 라우트 추가**
+
   ```go
   // Event routes (protected, under sessions)
   sessions.POST("/:sessionId/events", eventController.BatchEvents)
@@ -828,11 +875,13 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
   ```
 
 - [ ] **import 추가**
+
   ```go
   import "strconv"
   ```
 
 ### 검증
+
 ```bash
 # 이벤트 목록 조회
 curl -H "Authorization: Bearer $TOKEN" \
@@ -866,6 +915,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### 응답 예시
 
 **POST /v1/sessions/:sessionId/events** (성공)
+
 ```json
 {
   "processed": 3,
@@ -874,6 +924,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **GET /v1/sessions/:sessionId/events** (성공)
+
 ```json
 {
   "events": [
@@ -894,6 +945,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **GET /v1/sessions/:sessionId/events/stats** (성공)
+
 ```json
 {
   "stats": {
@@ -912,6 +964,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### 전체 검증 체크리스트
 
 - [ ] **이벤트 배치 전송**
+
   ```bash
   curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     -H "Authorization: Bearer $TOKEN" \
@@ -921,6 +974,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   ```
 
 - [ ] **빈 배치 거부**
+
   ```bash
   curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     -H "Authorization: Bearer $TOKEN" \
@@ -930,6 +984,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   ```
 
 - [ ] **다른 사용자 세션 접근 거부**
+
   ```bash
   # 다른 사용자 토큰으로 요청
   # 403 Forbidden
@@ -939,13 +994,29 @@ curl -H "Authorization: Bearer $TOKEN" \
   - 같은 URL로 두 번 이벤트 전송
   - urls 테이블에 1개만 존재하는지 확인
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 파일 |
+| ----------- | ---- | ---- |
+| 단위 테스트 | 이벤트 배치 처리 | `event_service_test.go` |
+| 단위 테스트 | URL 해시 및 중복 처리 | `url_service_test.go` |
+| 통합 테스트 | Event API 엔드포인트 | `event_controller_test.go` |
+
+```bash
+# Phase 4 테스트 실행
+moon run backend:test -- -run "TestEvent|TestURL"
+```
+
+> **Note**: 모든 테스트가 통과해야 Phase 4 완료로 인정됩니다.
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | Event 서비스 | `internal/service/event_service.go` |
 | URL 서비스 | `internal/service/url_service.go` |
 | Event 컨트롤러 | `internal/controller/event_controller.go` |
+| 테스트 | `internal/service/event_service_test.go` |
 
 ---
 

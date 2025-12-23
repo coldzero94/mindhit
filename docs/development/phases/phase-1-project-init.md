@@ -5,9 +5,9 @@
 | 항목 | 내용 |
 |-----|------|
 | **목표** | 모노레포 구조 설정 및 Go 백엔드 기반 구축 |
-| **선행 조건** | 없음 (첫 번째 Phase) |
-| **예상 소요** | 9 Steps |
-| **결과물** | 동작하는 Go 서버 + PostgreSQL 연결 |
+| **선행 조건** | Phase 0 완료 |
+| **예상 소요** | 10 Steps |
+| **결과물** | 동작하는 Go 서버 + PostgreSQL 연결 + 테스트 인프라 |
 
 ---
 
@@ -24,12 +24,14 @@
 | 1.7 | Ent 스키마 정의 - 핵심 엔티티 | ⬜ |
 | 1.8 | Ent 스키마 정의 - 보조 엔티티 | ⬜ |
 | 1.9 | 첫 번째 Migration 생성 및 적용 | ⬜ |
+| 1.10 | 테스트 인프라 설정 | ⬜ |
 
 ---
 
 ## Step 1.1: 모노레포 구조 확인
 
 ### 목표
+
 Phase 0에서 설정한 Moon + pnpm 모노레포 구조 확인 및 검증
 
 > **참고**: Moon 설치 및 기본 설정은 [Phase 0: Moon + Docker 개발 환경](./phase-0-dev-environment.md)에서 완료됩니다.
@@ -42,6 +44,7 @@ Phase 0에서 설정한 Moon + pnpm 모노레포 구조 확인 및 검증
   - [ ] GitHub Actions CI 워크플로우가 설정되어 있는지 확인
 
 - [ ] **디렉토리 구조 확인**
+
   ```bash
   ls -la .moon/
   ls -la apps/
@@ -49,6 +52,7 @@ Phase 0에서 설정한 Moon + pnpm 모노레포 구조 확인 및 검증
   ```
 
 - [ ] **Moon 프로젝트 확인**
+
   ```bash
   pnpm moon query projects
   ```
@@ -78,14 +82,18 @@ mindhit/
 │   └── workflows/
 │       └── ci.yml        # Moon CI 워크플로우
 ├── apps/
-│   ├── api/              # Go 백엔드
+│   ├── backend/          # Go 백엔드 (API + Worker)
 │   ├── web/              # Next.js 웹앱
 │   └── extension/        # Chrome Extension
 ├── packages/
 │   ├── shared/           # 공유 유틸
 │   └── protocol/         # API 타입 정의
-├── docker-compose.yml
-├── Makefile
+├── infra/
+│   ├── docker/           # Docker Compose (go run 모드)
+│   ├── kind/             # kind 클러스터 설정
+│   ├── helm/             # Helm Charts
+│   └── modules/          # Terraform 모듈
+├── .moon/                # Moon 설정
 ├── package.json
 ├── pnpm-workspace.yaml
 └── pnpm-lock.yaml
@@ -96,17 +104,20 @@ mindhit/
 ## Step 1.2: Go 백엔드 프로젝트 초기화
 
 ### 목표
+
 Go 모듈 및 기본 프로젝트 구조 설정
 
 ### 체크리스트
 
 - [ ] **Go 모듈 초기화**
+
   ```bash
   cd apps/api
   go mod init github.com/mindhit/api
   ```
 
 - [ ] **디렉토리 구조 생성**
+
   ```bash
   mkdir -p cmd/server
   mkdir -p internal/{controller,service,infrastructure/{config,middleware,logger}}
@@ -116,6 +127,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
 
 - [ ] **기본 파일 생성**
   - [ ] `cmd/server/main.go`
+
     ```go
     package main
 
@@ -128,6 +140,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
 
 - [ ] **golangci-lint 설정**
   - [ ] `.golangci.yml` 생성
+
     ```yaml
     run:
       timeout: 5m
@@ -158,6 +171,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
 
 - [ ] **moon.yml 설정**
   - [ ] `apps/api/moon.yml` 생성
+
     ```yaml
     language: go
     type: application
@@ -188,6 +202,7 @@ Go 모듈 및 기본 프로젝트 구조 설정
     ```
 
 ### 검증
+
 ```bash
 cd apps/api
 go build ./cmd/server
@@ -196,6 +211,7 @@ go run ./cmd/server
 ```
 
 ### 결과물
+
 ```
 apps/api/
 ├── cmd/
@@ -222,11 +238,13 @@ apps/api/
 ## Step 1.3: Ent ORM 설정
 
 ### 목표
+
 Ent ORM 의존성 추가 및 기본 설정
 
 ### 체크리스트
 
 - [ ] **Ent 의존성 추가**
+
   ```bash
   cd apps/api
   go get entgo.io/ent/cmd/ent@latest
@@ -234,12 +252,14 @@ Ent ORM 의존성 추가 및 기본 설정
   ```
 
 - [ ] **Ent 초기화**
+
   ```bash
   go run -mod=mod entgo.io/ent/cmd/ent new User
   ```
 
 - [ ] **generate.go 생성**
   - [ ] `ent/generate.go` 확인/생성
+
     ```go
     package ent
 
@@ -247,6 +267,7 @@ Ent ORM 의존성 추가 및 기본 설정
     ```
 
 - [ ] **moon.yml에 generate 태스크 추가**
+
   ```yaml
   generate:
     command: go generate ./ent
@@ -255,6 +276,7 @@ Ent ORM 의존성 추가 및 기본 설정
   ```
 
 ### 검증
+
 ```bash
 cd apps/api
 go generate ./ent
@@ -263,6 +285,7 @@ ls ent/
 ```
 
 ### 결과물
+
 ```
 apps/api/ent/
 ├── schema/
@@ -278,11 +301,13 @@ apps/api/ent/
 ## Step 1.4: Atlas Migration 설정
 
 ### 목표
+
 Atlas CLI 설정 및 migration 워크플로우 구성
 
 ### 체크리스트
 
 - [ ] **Atlas 설치** (로컬)
+
   ```bash
   # macOS
   brew install ariga/tap/atlas
@@ -293,6 +318,7 @@ Atlas CLI 설정 및 migration 워크플로우 구성
 
 - [ ] **atlas.hcl 생성**
   - [ ] `apps/api/atlas.hcl`
+
     ```hcl
     env "local" {
       src = "ent://ent/schema"
@@ -311,11 +337,13 @@ Atlas CLI 설정 및 migration 워크플로우 구성
     ```
 
 - [ ] **migration 디렉토리 생성**
+
   ```bash
   mkdir -p apps/api/ent/migrate/migrations
   ```
 
 - [ ] **moon.yml에 migration 태스크 추가**
+
   ```yaml
   migrate-diff:
     command: atlas migrate diff ${MIGRATION_NAME} --dir "file://ent/migrate/migrations" --to "ent://ent/schema" --dev-url "${DEV_DATABASE_URL}"
@@ -331,12 +359,14 @@ Atlas CLI 설정 및 migration 워크플로우 구성
   ```
 
 ### 검증
+
 ```bash
 atlas version
 # Atlas CLI version x.x.x
 ```
 
 ### 결과물
+
 ```
 apps/api/
 ├── atlas.hcl
@@ -350,87 +380,51 @@ apps/api/
 ## Step 1.5: PostgreSQL Docker Compose 설정
 
 ### 목표
-로컬 개발용 PostgreSQL 컨테이너 설정
+
+로컬 개발용 PostgreSQL/Redis 컨테이너 설정
+
+> **Note**: Docker Compose 설정은 [Phase 0](./phase-0-dev-environment.md)에서 이미 완료됩니다.
+> 이 단계에서는 Phase 0에서 생성한 인프라가 정상 동작하는지 확인합니다.
 
 ### 체크리스트
 
-- [ ] **docker-compose.yml 생성** (루트)
-  ```yaml
-  version: '3.8'
-
-  services:
-    postgres:
-      image: postgres:16-alpine
-      container_name: mindhit-postgres
-      environment:
-        POSTGRES_USER: postgres
-        POSTGRES_PASSWORD: password
-        POSTGRES_DB: mindhit
-      ports:
-        - "5432:5432"
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
-        - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]
-        interval: 5s
-        timeout: 5s
-        retries: 5
-
-    redis:
-      image: redis:7-alpine
-      container_name: mindhit-redis
-      ports:
-        - "6379:6379"
-      volumes:
-        - redis_data:/data
-
-  volumes:
-    postgres_data:
-    redis_data:
-  ```
-
-- [ ] **초기화 스크립트 생성**
-  - [ ] `scripts/init-db.sql`
-    ```sql
-    -- 개발용 데이터베이스 생성
-    CREATE DATABASE mindhit_dev;
-    CREATE DATABASE mindhit_test;
-    ```
+- [ ] **Phase 0 완료 확인**
+  - Docker Compose 파일 위치: `infra/docker/docker-compose.yml`
 
 - [ ] **환경 변수 파일 생성**
-  - [ ] `apps/api/.env.example`
+  - [ ] `apps/backend/.env.local`
+
     ```
-    PORT=8080
-    ENVIRONMENT=development
+    ENVIRONMENT=local
+    API_PORT=8081
     DATABASE_URL=postgres://postgres:password@localhost:5432/mindhit?sslmode=disable
-    DEV_DATABASE_URL=postgres://postgres:password@localhost:5432/mindhit_dev?sslmode=disable
-    JWT_SECRET=your-secret-key-change-in-production
     REDIS_URL=redis://localhost:6379
+    JWT_SECRET=your-secret-key-change-in-production
+    WORKER_CONCURRENCY=10
     ```
-  - [ ] `apps/api/.env` (복사 후 수정)
 
 ### 검증
+
 ```bash
-# 컨테이너 실행
-docker-compose up -d
+# Docker Compose 실행 (Phase 0에서 설정)
+moon run infra:dev-up
 
 # 연결 테스트
 docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "SELECT 1;"
 
-# 데이터베이스 목록 확인
-docker exec -it mindhit-postgres psql -U postgres -c "\l"
+# Redis 테스트
+docker exec -it mindhit-redis redis-cli ping
 ```
 
 ### 결과물
+
 ```
 mindhit/
-├── docker-compose.yml
-├── scripts/
-│   └── init-db.sql
-└── apps/api/
-    ├── .env.example
-    └── .env
+├── infra/
+│   └── docker/
+│       └── docker-compose.yml  # Phase 0에서 생성
+└── apps/backend/
+    └── .env.local
 ```
 
 ---
@@ -438,11 +432,13 @@ mindhit/
 ## Step 1.6: Gin 서버 기본 설정
 
 ### 목표
+
 Gin 프레임워크로 기본 HTTP 서버 구성
 
 ### 체크리스트
 
 - [ ] **의존성 추가**
+
   ```bash
   cd apps/api
   go get github.com/gin-gonic/gin
@@ -452,6 +448,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
 
 - [ ] **config 패키지 작성**
   - [ ] `internal/infrastructure/config/config.go`
+
     ```go
     package config
 
@@ -492,6 +489,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
 
 - [ ] **main.go 업데이트**
   - [ ] `cmd/server/main.go`
+
     ```go
     package main
 
@@ -534,6 +532,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
     ```
 
 ### 검증
+
 ```bash
 cd apps/api
 go run ./cmd/server
@@ -544,6 +543,7 @@ curl http://localhost:8080/health
 ```
 
 ### 결과물
+
 - 동작하는 Gin 서버
 - `/health` 엔드포인트 응답
 
@@ -552,6 +552,7 @@ curl http://localhost:8080/health
 ## Step 1.7: Ent 스키마 정의 - 핵심 엔티티
 
 ### 목표
+
 User, Session, URL 핵심 엔티티 스키마 정의
 
 ### 공통 Mixin 정의
@@ -572,6 +573,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 - [ ] **BaseMixin 정의** (모든 엔티티 공통)
   - [ ] `ent/schema/mixin/base.go`
+
     ```go
     package mixin
 
@@ -609,6 +611,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 - [ ] **SoftDeleteMixin 정의** (주요 엔티티용)
   - [ ] `ent/schema/mixin/soft_delete.go`
+
     ```go
     package mixin
 
@@ -639,6 +642,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 - [ ] **AuditMixin 정의** (감사 추적용, 선택적)
   - [ ] `ent/schema/mixin/audit.go`
+
     ```go
     package mixin
 
@@ -670,6 +674,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 - [ ] **User 스키마** (BaseMixin + SoftDeleteMixin 적용)
   - [ ] `ent/schema/user.go`
+
     ```go
     package schema
 
@@ -723,6 +728,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 - [ ] **Session 스키마** (BaseMixin 적용, 별도 session_status 사용)
   - [ ] `ent/schema/session.go`
+
     ```go
     package schema
 
@@ -803,6 +809,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 - [ ] **URL 스키마** (BaseMixin + SoftDeleteMixin 적용)
   - [ ] `ent/schema/url.go`
+
     ```go
     package schema
 
@@ -870,11 +877,13 @@ User, Session, URL 핵심 엔티티 스키마 정의
     ```
 
 - [ ] **uuid 의존성 추가**
+
   ```bash
   go get github.com/google/uuid
   ```
 
 ### 검증
+
 ```bash
 # 아직 다른 엔티티 참조로 인해 generate 실패할 수 있음
 # Step 1.8 완료 후 검증
@@ -885,6 +894,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 ## Step 1.8: Ent 스키마 정의 - 보조 엔티티
 
 ### 목표
+
 PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 ### Mixin 적용 규칙
@@ -901,6 +911,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 - [ ] **PageVisit 스키마** (BaseMixin 적용)
   - [ ] `ent/schema/pagevisit.go`
+
     ```go
     package schema
 
@@ -965,6 +976,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 - [ ] **Highlight 스키마** (BaseMixin + SoftDeleteMixin 적용)
   - [ ] `ent/schema/highlight.go`
+
     ```go
     package schema
 
@@ -1025,6 +1037,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 - [ ] **RawEvent 스키마** (BaseMixin 적용)
   - [ ] `ent/schema/rawevent.go`
+
     ```go
     package schema
 
@@ -1086,6 +1099,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 - [ ] **MindmapGraph 스키마** (BaseMixin + SoftDeleteMixin 적용)
   - [ ] `ent/schema/mindmapgraph.go`
+
     ```go
     package schema
 
@@ -1149,6 +1163,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 - [ ] **UserSettings 스키마** (BaseMixin 적용)
   - [ ] `ent/schema/usersettings.go`
+
     ```go
     package schema
 
@@ -1210,12 +1225,14 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 > **Note**: User 스키마의 settings edge는 Step 1.7에서 이미 정의되어 있습니다.
 
 - [ ] **코드 생성**
+
   ```bash
   cd apps/api
   go generate ./ent
   ```
 
 ### 검증
+
 ```bash
 cd apps/api
 go generate ./ent
@@ -1226,6 +1243,7 @@ ls ent/
 ```
 
 ### 결과물
+
 ```
 apps/api/ent/
 ├── schema/
@@ -1366,17 +1384,20 @@ users, err := s.ActiveUsers().
 ## Step 1.9: 첫 번째 Migration 생성 및 적용
 
 ### 목표
+
 Atlas로 초기 migration 생성 및 PostgreSQL에 적용
 
 ### 체크리스트
 
 - [ ] **PostgreSQL 실행 확인**
+
   ```bash
   docker-compose up -d postgres
   docker exec -it mindhit-postgres psql -U postgres -c "SELECT 1;"
   ```
 
 - [ ] **PostgreSQL 드라이버 추가**
+
   ```bash
   cd apps/api
   go get github.com/lib/pq
@@ -1384,6 +1405,7 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
   ```
 
 - [ ] **Migration 생성**
+
   ```bash
   cd apps/api
   atlas migrate diff initial_schema \
@@ -1393,11 +1415,13 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
   ```
 
 - [ ] **생성된 SQL 확인**
+
   ```bash
   cat ent/migrate/migrations/*.sql
   ```
 
 - [ ] **Migration 적용**
+
   ```bash
   atlas migrate apply \
     --dir "file://ent/migrate/migrations" \
@@ -1405,11 +1429,13 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
   ```
 
 - [ ] **테이블 확인**
+
   ```bash
   docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
   ```
 
 ### 검증
+
 ```bash
 # 테이블 목록 확인
 docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
@@ -1429,10 +1455,313 @@ docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
 ```
 
 ### 결과물
+
 ```
 apps/api/ent/migrate/migrations/
 ├── 20241221000000_initial_schema.sql
 └── atlas.sum
+```
+
+### 마이그레이션 전략
+
+#### 원칙
+
+1. **Backward-compatible 변경 우선**: 가능하면 롤백 가능한 마이그레이션 작성
+2. **Phase별 마이그레이션 분리**: 각 Phase의 변경사항을 별도 마이그레이션으로 생성
+3. **CI에서 마이그레이션 검증**: PR 시 마이그레이션 dry-run 검증
+
+#### 마이그레이션 파일 네이밍
+
+```
+{YYYYMMDD}_{sequence}_{phase}_{description}.sql
+```
+
+예시:
+
+- `20241221_001_phase1_initial_schema.sql`
+- `20241222_001_phase2_add_oauth_fields.sql`
+- `20241223_001_phase13_add_billing_tables.sql`
+
+#### 안전한 스키마 변경 가이드
+
+| 변경 유형 | 안전한 방법 | 피해야 할 방법 |
+| --------- | ----------- | -------------- |
+| 컬럼 추가 | `ADD COLUMN ... DEFAULT` | `ADD COLUMN ... NOT NULL` (기본값 없이) |
+| 컬럼 삭제 | 2단계: 코드 제거 → 컬럼 삭제 | 즉시 삭제 |
+| 컬럼 이름 변경 | 새 컬럼 추가 → 데이터 복사 → 이전 컬럼 삭제 | `RENAME COLUMN` |
+| 타입 변경 | 호환 가능한 타입으로만 | 데이터 손실 가능한 변경 |
+| 인덱스 추가 | `CREATE INDEX CONCURRENTLY` | `CREATE INDEX` (락 발생) |
+
+#### 롤백 계획
+
+각 마이그레이션에 대해 롤백 SQL을 문서화:
+
+```sql
+-- Migration: 20241222_001_phase2_add_oauth_fields.sql
+-- Rollback:
+-- ALTER TABLE users DROP COLUMN IF EXISTS oauth_provider;
+-- ALTER TABLE users DROP COLUMN IF EXISTS oauth_id;
+```
+
+---
+
+## Step 1.10: 테스트 인프라 설정
+
+### 목표
+
+테스트 헬퍼, fixture, CI 통합을 통해 지속적인 테스트 기반 마련
+
+### 체크리스트
+
+- [ ] **testutil 패키지 생성**
+  - [ ] `internal/testutil/db.go`
+
+    ```go
+    package testutil
+
+    import (
+        "context"
+        "testing"
+
+        "entgo.io/ent/dialect"
+        _ "github.com/lib/pq"
+
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/ent/enttest"
+    )
+
+    // SetupTestDB creates a test database client
+    // Uses SQLite in-memory for fast unit tests
+    func SetupTestDB(t *testing.T) *ent.Client {
+        t.Helper()
+        client := enttest.Open(t, dialect.SQLite, "file:ent?mode=memory&_fk=1")
+        return client
+    }
+
+    // SetupTestDBWithPostgres creates a test client with PostgreSQL
+    // Use for integration tests that need PostgreSQL-specific features
+    func SetupTestDBWithPostgres(t *testing.T, dsn string) *ent.Client {
+        t.Helper()
+        client, err := ent.Open(dialect.Postgres, dsn)
+        if err != nil {
+            t.Fatalf("failed to open postgres: %v", err)
+        }
+        // Run migrations
+        if err := client.Schema.Create(context.Background()); err != nil {
+            t.Fatalf("failed to create schema: %v", err)
+        }
+        return client
+    }
+
+    // CleanupTestDB closes the test database client
+    func CleanupTestDB(t *testing.T, client *ent.Client) {
+        t.Helper()
+        if err := client.Close(); err != nil {
+            t.Errorf("failed to close client: %v", err)
+        }
+    }
+    ```
+
+- [ ] **fixture 패키지 생성**
+  - [ ] `internal/testutil/fixture/user.go`
+
+    ```go
+    package fixture
+
+    import (
+        "context"
+        "testing"
+
+        "github.com/mindhit/api/ent"
+    )
+
+    // CreateTestUser creates a user for testing
+    func CreateTestUser(t *testing.T, client *ent.Client, email string) *ent.User {
+        t.Helper()
+        user, err := client.User.Create().
+            SetEmail(email).
+            SetPasswordHash("$2a$10$testhashedpassword").
+            Save(context.Background())
+        if err != nil {
+            t.Fatalf("failed to create test user: %v", err)
+        }
+        return user
+    }
+
+    // CreateTestSession creates a session for testing
+    func CreateTestSession(t *testing.T, client *ent.Client, user *ent.User) *ent.Session {
+        t.Helper()
+        session, err := client.Session.Create().
+            SetUser(user).
+            Save(context.Background())
+        if err != nil {
+            t.Fatalf("failed to create test session: %v", err)
+        }
+        return session
+    }
+    ```
+
+- [ ] **SQLite 의존성 추가**
+
+  ```bash
+  cd apps/api
+  go get github.com/mattn/go-sqlite3
+  go get entgo.io/ent/dialect/sql
+  ```
+
+- [ ] **예제 단위 테스트 작성**
+  - [ ] `internal/service/user_test.go`
+
+    ```go
+    package service_test
+
+    import (
+        "context"
+        "testing"
+
+        "github.com/mindhit/api/ent/user"
+        "github.com/mindhit/api/internal/testutil"
+    )
+
+    func TestUserCreate(t *testing.T) {
+        client := testutil.SetupTestDB(t)
+        defer testutil.CleanupTestDB(t, client)
+
+        ctx := context.Background()
+
+        // Create user
+        u, err := client.User.Create().
+            SetEmail("test@example.com").
+            SetPasswordHash("hashedpassword").
+            Save(ctx)
+        if err != nil {
+            t.Fatalf("failed to create user: %v", err)
+        }
+
+        // Verify
+        if u.Email != "test@example.com" {
+            t.Errorf("expected email test@example.com, got %s", u.Email)
+        }
+        if u.Status != user.StatusActive {
+            t.Errorf("expected status active, got %s", u.Status)
+        }
+    }
+
+    func TestUserSoftDelete(t *testing.T) {
+        client := testutil.SetupTestDB(t)
+        defer testutil.CleanupTestDB(t, client)
+
+        ctx := context.Background()
+
+        // Create user
+        u, err := client.User.Create().
+            SetEmail("delete@example.com").
+            SetPasswordHash("hashedpassword").
+            Save(ctx)
+        if err != nil {
+            t.Fatalf("failed to create user: %v", err)
+        }
+
+        // Soft delete
+        _, err = client.User.UpdateOneID(u.ID).
+            SetStatus(user.StatusInactive).
+            Save(ctx)
+        if err != nil {
+            t.Fatalf("failed to soft delete user: %v", err)
+        }
+
+        // Query active users - should not find deleted user
+        activeUsers, err := client.User.Query().
+            Where(user.StatusEQ(user.StatusActive)).
+            All(ctx)
+        if err != nil {
+            t.Fatalf("failed to query users: %v", err)
+        }
+        if len(activeUsers) != 0 {
+            t.Errorf("expected 0 active users, got %d", len(activeUsers))
+        }
+    }
+    ```
+
+- [ ] **moon.yml에 테스트 태스크 확인**
+
+  ```yaml
+  # apps/backend/moon.yml
+  test:
+    command: go test -v -race -coverprofile=coverage.out ./...
+    inputs:
+      - "**/*.go"
+
+  test-coverage:
+    command: bash
+    args: [-c, "go test -v -race -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html"]
+    deps: [test]
+
+  test-short:
+    command: go test -v -short ./...
+    inputs:
+      - "**/*.go"
+  ```
+
+- [ ] **CI 워크플로우에 테스트 추가**
+  - [ ] `.github/workflows/ci.yml` 업데이트
+
+    ```yaml
+    # backend 테스트 job 추가
+    test-backend:
+      runs-on: ubuntu-latest
+      services:
+        postgres:
+          image: postgres:16
+          env:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: mindhit_test
+          ports:
+            - 5432:5432
+          options: >-
+            --health-cmd pg_isready
+            --health-interval 10s
+            --health-timeout 5s
+            --health-retries 5
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-go@v5
+          with:
+            go-version: '1.22'
+        - name: Run tests
+          run: moon run backend:test
+          env:
+            DATABASE_URL: postgres://postgres:password@localhost:5432/mindhit_test?sslmode=disable
+    ```
+
+### 검증
+
+```bash
+# 단위 테스트 실행
+cd apps/api
+go test -v ./internal/service/...
+
+# 전체 테스트 실행
+moon run backend:test
+
+# 커버리지 리포트
+moon run backend:test-coverage
+open coverage.html
+```
+
+### 결과물
+
+```
+apps/api/
+├── internal/
+│   ├── testutil/
+│   │   ├── db.go              # 테스트 DB 헬퍼
+│   │   └── fixture/
+│   │       └── user.go        # 테스트 fixture
+│   └── service/
+│       └── user_test.go       # 예제 테스트
+└── coverage.out               # (생성됨)
 ```
 
 ---
@@ -1442,35 +1771,56 @@ apps/api/ent/migrate/migrations/
 ### 전체 검증 체크리스트
 
 - [ ] **모노레포 구조**
+
   ```bash
   ls -la apps/ packages/
   ```
 
 - [ ] **Go 서버 실행**
+
   ```bash
   cd apps/api && go run ./cmd/server
   curl http://localhost:8080/health
   ```
 
 - [ ] **Ent 코드 생성**
+
   ```bash
   cd apps/api && go generate ./ent
   ```
 
 - [ ] **PostgreSQL 테이블**
+
   ```bash
   docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
   ```
+
+- [ ] **테스트 통과**
+
+  ```bash
+  moon run backend:test
+  # 모든 테스트 PASS
+  ```
+
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 최소 커버리지 |
+| ----------- | ---- | ------------- |
+| 단위 테스트 | Ent 스키마 CRUD | 기본 동작 검증 |
+| 단위 테스트 | Soft delete 동작 | status 필터링 검증 |
+
+> **Note**: Phase 1에서는 테스트 인프라 설정이 목표입니다.
+> 이후 Phase에서 각 기능에 대한 테스트가 점진적으로 추가됩니다.
 
 ### 산출물 요약
 
 | 항목 | 위치 |
 |-----|------|
 | 모노레포 설정 | `pnpm-workspace.yaml`, `.moon/` |
-| Go 프로젝트 | `apps/api/` |
-| Ent 스키마 | `apps/api/ent/schema/` |
-| Migration | `apps/api/ent/migrate/migrations/` |
-| Docker | `docker-compose.yml` |
+| Go 프로젝트 | `apps/backend/` |
+| Ent 스키마 | `apps/backend/pkg/ent/schema/` |
+| Migration | `apps/backend/pkg/ent/migrate/migrations/` |
+| Docker Compose | `infra/docker/docker-compose.yml` |
 
 ---
 

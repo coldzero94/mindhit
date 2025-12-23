@@ -1,11 +1,11 @@
-# Phase 10: 웹앱 대시보드 & 3D 마인드맵
+# Phase 11: 웹앱 대시보드 & 3D 마인드맵
 
 ## 개요
 
 | 항목 | 내용 |
 |-----|------|
 | **목표** | React Three Fiber 기반 3D 마인드맵 시각화 및 대시보드 |
-| **선행 조건** | Phase 7, 9 완료 |
+| **선행 조건** | Phase 7, 10 완료 |
 | **예상 소요** | 4 Steps |
 | **결과물** | 인터랙티브 3D "Knowledge Galaxy" 마인드맵 |
 
@@ -15,18 +15,19 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 10.1 | React Three Fiber 설정 | ⬜ |
-| 10.2 | 3D 마인드맵 컴포넌트 | ⬜ |
-| 10.3 | 세션 상세 페이지 개선 | ⬜ |
-| 10.4 | 애니메이션 & 인터랙션 | ⬜ |
+| 11.1 | React Three Fiber 설정 | ⬜ |
+| 11.2 | 3D 마인드맵 컴포넌트 | ⬜ |
+| 11.3 | 세션 상세 페이지 개선 | ⬜ |
+| 11.4 | 애니메이션 & 인터랙션 | ⬜ |
 
 ---
 
-## Step 10.1: React Three Fiber 설정
+## Step 11.1: React Three Fiber 설정
 
 ### 체크리스트
 
 - [ ] **의존성 설치**
+
   ```bash
   cd apps/web
   pnpm add three @react-three/fiber @react-three/drei @react-three/postprocessing
@@ -36,6 +37,7 @@
 
 - [ ] **Three.js 타입 설정**
   - [ ] `src/types/three.d.ts`
+
     ```typescript
     import { Object3DNode } from '@react-three/fiber';
     import { Line2 } from 'three/examples/jsm/lines/Line2';
@@ -53,6 +55,7 @@
 
 - [ ] **마인드맵 타입 정의**
   - [ ] `src/types/mindmap.ts`
+
     ```typescript
     export interface MindmapNode {
       id: string;
@@ -88,6 +91,7 @@
 
 - [ ] **Canvas Provider 설정**
   - [ ] `src/components/mindmap/MindmapCanvas.tsx`
+
     ```tsx
     'use client';
 
@@ -152,6 +156,7 @@
     ```
 
 ### 검증
+
 ```bash
 pnpm dev
 # http://localhost:3000 접속
@@ -160,12 +165,13 @@ pnpm dev
 
 ---
 
-## Step 10.2: 3D 마인드맵 컴포넌트
+## Step 11.2: 3D 마인드맵 컴포넌트
 
 ### 체크리스트
 
 - [ ] **Node 컴포넌트 (행성/위성)**
   - [ ] `src/components/mindmap/Node.tsx`
+
     ```tsx
     'use client';
 
@@ -286,6 +292,7 @@ pnpm dev
 
 - [ ] **Edge 컴포넌트 (연결선)**
   - [ ] `src/components/mindmap/Edge.tsx`
+
     ```tsx
     'use client';
 
@@ -352,6 +359,7 @@ pnpm dev
 
 - [ ] **Galaxy 컴포넌트 (전체 마인드맵)**
   - [ ] `src/components/mindmap/Galaxy.tsx`
+
     ```tsx
     'use client';
 
@@ -475,6 +483,7 @@ pnpm dev
     ```
 
 ### 검증
+
 ```bash
 pnpm dev
 # 마인드맵 데이터와 함께 Galaxy 컴포넌트 렌더링 확인
@@ -482,12 +491,13 @@ pnpm dev
 
 ---
 
-## Step 10.3: 세션 상세 페이지 개선
+## Step 11.3: 세션 상세 페이지 개선
 
 ### 체크리스트
 
 - [ ] **마인드맵 Hook**
   - [ ] `src/lib/hooks/use-mindmap.ts`
+
     ```typescript
     import { useQuery } from '@tanstack/react-query';
     import { apiClient } from '@/lib/api/client';
@@ -509,6 +519,7 @@ pnpm dev
 
 - [ ] **Node 상세 패널**
   - [ ] `src/components/mindmap/NodeDetailPanel.tsx`
+
     ```tsx
     'use client';
 
@@ -611,6 +622,7 @@ pnpm dev
 
 - [ ] **세션 상세 페이지 업데이트**
   - [ ] `src/app/(dashboard)/sessions/[id]/page.tsx` 업데이트
+
     ```tsx
     'use client';
 
@@ -761,6 +773,7 @@ pnpm dev
 
 - [ ] **세션 통계 컴포넌트**
   - [ ] `src/components/sessions/SessionStats.tsx`
+
     ```tsx
     import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
     import { Badge } from '@/components/ui/badge';
@@ -840,6 +853,7 @@ pnpm dev
 
 - [ ] **세션 타임라인 컴포넌트**
   - [ ] `src/components/sessions/SessionTimeline.tsx`
+
     ```tsx
     import { formatDistanceToNow } from 'date-fns';
     import { ko } from 'date-fns/locale';
@@ -947,6 +961,7 @@ pnpm dev
     ```
 
 ### 검증
+
 ```bash
 pnpm dev
 # 세션 상세 페이지에서 마인드맵 및 타임라인 탭 전환 확인
@@ -954,12 +969,13 @@ pnpm dev
 
 ---
 
-## Step 10.4: 애니메이션 & 인터랙션
+## Step 11.4: 애니메이션 & 인터랙션
 
 ### 체크리스트
 
 - [ ] **빅뱅 초기 애니메이션**
   - [ ] `src/components/mindmap/BigBangAnimation.tsx`
+
     ```tsx
     'use client';
 
@@ -1003,6 +1019,7 @@ pnpm dev
 
 - [ ] **궤도 애니메이션**
   - [ ] `src/components/mindmap/OrbitAnimation.tsx`
+
     ```tsx
     'use client';
 
@@ -1047,6 +1064,7 @@ pnpm dev
 
 - [ ] **파티클 효과**
   - [ ] `src/components/mindmap/ParticleField.tsx`
+
     ```tsx
     'use client';
 
@@ -1109,6 +1127,7 @@ pnpm dev
 
 - [ ] **카메라 제어 개선**
   - [ ] `src/components/mindmap/CameraController.tsx`
+
     ```tsx
     'use client';
 
@@ -1165,6 +1184,7 @@ pnpm dev
     ```
 
 - [ ] **최종 Galaxy 컴포넌트 업데이트**
+
   ```tsx
   // Galaxy.tsx에 애니메이션 추가
   import { useState } from 'react';
@@ -1205,6 +1225,7 @@ pnpm dev
   ```
 
 ### 검증
+
 ```bash
 pnpm dev
 # 3D 마인드맵 페이지에서:
@@ -1216,7 +1237,7 @@ pnpm dev
 
 ---
 
-## Phase 10 완료 확인
+## Phase 11 완료 확인
 
 ### 전체 검증 체크리스트
 
@@ -1231,48 +1252,36 @@ pnpm dev
 - [ ] 세션 통계 표시
 - [ ] 타임라인 뷰
 
+### 테스트 요구사항
+
+| 테스트 유형 | 대상 | 도구 |
+| ----------- | ---- | ---- |
+| 컴포넌트 테스트 | 마인드맵 노드/엣지 | Vitest + React Testing Library |
+| 스냅샷 테스트 | 3D 렌더링 결과 | Vitest |
+| E2E 테스트 | 마인드맵 인터랙션 | Playwright |
+
+```bash
+# Phase 11 테스트 실행
+moon run web:test
+moon run web:e2e
+```
+
+> **Note**: 3D 컴포넌트는 WebGL 컨텍스트가 필요하므로 CI에서는 headless 브라우저로 E2E 테스트를 실행합니다.
+
 ### 산출물 요약
 
 | 항목 | 위치 |
-|-----|------|
+| ---- | ---- |
 | 마인드맵 Canvas | `src/components/mindmap/MindmapCanvas.tsx` |
 | Galaxy 컴포넌트 | `src/components/mindmap/Galaxy.tsx` |
 | Node 컴포넌트 | `src/components/mindmap/Node.tsx` |
 | Edge 컴포넌트 | `src/components/mindmap/Edge.tsx` |
 | 애니메이션 | `src/components/mindmap/BigBangAnimation.tsx` |
 | 세션 상세 페이지 | `src/app/(dashboard)/sessions/[id]/page.tsx` |
+| 테스트 | `src/components/mindmap/**/*.test.tsx` |
 
 ---
 
-## 프로젝트 완료
+## 다음 Phase
 
-축하합니다! 모든 Phase가 완료되었습니다.
-
-### 완료된 기능
-
-1. **백엔드 API** (Go + Gin + Ent)
-   - 인증 (회원가입/로그인)
-   - 세션 관리
-   - 이벤트 수집
-   - AI 마인드맵 생성
-
-2. **Chrome Extension**
-   - Side Panel UI
-   - 세션 녹화 제어
-   - 이벤트 수집 및 배치 전송
-
-3. **웹앱** (Next.js)
-   - 인증 UI
-   - 세션 목록/상세
-   - 3D 마인드맵 시각화
-   - 타임라인 뷰
-
-### 다음 단계 (선택적 개선)
-
-- [ ] 실시간 세션 동기화 (WebSocket)
-- [ ] 마인드맵 공유 기능
-- [ ] 검색 및 필터링
-- [ ] 다크 모드
-- [ ] 모바일 반응형 개선
-- [ ] PWA 지원
-- [ ] 국제화 (i18n)
+Phase 11 완료 후 [Phase 12: 프로덕션 모니터링](./phase-12-monitoring.md)으로 진행하세요.
