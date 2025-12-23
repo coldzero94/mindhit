@@ -56,7 +56,7 @@ apps/backend/
 
 | 영역 | 기술 |
 |------|------|
-| 백엔드 | Go, Echo, Ent |
+| 백엔드 | Go, Gin, Ent |
 | 프론트엔드 | Next.js, React, TypeScript |
 | 데이터베이스 | PostgreSQL |
 | 캐시/큐 | Redis + Asynq |

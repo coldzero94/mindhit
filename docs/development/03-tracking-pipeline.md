@@ -546,164 +546,274 @@ async function updatePageVisits(sessionId: string, events: TrackingEvent[]) {
 
 ## 5. AI 파이프라인
 
-### 5.1 Job Queue
+> Go + Asynq + Ent 기반 비동기 처리
 
-```typescript
-// services/job-queue.ts
-import { Queue, Worker } from 'bullmq';
+### 5.1 Job Queue (Asynq)
 
-const aiQueue = new Queue('ai-processing', { connection: redis });
+```go
+// internal/worker/tasks/types.go
+package tasks
 
-async function enqueueAIJob(sessionId: string) {
-  await aiQueue.add('generate-mindmap', { sessionId });
+const (
+    TaskAIProcessing  = "ai:processing"
+    TaskTagExtraction = "ai:tag"
+    TaskEmailReport   = "email:report"
+)
+
+type AIProcessingPayload struct {
+    SessionID uuid.UUID `json:"session_id"`
 }
 
-const worker = new Worker('ai-processing', async (job) => {
-  const { sessionId } = job.data;
+type TagExtractionPayload struct {
+    URLID uuid.UUID `json:"url_id"`
+}
+```
 
-  // 1. 요약 안 된 URL 처리
-  await summarizeUnsummarizedUrls(sessionId);
+```go
+// internal/worker/handler/ai_processing.go
+package handler
 
-  // 2. 마인드맵 생성
-  await generateMindmap(sessionId);
+import (
+    "context"
+    "encoding/json"
 
-  // 3. 이메일 발송
-  await sendSessionReport(sessionId);
+    "github.com/hibiken/asynq"
+    "github.com/mindhit/backend/internal/worker/tasks"
+    "github.com/mindhit/backend/pkg/service"
+)
 
-  // 4. 세션 상태 업데이트
-  await prisma.session.update({
-    where: { id: sessionId },
-    data: { status: 'completed' },
-  });
-}, { connection: redis });
+type AIProcessingHandler struct {
+    urlService     *service.URLService
+    mindmapService *service.MindmapService
+    sessionService *service.SessionService
+    emailService   *service.EmailService
+}
+
+func (h *AIProcessingHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
+    var payload tasks.AIProcessingPayload
+    if err := json.Unmarshal(t.Payload(), &payload); err != nil {
+        return err
+    }
+
+    // 1. 요약 안 된 URL 처리
+    if err := h.urlService.SummarizeUnsummarized(ctx, payload.SessionID); err != nil {
+        return err
+    }
+
+    // 2. 마인드맵 생성
+    if err := h.mindmapService.Generate(ctx, payload.SessionID); err != nil {
+        return err
+    }
+
+    // 3. 이메일 발송
+    if err := h.emailService.SendSessionReport(ctx, payload.SessionID); err != nil {
+        // 이메일 실패는 로그만 남기고 계속
+        log.Printf("email failed: %v", err)
+    }
+
+    // 4. 세션 상태 업데이트
+    return h.sessionService.UpdateStatus(ctx, payload.SessionID, "completed")
+}
+```
+
+```go
+// cmd/worker/main.go
+package main
+
+import (
+    "github.com/hibiken/asynq"
+    "github.com/mindhit/backend/internal/worker/handler"
+    "github.com/mindhit/backend/internal/worker/tasks"
+)
+
+func main() {
+    srv := asynq.NewServer(
+        asynq.RedisClientOpt{Addr: cfg.RedisAddr},
+        asynq.Config{
+            Concurrency: 10,
+            Queues: map[string]int{
+                "critical": 6,
+                "default":  3,
+                "low":      1,
+            },
+        },
+    )
+
+    mux := asynq.NewServeMux()
+    mux.HandleFunc(tasks.TaskAIProcessing, aiHandler.ProcessTask)
+    mux.HandleFunc(tasks.TaskTagExtraction, tagHandler.ProcessTask)
+    mux.HandleFunc(tasks.TaskEmailReport, emailHandler.ProcessTask)
+
+    if err := srv.Run(mux); err != nil {
+        log.Fatal(err)
+    }
+}
 ```
 
 ### 5.2 URL 요약 생성
 
-```typescript
-// services/summarizer.ts
+```go
+// pkg/service/url_service.go
+package service
 
-async function summarizeUnsummarizedUrls(sessionId: string) {
-  // 세션에서 요약 안 된 URL 조회
-  const unsummarized = await prisma.$queryRaw`
-    SELECT DISTINCT u.*
-    FROM urls u
-    JOIN page_visits pv ON pv.url_id = u.id
-    WHERE pv.session_id = ${sessionId}
-      AND u.summary IS NULL
-      AND u.content IS NOT NULL
-  `;
+import (
+    "context"
 
-  // 병렬로 요약 생성 (동시 5개 제한)
-  const limit = pLimit(5);
+    "github.com/google/uuid"
+    "github.com/mindhit/backend/pkg/ent"
+    "github.com/mindhit/backend/pkg/infra/ai"
+    "golang.org/x/sync/errgroup"
+    "golang.org/x/sync/semaphore"
+)
 
-  await Promise.all(
-    unsummarized.map(url =>
-      limit(async () => {
-        const summary = await generateSummary(url.content);
-        const keywords = await extractKeywords(url.content);
-
-        await prisma.urls.update({
-          where: { id: url.id },
-          data: {
-            summary,
-            keywords,
-            summarized_at: new Date(),
-          },
-        });
-      })
-    )
-  );
+type URLService struct {
+    db       *ent.Client
+    aiClient ai.Provider
 }
 
-async function generateSummary(content: string): Promise<string> {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4-turbo',
-    messages: [{
-      role: 'user',
-      content: `다음 웹페이지 내용을 3-5문장으로 핵심만 요약해주세요:\n\n${content.slice(0, 8000)}`,
-    }],
-  });
+func (s *URLService) SummarizeUnsummarized(ctx context.Context, sessionID uuid.UUID) error {
+    // 세션에서 요약 안 된 URL 조회
+    urls, err := s.db.URL.Query().
+        Where(
+            url.HasPageVisitsWith(pagevisit.SessionID(sessionID)),
+            url.SummaryIsNil(),
+            url.ContentNotNil(),
+        ).
+        All(ctx)
+    if err != nil {
+        return err
+    }
 
-  return response.choices[0].message.content!;
+    // 병렬로 요약 생성 (동시 5개 제한)
+    sem := semaphore.NewWeighted(5)
+    g, ctx := errgroup.WithContext(ctx)
+
+    for _, u := range urls {
+        u := u
+        g.Go(func() error {
+            if err := sem.Acquire(ctx, 1); err != nil {
+                return err
+            }
+            defer sem.Release(1)
+
+            summary, err := s.aiClient.Summarize(ctx, u.Content)
+            if err != nil {
+                return err
+            }
+
+            keywords, err := s.aiClient.ExtractKeywords(ctx, u.Content)
+            if err != nil {
+                return err
+            }
+
+            return s.db.URL.UpdateOneID(u.ID).
+                SetSummary(summary).
+                SetKeywords(keywords).
+                SetSummarizedAt(time.Now()).
+                Exec(ctx)
+        })
+    }
+
+    return g.Wait()
 }
 ```
 
 ### 5.3 마인드맵 생성
 
-```typescript
-// services/mindmap-generator.ts
+```go
+// pkg/service/mindmap_service.go
+package service
 
-async function generateMindmap(sessionId: string) {
-  // 1. 세션의 모든 URL 요약 + 하이라이트 조회
-  const pageVisits = await prisma.pageVisit.findMany({
-    where: { session_id: sessionId },
-    include: { url: true },
-    orderBy: { visit_order: 'asc' },
-  });
+import (
+    "context"
+    "encoding/json"
 
-  const highlights = await prisma.highlight.findMany({
-    where: { session_id: sessionId },
-  });
+    "github.com/google/uuid"
+    "github.com/mindhit/backend/pkg/ent"
+    "github.com/mindhit/backend/pkg/infra/ai"
+)
 
-  // 2. 마인드맵 생성 프롬프트
-  const prompt = buildMindmapPrompt(pageVisits, highlights);
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4-turbo',
-    messages: [{ role: 'user', content: prompt }],
-    response_format: { type: 'json_object' },
-  });
-
-  const { nodes, edges } = JSON.parse(response.choices[0].message.content!);
-
-  // 3. 레이아웃 계산
-  const positionedNodes = calculateLayout(nodes, edges);
-
-  // 4. 저장
-  await prisma.mindmapGraph.create({
-    data: {
-      session_id: sessionId,
-      nodes: positionedNodes,
-      edges,
-    },
-  });
+type MindmapService struct {
+    db       *ent.Client
+    aiClient ai.Provider
 }
 
-function buildMindmapPrompt(pageVisits: PageVisit[], highlights: Highlight[]): string {
-  const pages = pageVisits.map(pv => ({
-    title: pv.url.title,
-    summary: pv.url.summary,
-    keywords: pv.url.keywords,
-    durationMs: pv.duration_ms,
-  }));
+func (s *MindmapService) Generate(ctx context.Context, sessionID uuid.UUID) error {
+    // 1. 세션의 모든 URL 요약 + 하이라이트 조회
+    pageVisits, err := s.db.PageVisit.Query().
+        Where(pagevisit.SessionID(sessionID)).
+        WithURL().
+        Order(ent.Asc(pagevisit.FieldVisitOrder)).
+        All(ctx)
+    if err != nil {
+        return err
+    }
 
-  return `
+    highlights, err := s.db.Highlight.Query().
+        Where(highlight.SessionID(sessionID)).
+        All(ctx)
+    if err != nil {
+        return err
+    }
+
+    // 2. 마인드맵 생성
+    prompt := buildMindmapPrompt(pageVisits, highlights)
+    result, err := s.aiClient.GenerateMindmap(ctx, prompt)
+    if err != nil {
+        return err
+    }
+
+    // 3. 레이아웃 계산
+    positionedNodes := calculateLayout(result.Nodes, result.Edges)
+
+    // 4. 저장
+    return s.db.MindmapGraph.Create().
+        SetSessionID(sessionID).
+        SetNodes(positionedNodes).
+        SetEdges(result.Edges).
+        Exec(ctx)
+}
+
+func buildMindmapPrompt(pageVisits []*ent.PageVisit, highlights []*ent.Highlight) string {
+    pages := make([]map[string]interface{}, len(pageVisits))
+    for i, pv := range pageVisits {
+        pages[i] = map[string]interface{}{
+            "title":      pv.Edges.URL.Title,
+            "summary":    pv.Edges.URL.Summary,
+            "keywords":   pv.Edges.URL.Keywords,
+            "durationMs": pv.DurationMs,
+        }
+    }
+
+    highlightTexts := make([]string, len(highlights))
+    for i, h := range highlights {
+        highlightTexts[i] = "- " + h.Text
+    }
+
+    return fmt.Sprintf(`
 사용자가 브라우징한 내용을 마인드맵으로 구조화해주세요.
 
 ## 방문한 페이지들:
-${JSON.stringify(pages, null, 2)}
+%s
 
 ## 하이라이트한 텍스트:
-${highlights.map(h => `- ${h.text}`).join('\n')}
+%s
 
 ## 출력 형식 (JSON):
 {
   "nodes": [
     { "id": "root", "label": "메인 주제", "type": "root" },
-    { "id": "topic-1", "label": "토픽1", "type": "topic", "relatedPageIds": ["..."] },
-    ...
+    { "id": "topic-1", "label": "토픽1", "type": "topic", "relatedPageIds": ["..."] }
   ],
   "edges": [
-    { "id": "e1", "source": "root", "target": "topic-1", "type": "parent" },
-    ...
+    { "id": "e1", "source": "root", "target": "topic-1", "type": "parent" }
   ]
 }
 
 - type: root(1개), topic(주요 주제), subtopic(하위), keyword(키워드)
 - relatedPageIds: 관련된 페이지 visit ID들
 - 체류시간이 긴 페이지일수록 중요
-`;
+`, toJSON(pages), strings.Join(highlightTexts, "\n"))
 }
 ```
 

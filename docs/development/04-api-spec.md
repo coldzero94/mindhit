@@ -242,17 +242,17 @@ Authorization: Bearer <token>
     "startedAt": "2024-12-20T14:30:00Z",
     "endedAt": "2024-12-20T16:02:00Z"
   },
-  "segments": [
+  "pageVisits": [
     {
-      "id": "1",
+      "id": "uuid",
       "url": "https://techcrunch.com/2024/ai-predictions",
       "domain": "techcrunch.com",
       "title": "2024 AI Predictions",
       "favicon": "https://techcrunch.com/favicon.ico",
-      "startAt": "2024-12-20T14:31:00Z",
-      "endAt": "2024-12-20T14:36:12Z",
+      "enteredAt": "2024-12-20T14:31:00Z",
+      "leftAt": "2024-12-20T14:36:12Z",
       "durationMs": 312000,
-      "isFocused": true
+      "visitOrder": 1
     }
   ],
   "highlights": [
