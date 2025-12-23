@@ -151,7 +151,7 @@ flowchart TD
 각 Phase는 상세 기술 문서를 참조합니다:
 
 - [01-architecture.md](../01-architecture.md) - 시스템 아키텍처
-- [02-database.md](../02-database.md) - 데이터베이스 설계
+- [02-data-structure.md](../02-data-structure.md) - 데이터베이스 설계
 - [07-api-spec-workflow.md](../07-api-spec-workflow.md) - API 스펙 워크플로우
 
 ---
@@ -160,35 +160,35 @@ flowchart TD
 
 ### 개발 환경 설정
 
-0. Phase 0 (Docker 개발 환경)
+1. Phase 0 (3단계 개발 환경)
 
 ### MVP (최소 기능 제품)
 
-1. Phase 1 → Phase 1.5 → Phase 2 → Phase 3
-2. Phase 8 (Extension 기본)
-3. Phase 4
-4. **MVP 완료**: 브라우징 기록 수집 가능
+2. Phase 1 → Phase 1.5 → Phase 2 → Phase 3 → Phase 4
+3. Phase 5 (인프라 기초)
+4. Phase 8 (Extension 기본) - Phase 2, 4 의존
+5. **MVP 완료**: 브라우징 기록 수집 가능
 
 ### Core Features
 
-5. Phase 5 → Phase 6
-2. Phase 9 (AI)
-3. Phase 7 (웹앱 기본)
-4. **Core 완료**: 마인드맵 생성 가능
+6. Phase 6 (Worker)
+7. Phase 7 (웹앱 기본) - Phase 2, 3, 5 의존
+8. Phase 9 (플랜/사용량) - Phase 8 이후
+9. Phase 10 (AI) - Phase 6, 9 의존
+10. **Core 완료**: 마인드맵 생성 가능
 
-### Polish
+### Dashboard & Polish
 
-9. Phase 10 (대시보드)
-2. 각 Phase의 선택적 개선 사항
+11. Phase 11 (대시보드) - Phase 7, 10 의존
 
 ### 프로덕션 준비
 
-11. Phase 11 (모니터링)
-2. Phase 12 (배포/운영)
+12. Phase 12 (프로덕션 모니터링)
+13. Phase 13 (배포/운영)
 
 ### 수익화
 
-1. Phase 13 (결제/구독)
+14. Phase 14 (Stripe 결제)
 
 ---
 

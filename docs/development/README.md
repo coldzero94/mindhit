@@ -5,20 +5,20 @@
 개발을 시작하기 전 아래 문서를 순서대로 읽어주세요.
 
 | 순서 | 문서 | 설명 |
-|------|------|------|
-| 1 | [01-architecture.md](./01-architecture.md) | 시스템 아키텍처, 개발 환경, 배포 전략 |
-| 2 | [02-data-structure.md](./02-data-structure.md) | 데이터베이스 스키마, ER 다이어그램 |
-| 3 | [03-tracking-pipeline.md](./03-tracking-pipeline.md) | Extension → API → Worker 이벤트 파이프라인 |
-| 4 | [04-api-spec.md](./04-api-spec.md) | REST API 엔드포인트 상세 명세 |
-| 5 | [07-api-spec-workflow.md](./07-api-spec-workflow.md) | TypeSpec 기반 API 코드 자동 생성 |
-| 6 | [08-naming-conventions.md](./08-naming-conventions.md) | 네이밍 규칙, 코드 스타일 가이드 |
-| 7 | [09-error-handling.md](./09-error-handling.md) | 에러 처리, 로깅, 모니터링 표준 |
+| ---- | ---- | ---- |
+| 1 | [01-architecture.md](./01-architecture.md) | 시스템 아키텍처 |
+| 2 | [02-data-structure.md](./02-data-structure.md) | DB 스키마, ER 다이어그램 |
+| 3 | [03-tracking-pipeline.md](./03-tracking-pipeline.md) | 이벤트 파이프라인 |
+| 4 | [04-api-spec.md](./04-api-spec.md) | REST API 명세 |
+| 5 | [07-api-spec-workflow.md](./07-api-spec-workflow.md) | API 코드 자동 생성 |
+| 6 | [08-naming-conventions.md](./08-naming-conventions.md) | 네이밍 규칙 |
+| 7 | [09-error-handling.md](./09-error-handling.md) | 에러 처리, 로깅 표준 |
 
 ## Phase별 구현 가이드
 
 상세한 구현 체크리스트는 [phases/](./phases/) 폴더를 참조하세요.
 
-```
+```text
 phases/
 ├── README.md                    # 전체 진행 상황
 ├── phase-0-dev-environment.md   # 개발 환경 설정
@@ -41,7 +41,7 @@ phases/
 
 ## 문서 관계
 
-```
+```text
 01-architecture.md      ← 전체 시스템 설계
         ↓
 02-data-structure.md    ← DB 스키마 정의
@@ -62,9 +62,9 @@ phases/                 ← 단계별 구현 가이드
 ## Deprecated 문서
 
 | 문서 | 상태 | 대체 문서 |
-|------|------|----------|
-| [05-milestones.md](./05-milestones.md) | Deprecated | [phases/README.md](./phases/README.md) |
-| [06-implementation-phases.md](./06-implementation-phases.md) | Deprecated | [phases/README.md](./phases/README.md) |
+| ---- | ---- | --------- |
+| [05-milestones.md](./05-milestones.md) | Deprecated | [phases/](./phases/) |
+| [06-implementation-phases.md](./06-implementation-phases.md) | Deprecated | [phases/](./phases/) |
 
 ## 시작하기
 
