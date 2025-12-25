@@ -38,19 +38,77 @@ tasks:
       - bin/worker
       - ./cmd/worker
 
+  # 빌드 (server)
+  build:
+    command: go
+    args:
+      - build
+      - -o
+      - ./bin/server
+      - ./cmd/server
+    inputs:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    outputs:
+      - "bin/server"
+
   # 테스트
   test:
     command: go
     args:
       - test
       - -v
+      - -race
+      - -coverprofile=coverage.out
       - ./...
+    inputs:
+      - "**/*.go"
+
+  test-short:
+    command: go
+    args:
+      - test
+      - -v
+      - -short
+      - ./...
+    inputs:
+      - "**/*.go"
+
+  test-coverage:
+    command: bash
+    args:
+      - -c
+      - "go test -v -race -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html"
+    deps:
+      - test
+    inputs:
+      - "**/*.go"
 
   lint:
     command: golangci-lint
     args:
       - run
       - ./...
+    inputs:
+      - "**/*.go"
+
+  # Ent generate
+  generate:
+    command: go
+    args:
+      - generate
+      - ./ent
+    inputs:
+      - "ent/schema/**/*.go"
+
+  # run server
+  run:
+    command: go
+    args:
+      - run
+      - ./cmd/server
+    local: true
 
   # DB 마이그레이션
   migrate:
@@ -60,3 +118,17 @@ tasks:
       - apply
       - --env
       - local
+
+  migrate-diff:
+    command: atlas
+    args:
+      - migrate
+      - diff
+    local: true
+
+  migrate-status:
+    command: atlas
+    args:
+      - migrate
+      - status
+    local: true

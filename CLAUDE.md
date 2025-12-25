@@ -101,8 +101,8 @@ packages/shared/CLAUDE.md # Shared types, utilities
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| Phase 0 | ⬜ Pending | 3-Stage Dev Environment |
-| Phase 1 | ⬜ Pending | Project Initialization |
+| Phase 0 | ✅ Done | 3-Stage Dev Environment |
+| Phase 1 | ✅ Done | Project Initialization |
 | Phase 1.5 | ⬜ Pending | API Spec Standardization |
 | Phase 2 | ⬜ Pending | Authentication System |
 | Phase 3 | ⬜ Pending | Session Management API |
@@ -127,7 +127,8 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
-_Development has not started yet._
+- [2025-12-25] Phase 1 completed: Go backend project initialized with Ent ORM, PostgreSQL, and test infrastructure
+- [2025-12-25] Phase 0 completed: Moon + Docker development environment setup
 
 ---
 

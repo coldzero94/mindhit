@@ -30,6 +30,7 @@ dist/
 
 # Go
 bin/
+server
 *.exe
 *.exe~
 *.dll
@@ -199,8 +200,8 @@ playwright/.cache/
 # apps/api/ent/*.go
 # !apps/api/ent/schema/
 
-# Atlas migration lock
-# apps/api/ent/migrate/atlas.sum
+# Atlas migrations (using Auto Migration instead)
+apps/backend/ent/migrate/migrations/
 
 # Local development scripts
 scripts/local/

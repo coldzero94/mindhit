@@ -15,16 +15,16 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 1.1 | 모노레포 구조 설정 | ⬜ |
-| 1.2 | Go 백엔드 프로젝트 초기화 | ⬜ |
-| 1.3 | Ent ORM 설정 | ⬜ |
-| 1.4 | Atlas Migration 설정 | ⬜ |
-| 1.5 | PostgreSQL Docker Compose 설정 | ⬜ |
-| 1.6 | Gin 서버 기본 설정 | ⬜ |
-| 1.7 | Ent 스키마 정의 - 핵심 엔티티 | ⬜ |
-| 1.8 | Ent 스키마 정의 - 보조 엔티티 | ⬜ |
-| 1.9 | 첫 번째 Migration 생성 및 적용 | ⬜ |
-| 1.10 | 테스트 인프라 설정 | ⬜ |
+| 1.1 | 모노레포 구조 설정 | ✅ |
+| 1.2 | Go 백엔드 프로젝트 초기화 | ✅ |
+| 1.3 | Ent ORM 설정 | ✅ |
+| 1.4 | Atlas Migration 설정 | ✅ |
+| 1.5 | PostgreSQL Docker Compose 설정 | ✅ |
+| 1.6 | Gin 서버 기본 설정 | ✅ |
+| 1.7 | Ent 스키마 정의 - 핵심 엔티티 | ✅ |
+| 1.8 | Ent 스키마 정의 - 보조 엔티티 | ✅ |
+| 1.9 | 첫 번째 Migration 생성 및 적용 | ✅ |
+| 1.10 | 테스트 인프라 설정 | ✅ |
 
 ---
 
@@ -38,12 +38,12 @@ Phase 0에서 설정한 Moon + pnpm 모노레포 구조 확인 및 검증
 
 ### 체크리스트
 
-- [ ] **Phase 0 완료 확인**
-  - [ ] Moon이 설치되어 있는지 확인
-  - [ ] Docker Compose가 동작하는지 확인
+- [x] **Phase 0 완료 확인**
+  - [x] Moon이 설치되어 있는지 확인
+  - [x] Docker Compose가 동작하는지 확인
   - [ ] GitHub Actions CI 워크플로우가 설정되어 있는지 확인
 
-- [ ] **디렉토리 구조 확인**
+- [x] **디렉토리 구조 확인**
 
   ```bash
   ls -la .moon/
@@ -51,7 +51,7 @@ Phase 0에서 설정한 Moon + pnpm 모노레포 구조 확인 및 검증
   ls -la packages/
   ```
 
-- [ ] **Moon 프로젝트 확인**
+- [x] **Moon 프로젝트 확인**
 
   ```bash
   pnpm moon query projects
@@ -109,14 +109,14 @@ Go 모듈 및 기본 프로젝트 구조 설정
 
 ### 체크리스트
 
-- [ ] **Go 모듈 초기화**
+- [x] **Go 모듈 초기화**
 
   ```bash
   cd apps/backend
   go mod init github.com/mindhit/api
   ```
 
-- [ ] **디렉토리 구조 생성**
+- [x] **디렉토리 구조 생성**
 
   ```bash
   mkdir -p cmd/server
@@ -125,8 +125,8 @@ Go 모듈 및 기본 프로젝트 구조 설정
   mkdir -p test/e2e
   ```
 
-- [ ] **기본 파일 생성**
-  - [ ] `cmd/server/main.go`
+- [x] **기본 파일 생성**
+  - [x] `cmd/server/main.go`
 
     ```go
     package main
@@ -138,8 +138,8 @@ Go 모듈 및 기본 프로젝트 구조 설정
     }
     ```
 
-- [ ] **golangci-lint 설정**
-  - [ ] `.golangci.yml` 생성
+- [x] **golangci-lint 설정**
+  - [x] `.golangci.yml` 생성
 
     ```yaml
     run:
@@ -169,8 +169,8 @@ Go 모듈 및 기본 프로젝트 구조 설정
       exclude-use-default: false
     ```
 
-- [ ] **moon.yml 설정**
-  - [ ] `apps/backend/moon.yml` 생성
+- [x] **moon.yml 설정**
+  - [x] `apps/backend/moon.yml` 생성
 
     ```yaml
     language: go
@@ -243,7 +243,7 @@ Ent ORM 의존성 추가 및 기본 설정
 
 ### 체크리스트
 
-- [ ] **Ent 의존성 추가**
+- [x] **Ent 의존성 추가**
 
   ```bash
   cd apps/backend
@@ -251,14 +251,14 @@ Ent ORM 의존성 추가 및 기본 설정
   go get entgo.io/ent@latest
   ```
 
-- [ ] **Ent 초기화**
+- [x] **Ent 초기화**
 
   ```bash
   go run -mod=mod entgo.io/ent/cmd/ent new User
   ```
 
-- [ ] **generate.go 생성**
-  - [ ] `ent/generate.go` 확인/생성
+- [x] **generate.go 생성**
+  - [x] `ent/generate.go` 확인/생성
 
     ```go
     package ent
@@ -266,7 +266,7 @@ Ent ORM 의존성 추가 및 기본 설정
     //go:generate go run -mod=mod entgo.io/ent/cmd/ent generate ./schema
     ```
 
-- [ ] **moon.yml에 generate 태스크 추가**
+- [x] **moon.yml에 generate 태스크 추가**
 
   ```yaml
   generate:
@@ -306,7 +306,7 @@ Atlas CLI 설정 및 migration 워크플로우 구성
 
 ### 체크리스트
 
-- [ ] **Atlas 설치** (로컬)
+- [x] **Atlas 설치** (로컬)
 
   ```bash
   # macOS
@@ -316,8 +316,8 @@ Atlas CLI 설정 및 migration 워크플로우 구성
   curl -sSf https://atlasgo.sh | sh
   ```
 
-- [ ] **atlas.hcl 생성**
-  - [ ] `apps/backend/atlas.hcl`
+- [x] **atlas.hcl 생성**
+  - [x] `apps/backend/atlas.hcl`
 
     ```hcl
     env "local" {
@@ -336,13 +336,13 @@ Atlas CLI 설정 및 migration 워크플로우 구성
     }
     ```
 
-- [ ] **migration 디렉토리 생성**
+- [x] **migration 디렉토리 생성**
 
   ```bash
   mkdir -p apps/backend/ent/migrate/migrations
   ```
 
-- [ ] **moon.yml에 migration 태스크 추가**
+- [x] **moon.yml에 migration 태스크 추가**
 
   ```yaml
   migrate-diff:
@@ -388,11 +388,11 @@ apps/backend/
 
 ### 체크리스트
 
-- [ ] **Phase 0 완료 확인**
+- [x] **Phase 0 완료 확인**
   - Docker Compose 파일 위치: `infra/docker/docker-compose.yml`
 
-- [ ] **환경 변수 파일 생성**
-  - [ ] `apps/backend/.env.local`
+- [x] **환경 변수 파일 생성**
+  - [x] `apps/backend/.env.local`
 
     ```
     ENVIRONMENT=local
@@ -437,7 +437,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
 
 ### 체크리스트
 
-- [ ] **의존성 추가**
+- [x] **의존성 추가**
 
   ```bash
   cd apps/backend
@@ -446,8 +446,8 @@ Gin 프레임워크로 기본 HTTP 서버 구성
   go get github.com/joho/godotenv
   ```
 
-- [ ] **config 패키지 작성**
-  - [ ] `pkg/infra/config/config.go`
+- [x] **config 패키지 작성**
+  - [x] `internal/infrastructure/config/config.go`
 
     ```go
     package config
@@ -487,8 +487,8 @@ Gin 프레임워크로 기본 HTTP 서버 구성
     }
     ```
 
-- [ ] **main.go 업데이트**
-  - [ ] `cmd/server/main.go`
+- [x] **main.go 업데이트**
+  - [x] `cmd/server/main.go`
 
     ```go
     package main
@@ -571,11 +571,14 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
 ### 체크리스트
 
-- [ ] **BaseMixin 정의** (모든 엔티티 공통)
-  - [ ] `ent/schema/mixin/base.go`
+- [x] **Mixin 정의** (같은 패키지에 정의)
+  - [x] `ent/schema/mixin.go`
+
+    > **Note**: Ent의 코드 생성 특성상 mixin은 별도 패키지가 아닌 같은 `schema` 패키지에 정의해야 합니다.
+    > 별도 `mixin/` 서브패키지를 사용하면 nil pointer 에러가 발생할 수 있습니다.
 
     ```go
-    package mixin
+    package schema
 
     import (
         "time"
@@ -595,31 +598,15 @@ User, Session, URL 핵심 엔티티 스키마 정의
         return []ent.Field{
             field.UUID("id", uuid.UUID{}).
                 Default(uuid.New).
-                Immutable().
-                Comment("Primary key"),
+                Immutable(),
             field.Time("created_at").
                 Default(time.Now).
-                Immutable().
-                Comment("Record creation timestamp"),
+                Immutable(),
             field.Time("updated_at").
                 Default(time.Now).
-                UpdateDefault(time.Now).
-                Comment("Record last update timestamp"),
+                UpdateDefault(time.Now),
         }
     }
-    ```
-
-- [ ] **SoftDeleteMixin 정의** (주요 엔티티용)
-  - [ ] `ent/schema/mixin/soft_delete.go`
-
-    ```go
-    package mixin
-
-    import (
-        "entgo.io/ent"
-        "entgo.io/ent/schema/field"
-        "entgo.io/ent/schema/mixin"
-    )
 
     // SoftDeleteMixin adds soft delete capability
     type SoftDeleteMixin struct {
@@ -630,50 +617,16 @@ User, Session, URL 핵심 엔티티 스키마 정의
         return []ent.Field{
             field.Enum("status").
                 Values("active", "inactive").
-                Default("active").
-                Comment("Record status for soft delete"),
+                Default("active"),
             field.Time("deleted_at").
                 Optional().
-                Nillable().
-                Comment("Soft delete timestamp"),
+                Nillable(),
         }
     }
     ```
 
-- [ ] **AuditMixin 정의** (감사 추적용, 선택적)
-  - [ ] `ent/schema/mixin/audit.go`
-
-    ```go
-    package mixin
-
-    import (
-        "entgo.io/ent"
-        "entgo.io/ent/schema/field"
-        "entgo.io/ent/schema/mixin"
-        "github.com/google/uuid"
-    )
-
-    // AuditMixin adds audit trail fields
-    type AuditMixin struct {
-        mixin.Schema
-    }
-
-    func (AuditMixin) Fields() []ent.Field {
-        return []ent.Field{
-            field.UUID("created_by", uuid.UUID{}).
-                Optional().
-                Nillable().
-                Comment("User who created this record"),
-            field.UUID("updated_by", uuid.UUID{}).
-                Optional().
-                Nillable().
-                Comment("User who last updated this record"),
-        }
-    }
-    ```
-
-- [ ] **User 스키마** (BaseMixin + SoftDeleteMixin 적용)
-  - [ ] `ent/schema/user.go`
+- [x] **User 스키마** (BaseMixin + SoftDeleteMixin 적용)
+  - [x] `ent/schema/user.go`
 
     ```go
     package schema
@@ -683,8 +636,6 @@ User, Session, URL 핵심 엔티티 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type User struct {
@@ -693,8 +644,8 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
     func (User) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
-            mixin.SoftDeleteMixin{},
+            BaseMixin{},
+            SoftDeleteMixin{},
         }
     }
 
@@ -702,11 +653,9 @@ User, Session, URL 핵심 엔티티 스키마 정의
         return []ent.Field{
             field.String("email").
                 Unique().
-                NotEmpty().
-                Comment("User email address"),
+                NotEmpty(),
             field.String("password_hash").
-                Sensitive().
-                Comment("Hashed password"),
+                Sensitive(),
         }
     }
 
@@ -726,8 +675,8 @@ User, Session, URL 핵심 엔티티 스키마 정의
     }
     ```
 
-- [ ] **Session 스키마** (BaseMixin 적용, 별도 session_status 사용)
-  - [ ] `ent/schema/session.go`
+- [x] **Session 스키마** (BaseMixin 적용, 별도 session_status 사용)
+  - [x] `ent/schema/session.go`
 
     ```go
     package schema
@@ -739,8 +688,6 @@ User, Session, URL 핵심 엔티티 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type Session struct {
@@ -749,7 +696,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
     func (Session) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
+            BaseMixin{},
         }
     }
 
@@ -757,31 +704,24 @@ User, Session, URL 핵심 엔티티 스키마 정의
         return []ent.Field{
             field.String("title").
                 Optional().
-                Nillable().
-                Comment("Session title"),
+                Nillable(),
             field.Text("description").
                 Optional().
-                Nillable().
-                Comment("Session description"),
+                Nillable(),
             field.Enum("session_status").
                 Values("recording", "paused", "processing", "completed", "failed").
-                Default("recording").
-                Comment("Session workflow status"),
+                Default("recording"),
             field.Enum("status").
                 Values("active", "inactive").
-                Default("active").
-                Comment("Record status for soft delete"),
+                Default("active"),
             field.Time("started_at").
-                Default(time.Now).
-                Comment("Session start time"),
+                Default(time.Now),
             field.Time("ended_at").
                 Optional().
-                Nillable().
-                Comment("Session end time"),
+                Nillable(),
             field.Time("deleted_at").
                 Optional().
-                Nillable().
-                Comment("Soft delete timestamp"),
+                Nillable(),
         }
     }
 
@@ -807,8 +747,8 @@ User, Session, URL 핵심 엔티티 스키마 정의
     }
     ```
 
-- [ ] **URL 스키마** (BaseMixin + SoftDeleteMixin 적용)
-  - [ ] `ent/schema/url.go`
+- [x] **URL 스키마** (BaseMixin + SoftDeleteMixin 적용)
+  - [x] `ent/schema/url.go`
 
     ```go
     package schema
@@ -818,8 +758,6 @@ User, Session, URL 핵심 엔티티 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type URL struct {
@@ -828,36 +766,29 @@ User, Session, URL 핵심 엔티티 스키마 정의
 
     func (URL) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
-            mixin.SoftDeleteMixin{},
+            BaseMixin{},
+            SoftDeleteMixin{},
         }
     }
 
     func (URL) Fields() []ent.Field {
         return []ent.Field{
             field.String("url").
-                NotEmpty().
-                Comment("Original URL"),
+                NotEmpty(),
             field.String("url_hash").
                 Unique().
-                NotEmpty().
-                Comment("SHA256 hash of normalized URL"),
+                NotEmpty(),
             field.String("title").
-                Optional().
-                Comment("Page title"),
+                Optional(),
             field.Text("content").
-                Optional().
-                Comment("Extracted page content"),
+                Optional(),
             field.Text("summary").
-                Optional().
-                Comment("AI-generated summary"),
+                Optional(),
             field.JSON("keywords", []string{}).
-                Optional().
-                Comment("AI-extracted keywords"),
+                Optional(),
             field.Time("crawled_at").
                 Optional().
-                Nillable().
-                Comment("Last time the URL content was crawled"),
+                Nillable(),
         }
     }
 
@@ -876,7 +807,7 @@ User, Session, URL 핵심 엔티티 스키마 정의
     }
     ```
 
-- [ ] **uuid 의존성 추가**
+- [x] **uuid 의존성 추가**
 
   ```bash
   go get github.com/google/uuid
@@ -909,8 +840,8 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 ### 체크리스트
 
-- [ ] **PageVisit 스키마** (BaseMixin 적용)
-  - [ ] `ent/schema/pagevisit.go`
+- [x] **PageVisit 스키마** (BaseMixin 적용)
+  - [x] `ent/schema/pagevisit.go`
 
     ```go
     package schema
@@ -922,8 +853,6 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type PageVisit struct {
@@ -932,26 +861,22 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
     func (PageVisit) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
+            BaseMixin{},
         }
     }
 
     func (PageVisit) Fields() []ent.Field {
         return []ent.Field{
             field.Time("entered_at").
-                Default(time.Now).
-                Comment("Page entry time"),
+                Default(time.Now),
             field.Time("left_at").
                 Optional().
-                Nillable().
-                Comment("Page leave time"),
+                Nillable(),
             field.Int("duration_ms").
                 Optional().
-                Nillable().
-                Comment("Time spent on page in milliseconds"),
+                Nillable(),
             field.Float("max_scroll_depth").
-                Default(0).
-                Comment("Maximum scroll depth (0-1)"),
+                Default(0),
         }
     }
 
@@ -974,8 +899,8 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
     }
     ```
 
-- [ ] **Highlight 스키마** (BaseMixin + SoftDeleteMixin 적용)
-  - [ ] `ent/schema/highlight.go`
+- [x] **Highlight 스키마** (BaseMixin + SoftDeleteMixin 적용)
+  - [x] `ent/schema/highlight.go`
 
     ```go
     package schema
@@ -985,8 +910,6 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type Highlight struct {
@@ -995,25 +918,21 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
     func (Highlight) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
-            mixin.SoftDeleteMixin{},
+            BaseMixin{},
+            SoftDeleteMixin{},
         }
     }
 
     func (Highlight) Fields() []ent.Field {
         return []ent.Field{
             field.Text("text").
-                NotEmpty().
-                Comment("Highlighted text content"),
+                NotEmpty(),
             field.String("selector").
-                Optional().
-                Comment("CSS selector for highlight position"),
+                Optional(),
             field.String("color").
-                Default("#FFFF00").
-                Comment("Highlight color (hex)"),
+                Default("#FFFF00"),
             field.String("note").
-                Optional().
-                Comment("User note for this highlight"),
+                Optional(),
         }
     }
 
@@ -1035,8 +954,8 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
     }
     ```
 
-- [ ] **RawEvent 스키마** (BaseMixin 적용)
-  - [ ] `ent/schema/rawevent.go`
+- [x] **RawEvent 스키마** (BaseMixin 적용)
+  - [x] `ent/schema/rawevent.go`
 
     ```go
     package schema
@@ -1046,8 +965,6 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type RawEvent struct {
@@ -1056,26 +973,21 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
     func (RawEvent) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
+            BaseMixin{},
         }
     }
 
     func (RawEvent) Fields() []ent.Field {
         return []ent.Field{
             field.String("event_type").
-                NotEmpty().
-                Comment("Event type (page_visit, highlight, scroll, etc.)"),
-            field.Time("timestamp").
-                Comment("Client-side event timestamp"),
-            field.Text("payload").
-                Comment("Raw JSON event payload"),
+                NotEmpty(),
+            field.Time("timestamp"),
+            field.Text("payload"),
             field.Bool("processed").
-                Default(false).
-                Comment("Whether event has been processed"),
+                Default(false),
             field.Time("processed_at").
                 Optional().
-                Nillable().
-                Comment("When event was processed"),
+                Nillable(),
         }
     }
 
@@ -1097,8 +1009,10 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
     }
     ```
 
-- [ ] **MindmapGraph 스키마** (BaseMixin + SoftDeleteMixin 적용)
-  - [ ] `ent/schema/mindmapgraph.go`
+- [x] **MindmapGraph 스키마** (BaseMixin + SoftDeleteMixin 적용)
+  - [x] `ent/schema/mindmapgraph.go`
+
+    > **Note**: `edges` 필드는 Ent의 예약어(`Edges()` 메서드)와 충돌하므로 `graph_edges`로 명명합니다.
 
     ```go
     package schema
@@ -1110,8 +1024,6 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
         "entgo.io/ent/schema/index"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type MindmapGraph struct {
@@ -1120,28 +1032,23 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
     func (MindmapGraph) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
-            mixin.SoftDeleteMixin{},
+            BaseMixin{},
+            SoftDeleteMixin{},
         }
     }
 
     func (MindmapGraph) Fields() []ent.Field {
         return []ent.Field{
             field.JSON("nodes", []map[string]interface{}{}).
-                Optional().
-                Comment("Mindmap node data"),
-            field.JSON("edges", []map[string]interface{}{}).
-                Optional().
-                Comment("Mindmap edge data"),
+                Optional(),
+            field.JSON("graph_edges", []map[string]interface{}{}).
+                Optional(),
             field.JSON("layout", map[string]interface{}{}).
-                Optional().
-                Comment("Layout configuration"),
+                Optional(),
             field.Time("generated_at").
-                Default(time.Now).
-                Comment("AI generation timestamp"),
+                Default(time.Now),
             field.Int("version").
-                Default(1).
-                Comment("Mindmap version for regeneration tracking"),
+                Default(1),
         }
     }
 
@@ -1161,8 +1068,8 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
     }
     ```
 
-- [ ] **UserSettings 스키마** (BaseMixin 적용)
-  - [ ] `ent/schema/usersettings.go`
+- [x] **UserSettings 스키마** (BaseMixin 적용)
+  - [x] `ent/schema/usersettings.go`
 
     ```go
     package schema
@@ -1171,8 +1078,6 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
         "entgo.io/ent"
         "entgo.io/ent/schema/edge"
         "entgo.io/ent/schema/field"
-
-        "github.com/mindhit/api/ent/schema/mixin"
     )
 
     type UserSettings struct {
@@ -1181,7 +1086,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
     func (UserSettings) Mixin() []ent.Mixin {
         return []ent.Mixin{
-            mixin.BaseMixin{},
+            BaseMixin{},
         }
     }
 
@@ -1189,26 +1094,19 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
         return []ent.Field{
             field.Enum("theme").
                 Values("light", "dark", "system").
-                Default("system").
-                Comment("UI theme preference"),
+                Default("system"),
             field.Bool("email_notifications").
-                Default(true).
-                Comment("Email notification preference"),
+                Default(true),
             field.Bool("browser_notifications").
-                Default(true).
-                Comment("Browser notification preference"),
+                Default(true),
             field.String("language").
-                Default("ko").
-                Comment("Preferred language"),
+                Default("ko"),
             field.Int("session_timeout_minutes").
-                Default(60).
-                Comment("Auto-stop session after inactivity"),
+                Default(60),
             field.Bool("auto_summarize").
-                Default(true).
-                Comment("Auto-generate summary when session ends"),
+                Default(true),
             field.JSON("extension_settings", map[string]interface{}{}).
-                Optional().
-                Comment("Chrome extension specific settings"),
+                Optional(),
         }
     }
 
@@ -1224,7 +1122,7 @@ PageVisit, Highlight, RawEvent, MindmapGraph, UserSettings 스키마 정의
 
 > **Note**: User 스키마의 settings edge는 Step 1.7에서 이미 정의되어 있습니다.
 
-- [ ] **코드 생성**
+- [x] **코드 생성**
 
   ```bash
   cd apps/backend
@@ -1247,9 +1145,7 @@ ls ent/
 ```
 apps/backend/ent/
 ├── schema/
-│   ├── mixin/
-│   │   ├── base.go           # BaseMixin (id, created_at, updated_at)
-│   │   └── soft_delete.go    # SoftDeleteMixin (status, deleted_at)
+│   ├── mixin.go              # BaseMixin, SoftDeleteMixin (같은 패키지에 정의)
 │   ├── user.go
 │   ├── usersettings.go
 │   ├── session.go
@@ -1389,14 +1285,14 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
 
 ### 체크리스트
 
-- [ ] **PostgreSQL 실행 확인**
+- [x] **PostgreSQL 실행 확인**
 
   ```bash
   docker-compose up -d postgres
   docker exec -it mindhit-postgres psql -U postgres -c "SELECT 1;"
   ```
 
-- [ ] **PostgreSQL 드라이버 추가**
+- [x] **PostgreSQL 드라이버 추가**
 
   ```bash
   cd apps/backend
@@ -1404,8 +1300,9 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
   go get ariga.io/atlas-provider-ent
   ```
 
-- [ ] **Migration 생성**
+- [x] **Migration 생성** (Atlas 또는 Auto Migration 선택)
 
+  **방법 1: Atlas SQL 파일 생성** (버전 관리 필요 시)
   ```bash
   cd apps/backend
   atlas migrate diff initial_schema \
@@ -1414,21 +1311,17 @@ Atlas로 초기 migration 생성 및 PostgreSQL에 적용
     --dev-url "postgres://postgres:password@localhost:5432/mindhit_dev?sslmode=disable"
   ```
 
-- [ ] **생성된 SQL 확인**
-
-  ```bash
-  cat ent/migrate/migrations/*.sql
+  **방법 2: Auto Migration** (개발 환경 권장)
+  ```go
+  // main.go 또는 테스트 코드에서
+  if err := client.Schema.Create(ctx); err != nil {
+      log.Fatalf("failed to create schema: %v", err)
+  }
   ```
 
-- [ ] **Migration 적용**
+  > **Note**: 현재 프로젝트는 Auto Migration을 사용합니다. `client.Schema.Create(ctx)`가 자동으로 테이블을 생성/업데이트합니다.
 
-  ```bash
-  atlas migrate apply \
-    --dir "file://ent/migrate/migrations" \
-    --url "postgres://postgres:password@localhost:5432/mindhit?sslmode=disable"
-  ```
-
-- [ ] **테이블 확인**
+- [x] **테이블 확인**
 
   ```bash
   docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
@@ -1513,44 +1406,69 @@ apps/backend/ent/migrate/migrations/
 
 ### 체크리스트
 
-- [ ] **testutil 패키지 생성**
-  - [ ] `internal/testutil/db.go`
+- [x] **testutil 패키지 생성**
+  - [x] `internal/testutil/db.go`
+
+    > **Note**: SQLite가 아닌 PostgreSQL만 사용합니다. 테스트 환경과 프로덕션 환경의 일관성을 유지합니다.
 
     ```go
     package testutil
 
     import (
         "context"
+        "os"
         "testing"
 
         "entgo.io/ent/dialect"
         _ "github.com/lib/pq"
 
         "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/enttest"
     )
 
-    // SetupTestDB creates a test database client
-    // Uses SQLite in-memory for fast unit tests
-    func SetupTestDB(t *testing.T) *ent.Client {
-        t.Helper()
-        client := enttest.Open(t, dialect.SQLite, "file:ent?mode=memory&_fk=1")
-        return client
+    // getTestDatabaseURL returns the test database URL from environment or default
+    func getTestDatabaseURL() string {
+        if url := os.Getenv("TEST_DATABASE_URL"); url != "" {
+            return url
+        }
+        return "postgres://postgres:password@localhost:5432/mindhit_test?sslmode=disable"
     }
 
-    // SetupTestDBWithPostgres creates a test client with PostgreSQL
-    // Use for integration tests that need PostgreSQL-specific features
-    func SetupTestDBWithPostgres(t *testing.T, dsn string) *ent.Client {
+    // SetupTestDB creates a test database client with PostgreSQL
+    // It also cleans up existing data for a fresh test environment
+    func SetupTestDB(t *testing.T) *ent.Client {
         t.Helper()
-        client, err := ent.Open(dialect.Postgres, dsn)
+        client, err := ent.Open(dialect.Postgres, getTestDatabaseURL())
         if err != nil {
             t.Fatalf("failed to open postgres: %v", err)
         }
-        // Run migrations
-        if err := client.Schema.Create(context.Background()); err != nil {
+
+        ctx := context.Background()
+
+        // Auto migrate schema
+        if err := client.Schema.Create(ctx); err != nil {
             t.Fatalf("failed to create schema: %v", err)
         }
+
+        // Clean up all tables for fresh test
+        cleanupTables(t, client)
+
         return client
+    }
+
+    // cleanupTables deletes all data from tables (order matters due to foreign keys)
+    func cleanupTables(t *testing.T, client *ent.Client) {
+        t.Helper()
+        ctx := context.Background()
+
+        // Delete in reverse dependency order
+        client.MindmapGraph.Delete().Exec(ctx)
+        client.RawEvent.Delete().Exec(ctx)
+        client.Highlight.Delete().Exec(ctx)
+        client.PageVisit.Delete().Exec(ctx)
+        client.URL.Delete().Exec(ctx)
+        client.Session.Delete().Exec(ctx)
+        client.UserSettings.Delete().Exec(ctx)
+        client.User.Delete().Exec(ctx)
     }
 
     // CleanupTestDB closes the test database client
@@ -1562,8 +1480,14 @@ apps/backend/ent/migrate/migrations/
     }
     ```
 
-- [ ] **fixture 패키지 생성**
-  - [ ] `internal/testutil/fixture/user.go`
+- [x] **테스트 데이터베이스 생성**
+
+  ```bash
+  docker exec -it mindhit-postgres psql -U postgres -c "CREATE DATABASE mindhit_test;"
+  ```
+
+- [x] **fixture 패키지 생성**
+  - [x] `internal/testutil/fixture/user.go`
 
     ```go
     package fixture
@@ -1601,16 +1525,8 @@ apps/backend/ent/migrate/migrations/
     }
     ```
 
-- [ ] **SQLite 의존성 추가**
-
-  ```bash
-  cd apps/backend
-  go get github.com/mattn/go-sqlite3
-  go get entgo.io/ent/dialect/sql
-  ```
-
-- [ ] **예제 단위 테스트 작성**
-  - [ ] `pkg/service/user_test.go`
+- [x] **예제 단위 테스트 작성**
+  - [x] `internal/service/user_test.go`
 
     ```go
     package service_test
@@ -1683,7 +1599,7 @@ apps/backend/ent/migrate/migrations/
     }
     ```
 
-- [ ] **moon.yml에 테스트 태스크 확인**
+- [x] **moon.yml에 테스트 태스크 확인**
 
   ```yaml
   # apps/backend/moon.yml
@@ -1703,8 +1619,8 @@ apps/backend/ent/migrate/migrations/
       - "**/*.go"
   ```
 
-- [ ] **CI 워크플로우에 테스트 추가**
-  - [ ] `.github/workflows/ci.yml` 업데이트
+- [x] **CI 워크플로우에 테스트 추가**
+  - [x] `.github/workflows/ci.yml` 업데이트
 
     ```yaml
     # backend 테스트 job 추가
@@ -1756,7 +1672,7 @@ open coverage.html
 apps/backend/
 ├── internal/
 │   ├── testutil/
-│   │   ├── db.go              # 테스트 DB 헬퍼
+│   │   ├── db.go              # 테스트 DB 헬퍼 (PostgreSQL 전용)
 │   │   └── fixture/
 │   │       └── user.go        # 테스트 fixture
 │   └── service/
@@ -1770,32 +1686,32 @@ apps/backend/
 
 ### 전체 검증 체크리스트
 
-- [ ] **모노레포 구조**
+- [x] **모노레포 구조**
 
   ```bash
   ls -la apps/ packages/
   ```
 
-- [ ] **Go 서버 실행**
+- [x] **Go 서버 실행**
 
   ```bash
   cd apps/backend && go run ./cmd/server
   curl http://localhost:8080/health
   ```
 
-- [ ] **Ent 코드 생성**
+- [x] **Ent 코드 생성**
 
   ```bash
   cd apps/backend && go generate ./ent
   ```
 
-- [ ] **PostgreSQL 테이블**
+- [x] **PostgreSQL 테이블**
 
   ```bash
   docker exec -it mindhit-postgres psql -U postgres -d mindhit -c "\dt"
   ```
 
-- [ ] **테스트 통과**
+- [x] **테스트 통과**
 
   ```bash
   moonx backend:test
