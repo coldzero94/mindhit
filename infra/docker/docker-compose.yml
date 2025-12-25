@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16
+    platform: linux/amd64
+    container_name: mindhit-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mindhit
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    platform: linux/amd64
+    container_name: mindhit-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Asynqmon - Asynq monitoring UI
+  asynqmon:
+    image: hibiken/asynqmon:latest
+    platform: linux/amd64
+    container_name: mindhit-asynqmon
+    ports:
+      - "8080:8080"
+    command:
+      - "--redis-addr=redis:6379"
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/workspace.json'
+
+projects:
+  - 'apps/*'
+  - 'packages/*'
+  - 'infra'
+
+vcs:
+  manager: git
+  defaultBranch: main
+  remoteCandidates:
+    - origin
+
+versionConstraint: '>=1.28.0'

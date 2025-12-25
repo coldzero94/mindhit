@@ -64,12 +64,12 @@ flowchart LR
 
 | Step | 이름 | 상태 |
 | --- | --- | --- |
-| 0.1 | 필수 도구 설치 | ⬜ |
-| 0.2 | Moon 설치 및 모노레포 설정 | ⬜ |
-| 0.3 | Docker Compose 설정 (go run 모드용) | ⬜ |
-| 0.4 | 로컬 K8s (kind) 설정 | ⬜ |
-| 0.5 | Helm Chart 구성 | ⬜ |
-| 0.6 | Moon 태스크 설정 | ⬜ |
+| 0.1 | 필수 도구 설치 | ✅ |
+| 0.2 | Moon 설치 및 모노레포 설정 | ✅ |
+| 0.3 | Docker Compose 설정 (go run 모드용) | ✅ |
+| 0.4 | 로컬 K8s (kind) 설정 | ✅ |
+| 0.5 | Helm Chart 구성 | ✅ |
+| 0.6 | Moon 태스크 설정 | ✅ |
 
 ---
 
@@ -93,7 +93,7 @@ flowchart LR
 
 ### 체크리스트
 
-- [ ] **Docker 설치**
+- [x] **Docker 설치**
 
   ```bash
   # macOS
@@ -105,7 +105,7 @@ flowchart LR
   docker --version
   ```
 
-- [ ] **kind 설치**
+- [x] **kind 설치**
 
   ```bash
   # macOS
@@ -119,7 +119,7 @@ flowchart LR
   kind version
   ```
 
-- [ ] **kubectl 설치**
+- [x] **kubectl 설치**
 
   ```bash
   # macOS
@@ -132,7 +132,7 @@ flowchart LR
   kubectl version --client
   ```
 
-- [ ] **Helm 설치**
+- [x] **Helm 설치**
 
   ```bash
   # macOS
@@ -144,7 +144,7 @@ flowchart LR
   helm version
   ```
 
-- [ ] **Go 설치**
+- [x] **Go 설치**
 
   ```bash
   # macOS
@@ -158,7 +158,7 @@ flowchart LR
   go version
   ```
 
-- [ ] **Node.js + pnpm 설치**
+- [x] **Node.js + pnpm 설치**
 
   ```bash
   # Node.js (nvm 권장)
@@ -173,7 +173,7 @@ flowchart LR
   pnpm --version
   ```
 
-- [ ] **추가 도구 설치**
+- [x] **추가 도구 설치**
 
   ```bash
   # golangci-lint (Go 린터)
@@ -209,7 +209,7 @@ Moon 태스크 러너 설치 및 모노레포 기본 설정
 
 ### 체크리스트
 
-- [ ] **pnpm-workspace.yaml 생성** (루트)
+- [x] **pnpm-workspace.yaml 생성** (루트)
 
   ```yaml
   packages:
@@ -217,7 +217,7 @@ Moon 태스크 러너 설치 및 모노레포 기본 설정
     - 'packages/*'
   ```
 
-- [ ] **루트 package.json 생성**
+- [x] **루트 package.json 생성**
 
   ```json
   {
@@ -237,13 +237,13 @@ Moon 태스크 러너 설치 및 모노레포 기본 설정
   }
   ```
 
-- [ ] **Moon 설치**
+- [x] **Moon 설치**
 
   ```bash
   pnpm install
   ```
 
-- [ ] **.moon/workspace.yml 생성**
+- [x] **.moon/workspace.yml 생성**
 
   ```yaml
   $schema: 'https://moonrepo.dev/schemas/workspace.json'
@@ -262,7 +262,7 @@ Moon 태스크 러너 설치 및 모노레포 기본 설정
   versionConstraint: '>=1.28.0'
   ```
 
-- [ ] **.moon/toolchain.yml 생성**
+- [x] **.moon/toolchain.yml 생성**
 
   ```yaml
   $schema: 'https://moonrepo.dev/schemas/toolchain.json'
@@ -277,7 +277,7 @@ Moon 태스크 러너 설치 및 모노레포 기본 설정
     syncProjectReferences: true
   ```
 
-- [ ] **디렉토리 구조 생성**
+- [x] **디렉토리 구조 생성**
 
   ```bash
   mkdir -p apps/{backend,web,extension}
@@ -322,7 +322,7 @@ mindhit/
 
 ### 체크리스트
 
-- [ ] **docker-compose.yml 생성**
+- [x] **docker-compose.yml 생성**
 
   ```yaml
   # infra/docker/docker-compose.yml
@@ -375,7 +375,7 @@ mindhit/
     redis_data:
   ```
 
-- [ ] **.env.local 생성** (apps/backend/)
+- [x] **.env.local 생성** (apps/backend/)
 
   ```bash
   # apps/backend/.env.local
@@ -439,7 +439,7 @@ kind로 로컬 K8s 클러스터 구성 (프로덕션 환경 검증용)
 
 ### 체크리스트
 
-- [ ] **kind 클러스터 설정 파일 생성**
+- [x] **kind 클러스터 설정 파일 생성**
 
   ```yaml
   # infra/kind/kind-config.yaml
@@ -462,7 +462,7 @@ kind로 로컬 K8s 클러스터 구성 (프로덕션 환경 검증용)
           protocol: TCP
   ```
 
-- [ ] **kind 클러스터 생성 스크립트**
+- [x] **kind 클러스터 생성 스크립트**
 
   ```bash
   # infra/kind/setup.sh
@@ -503,7 +503,7 @@ kind로 로컬 K8s 클러스터 구성 (프로덕션 환경 검증용)
   echo "Run 'moonx infra:kind-deploy' to deploy"
   ```
 
-- [ ] **실행 권한 부여**
+- [x] **실행 권한 부여**
 
   ```bash
   chmod +x infra/kind/setup.sh
@@ -533,13 +533,13 @@ MindHit 애플리케이션용 Helm Chart 생성
 
 ### 체크리스트
 
-- [ ] **Helm Chart 디렉토리 생성**
+- [x] **Helm Chart 디렉토리 생성**
 
   ```bash
   mkdir -p infra/helm/mindhit/templates
   ```
 
-- [ ] **Chart.yaml 생성**
+- [x] **Chart.yaml 생성**
 
   ```yaml
   # infra/helm/mindhit/Chart.yaml
@@ -561,7 +561,7 @@ MindHit 애플리케이션용 Helm Chart 생성
       condition: redis.enabled
   ```
 
-- [ ] **values.yaml 생성 (기본값)**
+- [x] **values.yaml 생성 (기본값)**
 
   ```yaml
   # infra/helm/mindhit/values.yaml
@@ -627,7 +627,7 @@ MindHit 애플리케이션용 Helm Chart 생성
             pathType: Prefix
   ```
 
-- [ ] **values-local.yaml 생성 (로컬 K8s 오버라이드)**
+- [x] **values-local.yaml 생성 (로컬 K8s 오버라이드)**
 
   ```yaml
   # infra/helm/mindhit/values-local.yaml
@@ -645,7 +645,7 @@ MindHit 애플리케이션용 Helm Chart 생성
       pullPolicy: Never
   ```
 
-- [ ] **API Deployment 템플릿 생성**
+- [x] **API Deployment 템플릿 생성**
 
   ```yaml
   # infra/helm/mindhit/templates/api-deployment.yaml
@@ -682,7 +682,7 @@ MindHit 애플리케이션용 Helm Chart 생성
               {{- toYaml .Values.api.resources | nindent 14 }}
   ```
 
-- [ ] **Worker Deployment 템플릿 생성**
+- [x] **Worker Deployment 템플릿 생성**
 
   ```yaml
   # infra/helm/mindhit/templates/worker-deployment.yaml
@@ -717,7 +717,7 @@ MindHit 애플리케이션용 Helm Chart 생성
               {{- toYaml .Values.worker.resources | nindent 14 }}
   ```
 
-- [ ] **API Service 템플릿 생성**
+- [x] **API Service 템플릿 생성**
 
   ```yaml
   # infra/helm/mindhit/templates/api-service.yaml
@@ -735,7 +735,7 @@ MindHit 애플리케이션용 Helm Chart 생성
       app: {{ .Release.Name }}-api
   ```
 
-- [ ] **Ingress 템플릿 생성**
+- [x] **Ingress 템플릿 생성**
 
   ```yaml
   # infra/helm/mindhit/templates/ingress.yaml
@@ -766,7 +766,7 @@ MindHit 애플리케이션용 Helm Chart 생성
   {{- end }}
   ```
 
-- [ ] **Helm 의존성 업데이트**
+- [x] **Helm 의존성 업데이트**
 
   ```bash
   cd infra/helm/mindhit
@@ -793,7 +793,7 @@ Moon을 이용한 개발 워크플로우 자동화
 
 ### 체크리스트
 
-- [ ] **infra/moon.yml 생성**
+- [x] **infra/moon.yml 생성**
 
   ```yaml
   # infra/moon.yml
@@ -938,7 +938,7 @@ Moon을 이용한 개발 워크플로우 자동화
         shell: true
   ```
 
-- [ ] **apps/backend/moon.yml 생성**
+- [x] **apps/backend/moon.yml 생성**
 
   ```yaml
   # apps/backend/moon.yml
@@ -1006,7 +1006,7 @@ Moon을 이용한 개발 워크플로우 자동화
         - local
   ```
 
-- [ ] **Air 설정 파일 생성** (Hot reload)
+- [x] **Air 설정 파일 생성** (Hot reload)
 
   ```toml
   # apps/backend/.air.api.toml
@@ -1076,7 +1076,7 @@ moonx infra:kind-down      # 클러스터 삭제
 
 #### go run 모드
 
-- [ ] **Docker Compose 동작**
+- [x] **Docker Compose 동작**
 
   ```bash
   moonx infra:dev-up

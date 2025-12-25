@@ -1,0 +1,62 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+type: application
+language: go
+
+tasks:
+  # go run 모드
+  dev-api:
+    command: air
+    args:
+      - -c
+      - .air.api.toml
+    env:
+      ENVIRONMENT: local
+
+  dev-worker:
+    command: air
+    args:
+      - -c
+      - .air.worker.toml
+    env:
+      ENVIRONMENT: local
+
+  # 빌드
+  build-api:
+    command: go
+    args:
+      - build
+      - -o
+      - bin/api
+      - ./cmd/api
+
+  build-worker:
+    command: go
+    args:
+      - build
+      - -o
+      - bin/worker
+      - ./cmd/worker
+
+  # 테스트
+  test:
+    command: go
+    args:
+      - test
+      - -v
+      - ./...
+
+  lint:
+    command: golangci-lint
+    args:
+      - run
+      - ./...
+
+  # DB 마이그레이션
+  migrate:
+    command: atlas
+    args:
+      - migrate
+      - apply
+      - --env
+      - local

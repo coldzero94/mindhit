@@ -1,0 +1,139 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+type: tool
+
+tasks:
+  # ===================
+  # go run 모드 (빠른 개발)
+  # ===================
+  dev-up:
+    command: docker
+    args:
+      - compose
+      - -f
+      - infra/docker/docker-compose.yml
+      - up
+      - -d
+    options:
+      runFromWorkspaceRoot: true
+
+  dev-down:
+    command: docker
+    args:
+      - compose
+      - -f
+      - infra/docker/docker-compose.yml
+      - down
+    options:
+      runFromWorkspaceRoot: true
+
+  dev-logs:
+    command: docker
+    args:
+      - compose
+      - -f
+      - infra/docker/docker-compose.yml
+      - logs
+      - -f
+    options:
+      runFromWorkspaceRoot: true
+
+  # ===================
+  # 로컬 K8s (kind)
+  # ===================
+  kind-up:
+    command: bash
+    args:
+      - infra/kind/setup.sh
+    options:
+      runFromWorkspaceRoot: true
+
+  kind-down:
+    command: kind
+    args:
+      - delete
+      - cluster
+      - --name
+      - mindhit
+
+  kind-build:
+    command: bash
+    args:
+      - -c
+      - |
+        set -e
+        echo "Building API image..."
+        docker build -f apps/backend/Dockerfile.api -t mindhit/api:latest apps/backend
+        echo "Building Worker image..."
+        docker build -f apps/backend/Dockerfile.worker -t mindhit/worker:latest apps/backend
+        echo "Loading images to kind..."
+        kind load docker-image mindhit/api:latest --name mindhit
+        kind load docker-image mindhit/worker:latest --name mindhit
+        echo "Done!"
+    options:
+      runFromWorkspaceRoot: true
+
+  kind-deploy:
+    command: bash
+    args:
+      - -c
+      - |
+        set -e
+        cd infra/helm/mindhit
+        helm dependency update
+        cd ../../..
+        helm upgrade --install mindhit ./infra/helm/mindhit -f ./infra/helm/mindhit/values-local.yaml
+    options:
+      runFromWorkspaceRoot: true
+    deps:
+      - kind-build
+
+  kind-redeploy:
+    command: bash
+    args:
+      - -c
+      - |
+        set -e
+        echo "Building and loading images..."
+        docker build -f apps/backend/Dockerfile.api -t mindhit/api:latest apps/backend
+        docker build -f apps/backend/Dockerfile.worker -t mindhit/worker:latest apps/backend
+        kind load docker-image mindhit/api:latest --name mindhit
+        kind load docker-image mindhit/worker:latest --name mindhit
+        echo "Restarting deployments..."
+        kubectl rollout restart deployment/mindhit-api deployment/mindhit-worker
+        kubectl rollout status deployment/mindhit-api
+        kubectl rollout status deployment/mindhit-worker
+    options:
+      runFromWorkspaceRoot: true
+
+  kind-logs-api:
+    command: kubectl
+    args:
+      - logs
+      - -f
+      - -l
+      - app=mindhit-api
+
+  kind-logs-worker:
+    command: kubectl
+    args:
+      - logs
+      - -f
+      - -l
+      - app=mindhit-worker
+
+  kind-shell-db:
+    command: bash
+    args:
+      - -c
+      - kubectl exec -it $(kubectl get pod -l app.kubernetes.io/name=postgresql -o jsonpath='{.items[0].metadata.name}') -- psql -U postgres -d mindhit
+    options:
+      shell: true
+
+  kind-shell-redis:
+    command: bash
+    args:
+      - -c
+      - kubectl exec -it $(kubectl get pod -l app.kubernetes.io/name=redis -o jsonpath='{.items[0].metadata.name}') -- redis-cli
+    options:
+      shell: true

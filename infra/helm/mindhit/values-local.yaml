@@ -1,0 +1,12 @@
+global:
+  environment: local
+
+api:
+  replicaCount: 1
+  image:
+    pullPolicy: Never  # Use local images loaded to kind
+
+worker:
+  replicaCount: 1
+  image:
+    pullPolicy: Never
