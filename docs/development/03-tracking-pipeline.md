@@ -418,7 +418,7 @@ package controller
 import (
     "github.com/gin-gonic/gin"
     "github.com/google/uuid"
-    "github.com/mindhit/backend/pkg/service"
+    "github.com/mindhit/api/internal/service"
 )
 
 type EventController struct {
@@ -449,14 +449,14 @@ func (c *EventController) IngestBatch(ctx *gin.Context) {
 ```
 
 ```go
-// pkg/service/event_service.go
+// internal/service/event_service.go
 package service
 
 import (
     "context"
 
     "github.com/google/uuid"
-    "github.com/mindhit/backend/pkg/ent"
+    "github.com/mindhit/api/ent"
 )
 
 type EventService struct {
@@ -500,7 +500,7 @@ func (s *EventService) IngestBatch(ctx context.Context, sessionID uuid.UUID, eve
 ### 4.2 URL 및 콘텐츠 처리
 
 ```go
-// pkg/service/url_service.go (ProcessWithContent 메서드)
+// internal/service/url_service.go (ProcessWithContent 메서드)
 
 func (s *URLService) ProcessWithContent(ctx context.Context, rawURL string, payload *EventPayload) (int, error) {
     normalized := normalizeURL(rawURL)
@@ -561,7 +561,7 @@ func (s *URLService) ProcessWithContent(ctx context.Context, rawURL string, payl
 ### 4.3 Page Visits 처리
 
 ```go
-// pkg/service/event_service.go (updatePageVisits 메서드)
+// internal/service/event_service.go (updatePageVisits 메서드)
 
 func (s *EventService) updatePageVisits(ctx context.Context, sessionID uuid.UUID, events []TrackingEvent) error {
     // NAV_COMMITTED 이벤트만 필터링
@@ -650,7 +650,7 @@ import (
 
     "github.com/hibiken/asynq"
     "github.com/mindhit/backend/internal/worker/tasks"
-    "github.com/mindhit/backend/pkg/service"
+    "github.com/mindhit/api/internal/service"
 )
 
 type AIProcessingHandler struct {
@@ -724,15 +724,15 @@ func main() {
 ### 5.2 URL 요약 생성
 
 ```go
-// pkg/service/url_service.go
+// internal/service/url_service.go
 package service
 
 import (
     "context"
 
     "github.com/google/uuid"
-    "github.com/mindhit/backend/pkg/ent"
-    "github.com/mindhit/backend/pkg/infra/ai"
+    "github.com/mindhit/api/ent"
+    "github.com/mindhit/api/internal/infrastructure/ai"
     "golang.org/x/sync/errgroup"
     "golang.org/x/sync/semaphore"
 )
@@ -792,7 +792,7 @@ func (s *URLService) SummarizeUnsummarized(ctx context.Context, sessionID uuid.U
 ### 5.3 마인드맵 생성
 
 ```go
-// pkg/service/mindmap_service.go
+// internal/service/mindmap_service.go
 package service
 
 import (
@@ -800,8 +800,8 @@ import (
     "encoding/json"
 
     "github.com/google/uuid"
-    "github.com/mindhit/backend/pkg/ent"
-    "github.com/mindhit/backend/pkg/infra/ai"
+    "github.com/mindhit/api/ent"
+    "github.com/mindhit/api/internal/infrastructure/ai"
 )
 
 type MindmapService struct {

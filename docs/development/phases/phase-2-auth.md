@@ -11,6 +11,29 @@
 
 ---
 
+## 테스트 환경
+
+> **중요**: 모든 테스트는 Docker로 실행 중인 로컬 PostgreSQL을 사용합니다.
+> SQLite는 사용하지 않습니다.
+
+```bash
+# 테스트 실행 전 Docker PostgreSQL 확인
+docker ps | grep postgres
+
+# 테스트 DB URL (기본값)
+# postgres://postgres:password@localhost:5432/mindhit_test
+
+# 환경변수로 커스텀 설정 가능
+export TEST_DATABASE_URL="postgres://..."
+```
+
+테스트 헬퍼는 `internal/testutil/db.go`에 정의되어 있습니다:
+
+- `SetupTestDB(t)` - 테스트 DB 클라이언트 생성 및 테이블 초기화
+- `CleanupTestDB(t, client)` - 테스트 완료 후 정리
+
+---
+
 ## 아키텍처
 
 ```mermaid
@@ -111,7 +134,7 @@ sequenceDiagram
   ```
 
 - [ ] **환경별 토큰 검증**
-  - [ ] `pkg/service/jwt_service.go`에 테스트 토큰 지원 추가
+  - [ ] `internal/service/jwt_service.go`에 테스트 토큰 지원 추가
 
   ```go
   func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
@@ -198,7 +221,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
   ```
 
 - [ ] **JWT 서비스 작성**
-  - [ ] `pkg/service/jwt_service.go`
+  - [ ] `internal/service/jwt_service.go`
 
     ```go
     package service
@@ -337,7 +360,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
     ```
 
 - [ ] **테스트 작성**
-  - [ ] `pkg/service/jwt_service_test.go`
+  - [ ] `internal/service/jwt_service_test.go`
 
     ```go
     package service_test
@@ -349,7 +372,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
         "github.com/stretchr/testify/assert"
         "github.com/stretchr/testify/require"
 
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/internal/service"
     )
 
     func TestJWTService_GenerateAndValidate(t *testing.T) {
@@ -377,7 +400,7 @@ Access Token (15분) + Refresh Token (7일) 기반 JWT 인증
 
 ```bash
 cd apps/backend
-go test ./pkg/service/... -v -run TestJWT
+go test ./internal/service/... -v -run TestJWT
 ```
 
 ---
@@ -397,7 +420,7 @@ go test ./pkg/service/... -v -run TestJWT
   ```
 
 - [ ] **Auth 서비스 작성**
-  - [ ] `pkg/service/auth_service.go`
+  - [ ] `internal/service/auth_service.go`
 
     ```go
     package service
@@ -500,7 +523,10 @@ go test ./pkg/service/... -v -run TestJWT
   ```
 
 - [ ] **테스트 작성**
-  - [ ] `pkg/service/auth_service_test.go`
+  - [ ] `internal/service/auth_service_test.go`
+
+    > **Note**: 테스트는 Docker로 실행중인 로컬 PostgreSQL을 사용합니다.
+    > `internal/testutil/db.go`의 `SetupTestDB` 헬퍼를 사용하세요.
 
     ```go
     package service_test
@@ -509,90 +535,99 @@ go test ./pkg/service/... -v -run TestJWT
         "context"
         "testing"
 
+        "github.com/google/uuid"
         "github.com/stretchr/testify/assert"
         "github.com/stretchr/testify/require"
-        "github.com/stretchr/testify/suite"
 
-        "github.com/mindhit/api/ent/enttest"
-        "github.com/mindhit/api/pkg/service"
-
-        _ "github.com/mattn/go-sqlite3"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/internal/service"
+        "github.com/mindhit/api/internal/testutil"
     )
 
-    type AuthServiceTestSuite struct {
-        suite.Suite
-        client      *ent.Client
-        authService *service.AuthService
+    func setupAuthServiceTest(t *testing.T) (*ent.Client, *service.AuthService) {
+        client := testutil.SetupTestDB(t)
+        authService := service.NewAuthService(client)
+        return client, authService
     }
 
-    func (s *AuthServiceTestSuite) SetupTest() {
-        s.client = enttest.Open(s.T(), "sqlite3", "file:ent?mode=memory&_fk=1")
-        s.authService = service.NewAuthService(s.client)
-    }
+    func TestAuthService_Signup_Success(t *testing.T) {
+        client, authService := setupAuthServiceTest(t)
+        defer testutil.CleanupTestDB(t, client)
 
-    func (s *AuthServiceTestSuite) TearDownTest() {
-        s.client.Close()
-    }
-
-    func (s *AuthServiceTestSuite) TestSignup_Success() {
         ctx := context.Background()
 
-        user, err := s.authService.Signup(ctx, "test@example.com", "password123")
+        user, err := authService.Signup(ctx, "test@example.com", "password123")
 
-        require.NoError(s.T(), err)
-        assert.NotNil(s.T(), user)
-        assert.Equal(s.T(), "test@example.com", user.Email)
+        require.NoError(t, err)
+        assert.NotNil(t, user)
+        assert.Equal(t, "test@example.com", user.Email)
     }
 
-    func (s *AuthServiceTestSuite) TestSignup_DuplicateEmail() {
+    func TestAuthService_Signup_DuplicateEmail(t *testing.T) {
+        client, authService := setupAuthServiceTest(t)
+        defer testutil.CleanupTestDB(t, client)
+
         ctx := context.Background()
 
-        _, err := s.authService.Signup(ctx, "test@example.com", "password123")
-        require.NoError(s.T(), err)
+        _, err := authService.Signup(ctx, "test@example.com", "password123")
+        require.NoError(t, err)
 
-        _, err = s.authService.Signup(ctx, "test@example.com", "password456")
-        assert.ErrorIs(s.T(), err, service.ErrEmailExists)
+        _, err = authService.Signup(ctx, "test@example.com", "password456")
+        assert.ErrorIs(t, err, service.ErrEmailExists)
     }
 
-    func (s *AuthServiceTestSuite) TestLogin_Success() {
+    func TestAuthService_Login_Success(t *testing.T) {
+        client, authService := setupAuthServiceTest(t)
+        defer testutil.CleanupTestDB(t, client)
+
         ctx := context.Background()
 
-        _, err := s.authService.Signup(ctx, "test@example.com", "password123")
-        require.NoError(s.T(), err)
+        _, err := authService.Signup(ctx, "test@example.com", "password123")
+        require.NoError(t, err)
 
-        user, err := s.authService.Login(ctx, "test@example.com", "password123")
+        user, err := authService.Login(ctx, "test@example.com", "password123")
 
-        require.NoError(s.T(), err)
-        assert.Equal(s.T(), "test@example.com", user.Email)
+        require.NoError(t, err)
+        assert.Equal(t, "test@example.com", user.Email)
     }
 
-    func (s *AuthServiceTestSuite) TestLogin_InvalidCredentials() {
+    func TestAuthService_Login_InvalidCredentials(t *testing.T) {
+        client, authService := setupAuthServiceTest(t)
+        defer testutil.CleanupTestDB(t, client)
+
         ctx := context.Background()
 
-        _, err := s.authService.Signup(ctx, "test@example.com", "password123")
-        require.NoError(s.T(), err)
+        _, err := authService.Signup(ctx, "test@example.com", "password123")
+        require.NoError(t, err)
 
-        _, err = s.authService.Login(ctx, "test@example.com", "wrongpassword")
-        assert.ErrorIs(s.T(), err, service.ErrInvalidCredentials)
-    }
-
-    func TestAuthServiceTestSuite(t *testing.T) {
-        suite.Run(t, new(AuthServiceTestSuite))
+        _, err = authService.Login(ctx, "test@example.com", "wrongpassword")
+        assert.ErrorIs(t, err, service.ErrInvalidCredentials)
     }
     ```
 
-- [ ] **SQLite 드라이버 추가** (테스트용)
+- [ ] **testify 추가** (테스트용)
 
   ```bash
-  go get github.com/mattn/go-sqlite3
   go get github.com/stretchr/testify
   ```
+
+### 테스트 환경 요구사항
+
+> **중요**: 테스트 실행 전 Docker로 PostgreSQL이 실행 중이어야 합니다.
+
+```bash
+# Docker PostgreSQL 실행 확인
+docker ps | grep postgres
+
+# 테스트 DB 연결 확인 (기본: postgres://postgres:password@localhost:5432/mindhit_test)
+# 또는 TEST_DATABASE_URL 환경변수로 설정 가능
+```
 
 ### 검증
 
 ```bash
 cd apps/backend
-go test ./pkg/service/... -v -run TestAuthService
+go test ./internal/service/... -v -run TestAuthService
 ```
 
 ---
@@ -608,7 +643,7 @@ HTTP 핸들러로 API 엔드포인트 구현
 - [ ] **Auth 컨트롤러 작성**
   - [ ] `internal/api/controller/auth_controller.go`
 
-    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
     > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
 
     ```go
@@ -622,8 +657,8 @@ HTTP 핸들러로 API 엔드포인트 구현
         "github.com/gin-gonic/gin"
 
         "github.com/mindhit/api/internal/generated"
-        "github.com/mindhit/api/pkg/api/response"
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/internal/controller/response"
+        "github.com/mindhit/api/internal/service"
     )
 
     type AuthController struct {
@@ -769,7 +804,7 @@ JWT 토큰 검증 미들웨어
 ### 체크리스트
 
 - [ ] **Auth 미들웨어 작성**
-  - [ ] `pkg/infra/middleware/auth.go`
+  - [ ] `internal/infrastructure/middleware/auth.go`
 
     ```go
     package middleware
@@ -780,7 +815,7 @@ JWT 토큰 검증 미들웨어
 
         "github.com/gin-gonic/gin"
 
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/internal/service"
     )
 
     const (
@@ -836,7 +871,7 @@ JWT 토큰 검증 미들웨어
   ```
 
 - [ ] **CORS 미들웨어 업데이트**
-  - [ ] `pkg/infra/middleware/cors.go`
+  - [ ] `internal/infrastructure/middleware/cors.go`
 
     ```go
     package middleware
@@ -858,7 +893,7 @@ JWT 토큰 검증 미들웨어
     ```
 
 - [ ] **로깅 미들웨어**
-  - [ ] `pkg/infra/middleware/logging.go`
+  - [ ] `internal/infrastructure/middleware/logging.go`
   - 상세 코드: [09-error-handling.md#5 HTTP 로깅 미들웨어](../09-error-handling.md#5-http-로깅-미들웨어)
 
   > **Note**: 로깅 미들웨어는 환경별로 다른 포맷을 사용합니다.
@@ -912,7 +947,7 @@ curl -X GET http://localhost:8080/v1/sessions \
 - [ ] **Auth 컨트롤러에 추가**
   - [ ] `internal/api/controller/auth_controller.go`에 메서드 추가
 
-    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
 
     ```go
     // RefreshRequest for token refresh
@@ -1164,7 +1199,7 @@ sequenceDiagram
 ### 체크리스트
 
 - [ ] **Ent 스키마 추가**
-  - [ ] `pkg/ent/schema/password_reset_token.go`
+  - [ ] `ent/schema/password_reset_token.go`
 
     ```go
     package schema
@@ -1221,7 +1256,7 @@ sequenceDiagram
     }
     ```
 
-  - [ ] `pkg/ent/schema/user.go`에 edge 추가
+  - [ ] `ent/schema/user.go`에 edge 추가
 
     ```go
     func (User) Edges() []ent.Edge {
@@ -1233,7 +1268,7 @@ sequenceDiagram
     ```
 
 - [ ] **Auth 서비스에 메서드 추가**
-  - [ ] `pkg/service/auth_service.go`
+  - [ ] `internal/service/auth_service.go`
 
     ```go
     import (
@@ -1371,7 +1406,7 @@ sequenceDiagram
 - [ ] **Auth 컨트롤러에 메서드 추가**
   - [ ] `internal/api/controller/auth_controller.go`
 
-    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
 
     ```go
     // ForgotPasswordRequest for password reset request
@@ -1462,7 +1497,7 @@ sequenceDiagram
 
   ```bash
   cd apps/backend
-  go generate ./pkg/ent
+  go generate ./ent
   moonx backend:migrate-diff -- password_reset_tokens
   moonx backend:migrate
   ```
@@ -1549,7 +1584,7 @@ sequenceDiagram
   ```
 
 - [ ] **User 스키마 수정**
-  - [ ] `pkg/ent/schema/user.go`에 OAuth 필드 추가
+  - [ ] `ent/schema/user.go`에 OAuth 필드 추가
 
     ```go
     func (User) Fields() []ent.Field {
@@ -1570,7 +1605,7 @@ sequenceDiagram
     ```
 
 - [ ] **OAuth 설정**
-  - [ ] `pkg/infra/config/oauth.go`
+  - [ ] `internal/infrastructure/config/oauth.go`
 
     ```go
     package config
@@ -1603,7 +1638,7 @@ sequenceDiagram
     ```
 
 - [ ] **OAuth 서비스 작성**
-  - [ ] `pkg/service/oauth_service.go`
+  - [ ] `internal/service/oauth_service.go`
 
     ```go
     package service
@@ -1745,7 +1780,7 @@ sequenceDiagram
 
         "github.com/gin-gonic/gin"
 
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/internal/service"
     )
 
     type OAuthController struct {
@@ -1875,7 +1910,7 @@ sequenceDiagram
 
   ```bash
   cd apps/backend
-  go generate ./pkg/ent
+  go generate ./ent
   moonx backend:migrate-diff -- add_oauth_fields
   moonx backend:migrate
   ```
@@ -2001,11 +2036,11 @@ moonx backend:test -- -run "TestJWT|TestAuth"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| JWT 서비스 | `pkg/service/jwt_service.go` |
-| Auth 서비스 | `pkg/service/auth_service.go` |
+| JWT 서비스 | `internal/service/jwt_service.go` |
+| Auth 서비스 | `internal/service/auth_service.go` |
 | Auth 컨트롤러 | `internal/api/controller/auth_controller.go` |
-| Auth 미들웨어 | `pkg/infra/middleware/auth.go` |
-| 테스트 | `pkg/service/*_test.go` |
+| Auth 미들웨어 | `internal/infrastructure/middleware/auth.go` |
+| 테스트 | `internal/service/*_test.go` |
 
 ### API 요약
 

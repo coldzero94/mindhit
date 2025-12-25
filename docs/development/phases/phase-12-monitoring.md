@@ -43,7 +43,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
   ```
 
 - [ ] **메트릭 미들웨어 구현**
-  - [ ] `pkg/infra/middleware/metrics.go`
+  - [ ] `internal/infrastructure/middleware/metrics.go`
 
     ```go
     package middleware
@@ -136,7 +136,7 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
     ```
 
 - [ ] **비즈니스 메트릭 정의**
-  - [ ] `pkg/infra/metrics/business.go`
+  - [ ] `internal/infrastructure/metrics/business.go`
 
     ```go
     package metrics
@@ -594,7 +594,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
 ### 체크리스트
 
 - [ ] **구조화된 로거 설정**
-  - [ ] `pkg/infra/logger/logger.go`
+  - [ ] `internal/infrastructure/logger/logger.go`
 
     ```go
     package logger
@@ -666,7 +666,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
     ```
 
 - [ ] **요청 로깅 미들웨어**
-  - [ ] `pkg/infra/middleware/logging.go`
+  - [ ] `internal/infrastructure/middleware/logging.go`
 
     ```go
     package middleware
@@ -678,7 +678,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/pkg/infra/logger"
+        "github.com/mindhit/api/internal/infrastructure/logger"
     )
 
     func Logging() gin.HandlerFunc {
@@ -1104,9 +1104,9 @@ curl http://localhost:3001/api/health # Grafana
 
 | 항목 | 위치 |
 | ---- | ---- |
-| 메트릭 미들웨어 | `pkg/infra/middleware/metrics.go` |
-| 비즈니스 메트릭 | `pkg/infra/metrics/business.go` |
-| 로거 설정 | `pkg/infra/logger/logger.go` |
+| 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
+| 비즈니스 메트릭 | `internal/infrastructure/metrics/business.go` |
+| 로거 설정 | `internal/infrastructure/logger/logger.go` |
 | Prometheus 설정 | `monitoring/prometheus/prometheus.yml` |
 | 알림 규칙 | `monitoring/prometheus/alerts.yml` |
 | Grafana 대시보드 | `monitoring/grafana/dashboards/*.json` |

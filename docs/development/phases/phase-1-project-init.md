@@ -501,7 +501,7 @@ Gin 프레임워크로 기본 HTTP 서버 구성
         "github.com/gin-contrib/cors"
         "github.com/gin-gonic/gin"
 
-        "github.com/mindhit/api/pkg/infra/config"
+        "github.com/mindhit/api/internal/infrastructure/config"
     )
 
     func main() {
@@ -1254,7 +1254,7 @@ sess, err := client.Session.Query().
 서비스 레이어에서 반복을 줄이기 위한 헬퍼 패턴:
 
 ```go
-// pkg/service/helpers.go
+// internal/service/helpers.go
 
 // ActiveUsers returns query for active users only
 func (s *UserService) ActiveUsers() *ent.UserQuery {
@@ -1656,7 +1656,7 @@ apps/backend/ent/migrate/migrations/
 ```bash
 # 단위 테스트 실행
 cd apps/backend
-go test -v ./pkg/service/...
+go test -v ./internal/service/...
 
 # 전체 테스트 실행
 moonx backend:test
@@ -1734,8 +1734,8 @@ apps/backend/
 |-----|------|
 | 모노레포 설정 | `pnpm-workspace.yaml`, `.moon/` |
 | Go 프로젝트 | `apps/backend/` |
-| Ent 스키마 | `apps/backend/pkg/ent/schema/` |
-| Migration | `apps/backend/pkg/ent/migrate/migrations/` |
+| Ent 스키마 | `apps/backend/ent/schema/` |
+| Migration | `apps/backend/ent/migrate/migrations/` |
 | Docker Compose | `infra/docker/docker-compose.yml` |
 
 ---

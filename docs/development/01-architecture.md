@@ -863,11 +863,10 @@ apps/backend/
 | --- | --- | --- |
 | `cmd/api/` | API 서버 시작점 | - |
 | `cmd/worker/` | Worker 시작점 | - |
-| `internal/api/` | API 전용 (controller, middleware) | API만 |
-| `internal/worker/` | Worker 전용 (job handler) | Worker만 |
-| `pkg/ent/` | Ent ORM 스키마 & 생성 코드 | 공유 |
-| `pkg/service/` | 비즈니스 로직 | 공유 |
-| `pkg/infra/` | DB, Redis, Queue, AI 클라이언트 | 공유 |
+| `internal/controller/` | HTTP 핸들러 | API만 |
+| `internal/service/` | 비즈니스 로직 | 공유 |
+| `internal/infrastructure/` | DB, Redis, Queue, AI 클라이언트, 미들웨어 | 공유 |
+| `ent/` | Ent ORM 스키마 & 생성 코드 | 공유 |
 
 ---
 

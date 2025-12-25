@@ -11,6 +11,22 @@
 
 ---
 
+## 테스트 환경
+
+> **중요**: 모든 테스트는 Docker로 실행 중인 로컬 PostgreSQL을 사용합니다.
+
+```bash
+# 테스트 실행 전 Docker PostgreSQL 확인
+docker ps | grep postgres
+
+# 테스트 DB URL (기본값)
+# postgres://postgres:password@localhost:5432/mindhit_test
+```
+
+테스트 헬퍼: `internal/testutil/db.go`의 `SetupTestDB(t)` 사용
+
+---
+
 ## 아키텍처
 
 ```mermaid
@@ -59,7 +75,7 @@ stateDiagram-v2
 ### 체크리스트
 
 - [ ] **Session 서비스 작성**
-  - [ ] `pkg/service/session_service.go`
+  - [ ] `internal/service/session_service.go`
 
     ```go
     package service
@@ -279,7 +295,7 @@ go build ./...
 - [ ] **Session 컨트롤러 작성**
   - [ ] `internal/api/controller/session_controller.go`
 
-    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
     > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
 
     ```go
@@ -293,9 +309,9 @@ go build ./...
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/pkg/api/response"
-        "github.com/mindhit/api/pkg/infra/middleware"
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/internal/controller/response"
+        "github.com/mindhit/api/internal/infrastructure/middleware"
+        "github.com/mindhit/api/internal/service"
     )
 
     type SessionController struct {
@@ -709,9 +725,9 @@ moonx backend:test -- -run "TestSession"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Session 서비스 | `pkg/service/session_service.go` |
+| Session 서비스 | `internal/service/session_service.go` |
 | Session 컨트롤러 | `internal/api/controller/session_controller.go` |
-| 테스트 | `pkg/service/session_service_test.go` |
+| 테스트 | `internal/service/session_service_test.go` |
 
 ---
 

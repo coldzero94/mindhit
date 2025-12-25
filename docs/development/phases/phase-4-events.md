@@ -11,6 +11,22 @@
 
 ---
 
+## 테스트 환경
+
+> **중요**: 모든 테스트는 Docker로 실행 중인 로컬 PostgreSQL을 사용합니다.
+
+```bash
+# 테스트 실행 전 Docker PostgreSQL 확인
+docker ps | grep postgres
+
+# 테스트 DB URL (기본값)
+# postgres://postgres:password@localhost:5432/mindhit_test
+```
+
+테스트 헬퍼: `internal/testutil/db.go`의 `SetupTestDB(t)` 사용
+
+---
+
 ## 아키텍처
 
 ```mermaid
@@ -67,7 +83,7 @@ flowchart LR
   ```
 
 - [ ] **Event 서비스 작성**
-  - [ ] `pkg/service/event_service.go`
+  - [ ] `internal/service/event_service.go`
 
     ```go
     package service
@@ -276,7 +292,7 @@ URL 중복 처리 및 콘텐츠 저장
   ```
 
 - [ ] **URL 서비스 작성**
-  - [ ] `pkg/service/url_service.go`
+  - [ ] `internal/service/url_service.go`
 
     ```go
     package service
@@ -441,7 +457,7 @@ go build ./...
 - [ ] **Event 컨트롤러 작성**
   - [ ] `internal/api/controller/event_controller.go`
 
-    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
     > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
 
     ```go
@@ -454,9 +470,9 @@ go build ./...
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
 
-        "github.com/mindhit/api/pkg/api/response"
-        "github.com/mindhit/api/pkg/infra/middleware"
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/internal/controller/response"
+        "github.com/mindhit/api/internal/infrastructure/middleware"
+        "github.com/mindhit/api/internal/service"
     )
 
     type EventController struct {
@@ -654,7 +670,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 ### 체크리스트
 
 - [ ] **Event 서비스에 조회 메서드 추가**
-  - [ ] `pkg/service/event_service.go`에 추가
+  - [ ] `internal/service/event_service.go`에 추가
 
     ```go
     // GetEventsBySession retrieves all events for a session
@@ -759,7 +775,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 - [ ] **Event 컨트롤러에 조회 엔드포인트 추가**
   - [ ] `internal/api/controller/event_controller.go`에 추가
 
-    > **Note**: 에러 응답은 `pkg/api/response` 헬퍼를 사용합니다.
+    > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
 
     ```go
     // ListEvents retrieves events for a session with optional filtering
@@ -993,10 +1009,10 @@ moonx backend:test -- -run "TestEvent|TestURL"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Event 서비스 | `pkg/service/event_service.go` |
-| URL 서비스 | `pkg/service/url_service.go` |
+| Event 서비스 | `internal/service/event_service.go` |
+| URL 서비스 | `internal/service/url_service.go` |
 | Event 컨트롤러 | `internal/api/controller/event_controller.go` |
-| 테스트 | `pkg/service/event_service_test.go` |
+| 테스트 | `internal/service/event_service_test.go` |
 
 ---
 

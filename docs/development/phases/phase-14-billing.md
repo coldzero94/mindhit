@@ -101,7 +101,7 @@ STRIPE_PRICE_PRO_YEARLY=price_...
   go get github.com/stripe/stripe-go/v76
   ```
 
-- [ ] `pkg/service/stripe_service.go` 생성
+- [ ] `internal/service/stripe_service.go` 생성
   - [ ] CreateCheckoutSession: Stripe Checkout 세션 생성
   - [ ] CreateCustomerPortalSession: Customer Portal 세션 생성
   - [ ] HandleWebhook: Stripe webhook 처리
@@ -115,7 +115,7 @@ STRIPE_PRICE_PRO_YEARLY=price_...
 
 ### 코드 예시
 
-**pkg/service/stripe_service.go:**
+**internal/service/stripe_service.go:**
 
 ```go
 package service
@@ -595,7 +595,7 @@ moonx web:e2e -- --grep "subscription"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Stripe Service | `pkg/service/stripe_service.go` |
+| Stripe Service | `internal/service/stripe_service.go` |
 | Billing Controller | `internal/api/controller/billing_controller.go` |
 | 구독 관리 페이지 | `apps/web/app/(dashboard)/settings/subscription/page.tsx` |
 | 사용량 컴포넌트 | `apps/web/components/usage-progress.tsx` |

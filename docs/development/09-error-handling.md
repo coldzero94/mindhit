@@ -77,7 +77,7 @@ sequenceDiagram
 ### 1.1 파일 구조
 
 ```
-pkg/service/
+internal/service/
 ├── auth_service.go
 ├── auth_errors.go      # 인증 관련 에러
 ├── session_service.go
@@ -88,7 +88,7 @@ pkg/service/
 ### 1.2 공통 에러
 
 ```go
-// pkg/service/errors.go
+// internal/service/errors.go
 package service
 
 import "errors"
@@ -103,7 +103,7 @@ var (
 ### 1.3 도메인 에러
 
 ```go
-// pkg/service/auth_errors.go
+// internal/service/auth_errors.go
 package service
 
 import "errors"
@@ -120,7 +120,7 @@ var (
 ```
 
 ```go
-// pkg/service/session_errors.go
+// internal/service/session_errors.go
 package service
 
 import "errors"
@@ -182,7 +182,7 @@ if errors.Is(err, ErrUserNotFound) {
 ### 2.3 응답 헬퍼
 
 ```go
-// pkg/api/response/error.go
+// internal/controller/response/error.go
 package response
 
 import (
@@ -306,7 +306,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 ### 3.3 로거 초기화
 
 ```go
-// pkg/infra/logger/logger.go
+// internal/infrastructure/logger/logger.go
 package logger
 
 import (
@@ -431,7 +431,7 @@ logger.Info("processing request")
 ### 4.1 미들웨어
 
 ```go
-// pkg/infra/middleware/request_id.go
+// internal/infrastructure/middleware/request_id.go
 package middleware
 
 import (
@@ -497,7 +497,7 @@ func (ctrl *SessionController) StartSession(c *gin.Context) {
 ### 5.1 Compact 로거 (터미널/k9s용)
 
 ```go
-// pkg/infra/middleware/logging.go
+// internal/infrastructure/middleware/logging.go
 package middleware
 
 import (
@@ -899,7 +899,7 @@ flowchart TB
 ### Phase 2: 인증 시스템
 
 ```go
-// pkg/service/auth_errors.go 생성
+// internal/service/auth_errors.go 생성
 var (
     ErrUserNotFound       = errors.New("user not found")
     ErrInvalidCredentials = errors.New("invalid credentials")
@@ -907,7 +907,7 @@ var (
 )
 
 // internal/api/controller/auth_controller.go에서 response 헬퍼 사용
-import "github.com/mindhit/api/pkg/api/response"
+import "github.com/mindhit/api/internal/controller/response"
 
 func (c *AuthController) Login(ctx *gin.Context) {
     // ...
@@ -923,7 +923,7 @@ func (c *AuthController) Login(ctx *gin.Context) {
 ### Phase 3: 세션 관리 API
 
 ```go
-// pkg/service/session_errors.go 생성
+// internal/service/session_errors.go 생성
 var (
     ErrSessionNotFound     = errors.New("session not found")
     ErrSessionNotOwned     = errors.New("session not owned by user")
@@ -966,9 +966,9 @@ func (c *EventController) BatchEvents(ctx *gin.Context) {
 
 ### Phase 5: 모니터링 및 인프라
 
-- `pkg/infra/logger/logger.go` - slog 초기화 (이 문서의 3.3 참조)
-- `pkg/infra/middleware/request_id.go` - Request ID 미들웨어 (이 문서의 4.1 참조)
-- `pkg/infra/middleware/logging.go` - HTTP 로깅 미들웨어 (이 문서의 5 참조)
+- `internal/infrastructure/logger/logger.go` - slog 초기화 (이 문서의 3.3 참조)
+- `internal/infrastructure/middleware/request_id.go` - Request ID 미들웨어 (이 문서의 4.1 참조)
+- `internal/infrastructure/middleware/logging.go` - HTTP 로깅 미들웨어 (이 문서의 5 참조)
 
 ### Phase 6: Worker 및 Job Queue
 
@@ -1377,7 +1377,7 @@ async function cleanupOldData() {
 ### 12.1 AI 관련 에러 타입
 
 ```go
-// pkg/infra/ai/errors.go
+// internal/infrastructure/ai/errors.go
 package ai
 
 import "errors"
@@ -1403,7 +1403,7 @@ var (
 ### 12.2 Service Layer AI 에러
 
 ```go
-// pkg/service/ai_errors.go
+// internal/service/ai_errors.go
 package service
 
 import "errors"
@@ -1437,8 +1437,8 @@ import (
 
     "github.com/hibiken/asynq"
 
-    "github.com/mindhit/api/pkg/infra/ai"
-    "github.com/mindhit/api/pkg/service"
+    "github.com/mindhit/api/internal/infrastructure/ai"
+    "github.com/mindhit/api/internal/service"
 )
 
 // handleAIError는 AI 관련 에러를 처리하고 적절한 재시도 동작을 결정합니다.

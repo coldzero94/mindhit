@@ -173,7 +173,7 @@ flowchart TB
 ### 체크리스트
 
 - [ ] **공통 타입 정의**
-  - [ ] `pkg/infra/ai/types.go`
+  - [ ] `internal/infrastructure/ai/types.go`
 
     ```go
     package ai
@@ -242,7 +242,7 @@ flowchart TB
     ```
 
 - [ ] **AIProvider 인터페이스 정의**
-  - [ ] `pkg/infra/ai/provider.go`
+  - [ ] `internal/infrastructure/ai/provider.go`
 
     ```go
     package ai
@@ -329,7 +329,7 @@ go build ./...
   ```
 
 - [ ] **OpenAI Provider 구현**
-  - [ ] `pkg/infra/ai/openai.go`
+  - [ ] `internal/infrastructure/ai/openai.go`
 
     ```go
     package ai
@@ -442,7 +442,7 @@ go build ./...
     ```
 
 - [ ] **Google Gemini Provider 구현**
-  - [ ] `pkg/infra/ai/gemini.go`
+  - [ ] `internal/infrastructure/ai/gemini.go`
 
     ```go
     package ai
@@ -604,7 +604,7 @@ go build ./...
     ```
 
 - [ ] **Anthropic Claude Provider 구현**
-  - [ ] `pkg/infra/ai/claude.go`
+  - [ ] `internal/infrastructure/ai/claude.go`
 
     ```go
     package ai
@@ -819,7 +819,7 @@ go build ./...
     ```
 
 - [ ] **Provider Manager 구현**
-  - [ ] `pkg/infra/ai/manager.go`
+  - [ ] `internal/infrastructure/ai/manager.go`
 
     ```go
     package ai
@@ -1034,7 +1034,7 @@ go build ./...
 ### 체크리스트
 
 - [ ] **태그 추출 Task 정의 (Phase 6에서 이미 정의됨)**
-  - [ ] `pkg/infra/queue/tasks.go`에 추가 확인
+  - [ ] `internal/infrastructure/queue/tasks.go`에 추가 확인
 
     ```go
     const TypeURLTagExtraction = "url:tag_extraction"
@@ -1067,9 +1067,9 @@ go build ./...
         "github.com/google/uuid"
         "github.com/hibiken/asynq"
 
-        "github.com/mindhit/api/pkg/ent"
-        "github.com/mindhit/api/pkg/infra/ai"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/internal/infrastructure/ai"
+        "github.com/mindhit/api/internal/infrastructure/queue"
     )
 
     const tagExtractionPrompt = `웹 페이지를 분석하고 다음을 추출하세요:
@@ -1178,9 +1178,9 @@ JSON 형식으로 응답:
     package handler
 
     import (
-        "github.com/mindhit/api/pkg/ent"
-        "github.com/mindhit/api/pkg/infra/ai"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/internal/infrastructure/ai"
+        "github.com/mindhit/api/internal/infrastructure/queue"
     )
 
     type handlers struct {
@@ -1202,7 +1202,7 @@ JSON 형식으로 응답:
     ```
 
 - [ ] **API에서 새 URL 발견 시 Task Enqueue**
-  - [ ] `pkg/service/event_service.go`
+  - [ ] `internal/service/event_service.go`
 
     ```go
     type EventService struct {
@@ -1268,7 +1268,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
 ### 체크리스트
 
 - [ ] **마인드맵 타입 정의**
-  - [ ] `pkg/service/mindmap_types.go`
+  - [ ] `internal/service/mindmap_types.go`
 
     ```go
     package service
@@ -1325,11 +1325,11 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         "github.com/google/uuid"
         "github.com/hibiken/asynq"
 
-        "github.com/mindhit/api/pkg/ent"
-        "github.com/mindhit/api/pkg/ent/session"
-        "github.com/mindhit/api/pkg/infra/ai"
-        "github.com/mindhit/api/pkg/infra/queue"
-        "github.com/mindhit/api/pkg/service"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/ent/session"
+        "github.com/mindhit/api/internal/infrastructure/ai"
+        "github.com/mindhit/api/internal/infrastructure/queue"
+        "github.com/mindhit/api/internal/service"
     )
 
     const relationshipGraphPrompt = `브라우징 세션의 페이지들과 추출된 태그를 분석하여 관계도를 생성하세요.
@@ -1669,7 +1669,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     ```
 
 - [ ] **세션 Stop 시 Task Enqueue**
-  - [ ] `pkg/service/session_service.go`
+  - [ ] `internal/service/session_service.go`
 
     ```go
     func (s *SessionService) StopSession(ctx context.Context, sessionID string) (*ent.Session, error) {
@@ -1901,16 +1901,16 @@ moonx backend:test -- -run "TestAI|TestMindmap|TestUsage"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| AI 타입 정의 | `pkg/infra/ai/types.go` |
-| Provider 인터페이스 | `pkg/infra/ai/provider.go` |
-| OpenAI Provider | `pkg/infra/ai/openai.go` |
-| Gemini Provider | `pkg/infra/ai/gemini.go` |
-| Claude Provider | `pkg/infra/ai/claude.go` |
-| Provider Manager | `pkg/infra/ai/manager.go` |
+| AI 타입 정의 | `internal/infrastructure/ai/types.go` |
+| Provider 인터페이스 | `internal/infrastructure/ai/provider.go` |
+| OpenAI Provider | `internal/infrastructure/ai/openai.go` |
+| Gemini Provider | `internal/infrastructure/ai/gemini.go` |
+| Claude Provider | `internal/infrastructure/ai/claude.go` |
+| Provider Manager | `internal/infrastructure/ai/manager.go` |
 | 태그 추출 Handler | `internal/worker/handler/tag_extraction.go` |
 | 마인드맵 Handler | `internal/worker/handler/mindmap.go` |
-| 마인드맵 타입 | `pkg/service/mindmap_types.go` |
-| 테스트 | `pkg/infra/ai/*_test.go` |
+| 마인드맵 타입 | `internal/service/mindmap_types.go` |
+| 테스트 | `internal/infrastructure/ai/*_test.go` |
 
 ---
 

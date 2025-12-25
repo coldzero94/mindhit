@@ -47,6 +47,23 @@ flowchart TB
 
 ---
 
+## 테스트 환경
+
+> **중요**: 모든 테스트는 Docker로 실행 중인 로컬 PostgreSQL과 Redis를 사용합니다.
+
+```bash
+# 테스트 실행 전 Docker 서비스 확인
+docker ps | grep -E "postgres|redis"
+
+# 테스트 DB URL (기본값)
+# postgres://postgres:password@localhost:5432/mindhit_test
+# Redis URL: redis://localhost:6379
+```
+
+테스트 헬퍼: `internal/testutil/db.go`의 `SetupTestDB(t)` 사용
+
+---
+
 ## 진행 상황
 
 | Step | 이름 | 상태 |
@@ -69,7 +86,7 @@ flowchart TB
   ```
 
 - [ ] **Asynq 클라이언트 (Job Enqueue용)**
-  - [ ] `pkg/infra/queue/client.go`
+  - [ ] `internal/infrastructure/queue/client.go`
 
     ```go
     package queue
@@ -99,7 +116,7 @@ flowchart TB
     ```
 
 - [ ] **Asynq 서버 설정 (Worker용)**
-  - [ ] `pkg/infra/queue/server.go`
+  - [ ] `internal/infrastructure/queue/server.go`
 
     ```go
     package queue
@@ -181,9 +198,9 @@ flowchart TB
         "syscall"
 
         "github.com/mindhit/api/internal/worker/handler"
-        "github.com/mindhit/api/pkg/infra/config"
-        "github.com/mindhit/api/pkg/ent"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/internal/infrastructure/config"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/internal/infrastructure/queue"
 
         _ "github.com/lib/pq"
     )
@@ -238,7 +255,7 @@ flowchart TB
     ```
 
 - [ ] **Config 업데이트**
-  - [ ] `pkg/infra/config/config.go`에 Redis 설정 추가
+  - [ ] `internal/infrastructure/config/config.go`에 Redis 설정 추가
 
     ```go
     type Config struct {
@@ -277,7 +294,7 @@ go build ./cmd/worker
 ### 체크리스트
 
 - [ ] **Task 타입 정의**
-  - [ ] `pkg/infra/queue/tasks.go`
+  - [ ] `internal/infrastructure/queue/tasks.go`
 
     ```go
     package queue
@@ -364,8 +381,8 @@ go build ./cmd/worker
     package handler
 
     import (
-        "github.com/mindhit/api/pkg/ent"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/internal/infrastructure/queue"
     )
 
     func RegisterHandlers(server *queue.Server, client *ent.Client) {
@@ -398,8 +415,8 @@ go build ./cmd/worker
 
         "github.com/hibiken/asynq"
 
-        "github.com/mindhit/api/pkg/ent/session"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/ent/session"
+        "github.com/mindhit/api/internal/infrastructure/queue"
     )
 
     func (h *handlers) HandleSessionProcess(ctx context.Context, t *asynq.Task) error {
@@ -451,8 +468,8 @@ go build ./cmd/worker
 
         "github.com/hibiken/asynq"
 
-        "github.com/mindhit/api/pkg/ent/session"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/ent/session"
+        "github.com/mindhit/api/internal/infrastructure/queue"
     )
 
     func (h *handlers) HandleSessionCleanup(ctx context.Context, t *asynq.Task) error {
@@ -512,7 +529,7 @@ go build ./cmd/worker
   - [ ] `cmd/api/main.go`에 Queue Client 초기화
 
     ```go
-    import "github.com/mindhit/api/pkg/infra/queue"
+    import "github.com/mindhit/api/internal/infrastructure/queue"
 
     // Initialize queue client
     queueClient := queue.NewClient(cfg.RedisAddr)
@@ -522,7 +539,7 @@ go build ./cmd/worker
     ```
 
 - [ ] **SessionService에 Enqueue 연동**
-  - [ ] `pkg/service/session_service.go` 수정
+  - [ ] `internal/service/session_service.go` 수정
 
     ```go
     package service
@@ -533,9 +550,9 @@ go build ./cmd/worker
 
         "github.com/hibiken/asynq"
 
-        "github.com/mindhit/api/pkg/ent"
-        "github.com/mindhit/api/pkg/ent/session"
-        "github.com/mindhit/api/pkg/infra/queue"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/ent/session"
+        "github.com/mindhit/api/internal/infrastructure/queue"
     )
 
     type SessionService struct {
@@ -587,7 +604,7 @@ go build ./cmd/worker
     ```
 
 - [ ] **주기적 Cleanup Task 스케줄링**
-  - [ ] `pkg/infra/queue/scheduler.go`
+  - [ ] `internal/infrastructure/queue/scheduler.go`
 
     ```go
     package queue
@@ -754,14 +771,14 @@ moonx backend:test -- -run "TestQueue|TestHandler"
 
 | 항목 | 위치 |
 | ---- | ---- |
-| Queue Client | `pkg/infra/queue/client.go` |
-| Queue Server | `pkg/infra/queue/server.go` |
-| Task 정의 | `pkg/infra/queue/tasks.go` |
-| Scheduler | `pkg/infra/queue/scheduler.go` |
+| Queue Client | `internal/infrastructure/queue/client.go` |
+| Queue Server | `internal/infrastructure/queue/server.go` |
+| Task 정의 | `internal/infrastructure/queue/tasks.go` |
+| Scheduler | `internal/infrastructure/queue/scheduler.go` |
 | Worker 엔트리포인트 | `cmd/worker/main.go` |
 | Session Handler | `internal/worker/handler/session.go` |
 | Cleanup Handler | `internal/worker/handler/cleanup.go` |
-| 테스트 | `pkg/infra/queue/*_test.go` |
+| 테스트 | `internal/infrastructure/queue/*_test.go` |
 
 ---
 

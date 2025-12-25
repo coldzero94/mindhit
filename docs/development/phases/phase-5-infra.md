@@ -34,7 +34,7 @@
   ```
 
 - [ ] **메트릭 미들웨어 작성**
-  - [ ] `pkg/infra/middleware/metrics.go`
+  - [ ] `internal/infrastructure/middleware/metrics.go`
 
     ```go
     package middleware
@@ -146,29 +146,29 @@ curl http://localhost:8080/metrics | head -20
 ### 체크리스트
 
 - [ ] **Logger 패키지 작성**
-  - [ ] `pkg/infra/logger/logger.go`
+  - [ ] `internal/infrastructure/logger/logger.go`
   - 상세 코드: [09-error-handling.md#3.3 로거 초기화](../09-error-handling.md#33-로거-초기화)
 
 - [ ] **Request ID 미들웨어**
-  - [ ] `pkg/infra/middleware/request_id.go`
+  - [ ] `internal/infrastructure/middleware/request_id.go`
   - 상세 코드: [09-error-handling.md#4.1 미들웨어](../09-error-handling.md#41-미들웨어)
 
 - [ ] **HTTP 로깅 미들웨어**
-  - [ ] `pkg/infra/middleware/logging.go`
+  - [ ] `internal/infrastructure/middleware/logging.go`
   - 상세 코드: [09-error-handling.md#5 HTTP 로깅 미들웨어](../09-error-handling.md#5-http-로깅-미들웨어)
 
 - [ ] **에러 응답 헬퍼**
-  - [ ] `pkg/api/response/error.go`
+  - [ ] `internal/controller/response/error.go`
   - 상세 코드: [09-error-handling.md#2.3 응답 헬퍼](../09-error-handling.md#23-응답-헬퍼)
 
 ### 구현 요약
 
 | 파일 | 설명 |
 |------|------|
-| `pkg/infra/logger/logger.go` | slog 기반 로거 초기화 (환경별 핸들러) |
-| `pkg/infra/middleware/request_id.go` | Request ID 생성 및 전파 |
-| `pkg/infra/middleware/logging.go` | HTTP 요청/응답 로깅 |
-| `pkg/api/response/error.go` | 표준 에러 응답 헬퍼 |
+| `internal/infrastructure/logger/logger.go` | slog 기반 로거 초기화 (환경별 핸들러) |
+| `internal/infrastructure/middleware/request_id.go` | Request ID 생성 및 전파 |
+| `internal/infrastructure/middleware/logging.go` | HTTP 요청/응답 로깅 |
+| `internal/controller/response/error.go` | 표준 에러 응답 헬퍼 |
 
 ### 검증
 
@@ -338,9 +338,9 @@ moonx backend:test
 
 | 항목 | 위치 |
 | ---- | ---- |
-| 메트릭 미들웨어 | `pkg/infra/middleware/metrics.go` |
-| 로거 | `pkg/infra/logger/logger.go` |
-| Request ID | `pkg/infra/middleware/request_id.go` |
+| 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
+| 로거 | `internal/infrastructure/logger/logger.go` |
+| Request ID | `internal/infrastructure/middleware/request_id.go` |
 | Moon 태스크 | `apps/backend/moon.yml` |
 
 ---
