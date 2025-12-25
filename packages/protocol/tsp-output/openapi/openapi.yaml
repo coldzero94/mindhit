@@ -1,0 +1,192 @@
+openapi: 3.0.0
+info:
+  title: MindHit API
+  version: 1.0.0
+tags: []
+paths:
+  /v1/auth/login:
+    post:
+      operationId: Routes_login
+      description: 로그인
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.LoginRequest'
+  /v1/auth/refresh:
+    post:
+      operationId: Routes_refresh
+      description: 토큰 갱신
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                required:
+                  - token
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/auth/signup:
+    post:
+      operationId: Routes_signup
+      description: 회원가입
+      parameters: []
+      responses:
+        '201':
+          description: The request has succeeded and a new resource has been created as a result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ValidationError'
+        '409':
+          description: The request conflicts with the current state of the server.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.SignupRequest'
+components:
+  schemas:
+    Auth.AuthResponse:
+      type: object
+      required:
+        - user
+        - token
+      properties:
+        user:
+          $ref: '#/components/schemas/Auth.User'
+        token:
+          type: string
+      description: 인증 응답
+    Auth.LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      description: 로그인 요청
+    Auth.SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          minLength: 1
+          description: 이메일 주소
+        password:
+          type: string
+          minLength: 8
+          description: 비밀번호 (최소 8자)
+      description: 회원가입 요청
+    Auth.User:
+      type: object
+      required:
+        - id
+        - email
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      description: 사용자 정보
+    Common.ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+          required:
+            - message
+      description: 기본 에러 응답
+    Common.ValidationDetail:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    Common.ValidationError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                $ref: '#/components/schemas/Common.ValidationDetail'
+          required:
+            - message
+      description: 유효성 검증 에러
+servers:
+  - url: http://localhost:8080
+    description: Development server
+    variables: {}

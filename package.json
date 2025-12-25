@@ -10,7 +10,11 @@
     "build": "moonx :build",
     "test": "moonx :test",
     "lint": "moonx :lint",
-    "ci": "moon ci"
+    "ci": "moon ci",
+    "generate": "pnpm run generate:protocol && pnpm run generate:api:go && pnpm run generate:api:ts",
+    "generate:protocol": "pnpm --filter @mindhit/protocol build",
+    "generate:api:go": "cd apps/backend && make generate-api",
+    "generate:api:ts": "pnpm --filter @mindhit/web generate"
   },
   "devDependencies": {
     "@moonrepo/cli": "^1.29.0",

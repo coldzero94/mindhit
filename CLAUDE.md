@@ -21,10 +21,15 @@ mindhit/
 │   │   │   ├── api/      # API server entrypoint
 │   │   │   └── worker/   # Worker entrypoint
 │   │   ├── internal/     # Private code (API/Worker specific)
+│   │   │   └── generated/  # oapi-codegen generated (committed)
 │   │   └── pkg/          # Shared code (services, infra)
 │   ├── web/              # Next.js 16.1 Web App
+│   │   └── src/api/generated/  # @hey-api/openapi-ts generated (committed)
 │   └── extension/        # Chrome Extension (Plasmo)
 ├── packages/
+│   ├── protocol/         # TypeSpec API definitions (Single Source of Truth)
+│   │   ├── src/          # *.tsp files
+│   │   └── tsp-output/   # Generated OpenAPI spec (committed)
 │   └── shared/           # Shared types/utilities (cross-platform)
 ├── docs/
 │   └── development/
@@ -41,6 +46,7 @@ mindhit/
 | Web App | Next.js 16.1 + TypeScript + TailwindCSS | `apps/web/` |
 | Chrome Extension | TypeScript + Plasmo | `apps/extension/` |
 | Worker | Go + Asynq | `apps/backend/` (same codebase) |
+| API Protocol | TypeSpec → OpenAPI | `packages/protocol/` |
 | Shared | TypeScript types, utilities | `packages/shared/` |
 
 ### Development Environment
@@ -70,14 +76,24 @@ This is a monorepo. Documentation should be **split by scope**:
 
 ### CLAUDE.md Files (Per App)
 
-Each app should have its own `CLAUDE.md` with app-specific context:
+Each app **MUST** have its own `CLAUDE.md` with app-specific context:
 
-```
-apps/backend/CLAUDE.md   # Backend-specific: routes, services, DB schema, worker jobs
-apps/web/CLAUDE.md       # Frontend-specific: components, pages, state
-apps/extension/CLAUDE.md # Extension-specific: background, content scripts
-packages/shared/CLAUDE.md # Shared types, utilities
-```
+| File | Status | Description |
+|------|--------|-------------|
+| `apps/backend/CLAUDE.md` | ✅ Exists | Go API server, Ent ORM, oapi-codegen |
+| `apps/web/CLAUDE.md` | ✅ Exists | Next.js, @hey-api/openapi-ts, Zod |
+| `apps/extension/CLAUDE.md` | ⬜ TODO | Chrome extension (Phase 8) |
+| `packages/protocol/CLAUDE.md` | ✅ Exists | TypeSpec API definitions |
+| `packages/shared/CLAUDE.md` | ⬜ TODO | Shared utilities (when created) |
+
+**IMPORTANT: Keep app-specific CLAUDE.md files updated!**
+
+When making changes to an app, update its CLAUDE.md if:
+- Directory structure changes
+- New patterns or conventions are introduced
+- Important files are added/removed
+- Commands change
+- New dependencies affect the workflow
 
 **What to include in app-specific CLAUDE.md:**
 - App architecture and folder structure
@@ -103,7 +119,7 @@ packages/shared/CLAUDE.md # Shared types, utilities
 |-------|--------|-------------|
 | Phase 0 | ✅ Done | 3-Stage Dev Environment |
 | Phase 1 | ✅ Done | Project Initialization |
-| Phase 1.5 | ⬜ Pending | API Spec Standardization |
+| Phase 1.5 | ✅ Done | API Spec Standardization |
 | Phase 2 | ⬜ Pending | Authentication System |
 | Phase 3 | ⬜ Pending | Session Management API |
 | Phase 4 | ⬜ Pending | Event Collection API |
@@ -127,6 +143,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-25] Phase 1.5 completed: TypeSpec → OpenAPI → Go/TypeScript code generation pipeline
 - [2025-12-25] Phase 1 completed: Go backend project initialized with Ent ORM, PostgreSQL, and test infrastructure
 - [2025-12-25] Phase 0 completed: Moon + Docker development environment setup
 
@@ -215,13 +232,25 @@ moonx :lint            # Lint all projects
 moonx :build           # Build all projects
 ```
 
+### Code Generation
+
+```bash
+pnpm run generate              # Generate all (TypeSpec → OpenAPI → Go/TS)
+pnpm run generate:protocol     # TypeSpec → OpenAPI only
+pnpm run generate:api:go       # OpenAPI → Go server code
+pnpm run generate:api:ts       # OpenAPI → TypeScript (types + SDK + Zod)
+```
+
 ---
 
 ## Key Decisions
 
 <!-- Record major technical decisions made during development -->
 
-_No decisions recorded yet._
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2025-12-25 | Use `@hey-api/openapi-ts` for TypeScript code generation | Supports Zod v4 natively, single tool for types + SDK + validation, no Java dependency (unlike openapi-generator-cli) |
+| 2025-12-25 | Commit generated code (not gitignore) | Enables code review for API changes, no CI generation step needed |
 
 ---
 
@@ -250,7 +279,7 @@ _No known issues._
 ### API Versioning
 
 - All APIs are prefixed with `/v1/`
-- OpenAPI spec: `docs/api/openapi.yaml`
+- OpenAPI spec: `packages/protocol/tsp-output/openapi/openapi.yaml`
 
 ### Authentication Flow
 

@@ -1,0 +1,17 @@
+{
+  "name": "@mindhit/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsp compile .",
+    "watch": "tsp compile . --watch",
+    "format": "tsp format **/*.tsp"
+  },
+  "dependencies": {
+    "@typespec/compiler": "^0.61.0",
+    "@typespec/http": "^0.61.0",
+    "@typespec/openapi": "^0.61.0",
+    "@typespec/openapi3": "^0.61.0",
+    "@typespec/rest": "^0.61.0"
+  }
+}

@@ -18,7 +18,7 @@ flowchart TB
     subgraph Generated["생성된 코드"]
         OpenAPI[OpenAPI Spec<br/>openapi.yaml]
         GoTypes[Go Types + Server<br/>oapi-codegen]
-        TSClient[TypeScript Client<br/>openapi-generator]
+        TSClient[TypeScript Client + Zod<br/>@hey-api/openapi-ts]
     end
 
     OpenAPI --> Docs[Swagger UI<br/>API 문서]
@@ -86,9 +86,11 @@ mindhit/
 │   ├── web/                         # Next.js
 │   │   └── src/
 │   │       └── api/
-│   │           └── generated/       # openapi-generator 생성
-│   │               ├── api.ts
-│   │               └── models/
+│   │           └── generated/       # @hey-api/openapi-ts 생성
+│   │               ├── types.gen.ts
+│   │               ├── sdk.gen.ts
+│   │               ├── zod.gen.ts
+│   │               └── client.gen.ts
 │   │
 │   └── extension/                   # Chrome Extension
 │       └── src/
@@ -123,8 +125,8 @@ flowchart TD
         OAPI --> GO_GEN
     end
 
-    subgraph Step3b["3b. TypeScript 클라이언트"]
-        OPENAPI_GEN[openapi-generator]
+    subgraph Step3b["3b. TypeScript 클라이언트 + Zod"]
+        OPENAPI_GEN[@hey-api/openapi-ts]
         TS_GEN[apps/web/src/api/generated/<br/>apps/extension/src/api/generated/]
         OPENAPI_GEN --> TS_GEN
     end
@@ -538,53 +540,101 @@ func (c *AuthController) Signup(
 
 ---
 
-## TypeScript 클라이언트 생성 (openapi-generator)
+## TypeScript 클라이언트 생성 (@hey-api/openapi-ts)
+
+### apps/web/openapi-ts.config.ts
+
+```typescript
+import { defineConfig } from '@hey-api/openapi-ts';
+
+export default defineConfig({
+  input: '../../packages/protocol/tsp-output/openapi/openapi.yaml',
+  output: {
+    path: 'src/api/generated',
+    format: 'prettier',
+  },
+  plugins: [
+    '@hey-api/typescript',  // TypeScript 타입 생성
+    '@hey-api/sdk',         // API SDK 생성
+    {
+      name: 'zod',          // Zod v4 스키마 생성
+    },
+  ],
+});
+```
 
 ### apps/web/package.json
 
 ```json
 {
   "scripts": {
-    "generate:api": "openapi-generator-cli generate -i ../../packages/protocol/tsp-output/openapi/openapi.yaml -g typescript-axios -o src/api/generated --additional-properties=supportsES6=true,withSeparateModelsAndApi=true,apiPackage=api,modelPackage=models"
+    "generate": "openapi-ts"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.13.0"
+    "@hey-api/openapi-ts": "^0.89.2"
   }
 }
 ```
+
+### 생성된 파일 구조
+
+| 파일 | 설명 |
+|------|------|
+| `types.gen.ts` | TypeScript 타입 정의 |
+| `sdk.gen.ts` | API 호출 함수 (SDK) |
+| `zod.gen.ts` | Zod v4 유효성 검증 스키마 |
+| `client.gen.ts` | HTTP 클라이언트 설정 |
 
 ### 생성된 TypeScript 클라이언트 사용
 
 ```typescript
 // apps/web/src/lib/api.ts
-import { Configuration, AuthApi, SessionsApi, EventsApi } from '@/api/generated';
+import { createClient } from '../api/generated';
 
-const config = new Configuration({
-  basePath: process.env.NEXT_PUBLIC_API_URL,
-  accessToken: () => localStorage.getItem('token') || '',
+export const apiClient = createClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
 });
 
-export const authApi = new AuthApi(config);
-export const sessionsApi = new SessionsApi(config);
-export const eventsApi = new EventsApi(config);
+// Re-export SDK functions for convenience
+export * from '../api/generated/sdk.gen';
+
+// Re-export Zod schemas for validation
+export * from '../api/generated/zod.gen';
+
+// Re-export types
+export type * from '../api/generated/types.gen';
 ```
 
 ```typescript
 // apps/web/src/app/login/page.tsx
 'use client';
 
-import { authApi } from '@/lib/api';
-import { SignupRequest, AuthResponse } from '@/api/generated';
+import { routesLogin, zAuthLoginRequest } from '@/lib/api';
+import type { AuthLoginRequest } from '@/api/generated/types.gen';
 
 export default function LoginPage() {
   const handleLogin = async (email: string, password: string) => {
+    // Zod 스키마로 입력값 유효성 검증
+    const validated = zAuthLoginRequest.parse({ email, password });
+
     try {
       // 타입 안전한 API 호출
-      const response = await authApi.login({ email, password });
-      const { user, token } = response.data;
+      const { data, error } = await routesLogin({ body: validated });
+
+      if (error) {
+        // 에러 처리
+        console.error(error);
+        return;
+      }
+
+      const { user, token } = data;
       // ...
     } catch (error) {
-      // 에러 타입도 자동 생성됨
+      // 네트워크 에러 처리
     }
   };
   // ...
@@ -594,15 +644,16 @@ export default function LoginPage() {
 ```typescript
 // apps/web/src/hooks/useSessions.ts
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { sessionsApi } from '@/lib/api';
-import type { Session, SessionWithDetails } from '@/api/generated';
+import { routesSessionsList, routesSessionsGet, routesSessionsStart } from '@/lib/api';
+import type { Session, SessionWithDetails } from '@/api/generated/types.gen';
 
 export function useSessions() {
   return useQuery({
     queryKey: ['sessions'],
     queryFn: async () => {
-      const response = await sessionsApi.list();
-      return response.data.sessions;
+      const { data, error } = await routesSessionsList({});
+      if (error) throw error;
+      return data.sessions;
     },
   });
 }
@@ -611,8 +662,9 @@ export function useSession(id: string) {
   return useQuery({
     queryKey: ['session', id],
     queryFn: async () => {
-      const response = await sessionsApi.get(id);
-      return response.data.session;
+      const { data, error } = await routesSessionsGet({ path: { id } });
+      if (error) throw error;
+      return data.session;
     },
   });
 }
@@ -620,8 +672,9 @@ export function useSession(id: string) {
 export function useStartSession() {
   return useMutation({
     mutationFn: async () => {
-      const response = await sessionsApi.start();
-      return response.data.session;
+      const { data, error } = await routesSessionsStart({});
+      if (error) throw error;
+      return data.session;
     },
   });
 }
@@ -631,37 +684,48 @@ export function useStartSession() {
 
 ## Extension에서 사용
 
+Extension도 동일한 `@hey-api/openapi-ts` 설정을 사용합니다.
+
 ```typescript
 // apps/extension/src/api/client.ts
-import { Configuration, AuthApi, SessionsApi, EventsApi } from './generated';
+import { createClient } from './generated';
 
 const getToken = async (): Promise<string> => {
   const result = await chrome.storage.local.get('token');
   return result.token || '';
 };
 
-const config = new Configuration({
-  basePath: 'http://localhost:8080',
-  accessToken: getToken,
+export const apiClient = createClient({
+  baseUrl: 'http://localhost:8080',
 });
 
-export const authApi = new AuthApi(config);
-export const sessionsApi = new SessionsApi(config);
-export const eventsApi = new EventsApi(config);
+// Re-export SDK functions
+export * from './generated/sdk.gen';
+
+// Re-export Zod schemas for validation
+export * from './generated/zod.gen';
+
+// Re-export types
+export type * from './generated/types.gen';
 ```
 
 ```typescript
 // apps/extension/src/background/service-worker.ts
-import { eventsApi } from '../api/client';
-import type { BatchEvent } from '../api/generated';
+import { routesEventsBatch } from '../api/client';
+import type { BatchEvent } from '../api/generated/types.gen';
 
 async function sendBatchEvents(sessionId: string, events: BatchEvent[]) {
-  try {
-    const response = await eventsApi.batch(sessionId, { events });
-    console.log(`Processed ${response.data.processed} events`);
-  } catch (error) {
+  const { data, error } = await routesEventsBatch({
+    path: { sessionId },
+    body: { events },
+  });
+
+  if (error) {
     console.error('Failed to send events:', error);
+    return;
   }
+
+  console.log(`Processed ${data.processed} events`);
 }
 ```
 
@@ -750,11 +814,20 @@ jobs:
 | API 스펙 정의 | `packages/protocol/src/**/*.tsp` | - |
 | OpenAPI 생성 | `packages/protocol/` | `pnpm run build` |
 | Go 서버 코드 생성 | `apps/backend/` | `make generate-api` |
-| TS 클라이언트 생성 | `apps/web/` | `pnpm run generate:api` |
-| Extension 클라이언트 | `apps/extension/` | `pnpm run generate:api` |
+| TS 클라이언트 + Zod 생성 | `apps/web/` | `pnpm run generate` |
+| Extension 클라이언트 | `apps/extension/` | `pnpm run generate` |
 | 전체 생성 (루트) | `/` | `pnpm run generate` |
+
+### 생성되는 TypeScript 파일
+
+| 파일 | 용도 |
+|------|------|
+| `types.gen.ts` | API 타입 정의 (Request/Response) |
+| `sdk.gen.ts` | API 호출 함수 |
+| `zod.gen.ts` | Zod v4 유효성 검증 스키마 |
+| `client.gen.ts` | HTTP 클라이언트 설정 |
 
 **API가 바뀌면:**
 1. TypeSpec 수정 (`packages/protocol/src/`)
 2. `pnpm run generate` (루트에서 한 번에 실행)
-3. Frontend/Backend 타입과 클라이언트가 자동 동기화
+3. Frontend/Backend 타입, SDK, Zod 스키마가 자동 동기화

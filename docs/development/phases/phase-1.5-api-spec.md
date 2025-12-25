@@ -17,11 +17,11 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 1.5.1 | TypeSpec 패키지 설정 | ⬜ |
-| 1.5.2 | 공통 타입 및 Auth API 스펙 작성 | ⬜ |
-| 1.5.3 | oapi-codegen 설정 (Go) | ⬜ |
-| 1.5.4 | openapi-generator 설정 (TypeScript) | ⬜ |
-| 1.5.5 | 루트 generate 스크립트 설정 | ⬜ |
+| 1.5.1 | TypeSpec 패키지 설정 | ✅ |
+| 1.5.2 | 공통 타입 및 Auth API 스펙 작성 | ✅ |
+| 1.5.3 | oapi-codegen 설정 (Go) | ✅ |
+| 1.5.4 | @hey-api/openapi-ts 설정 (TypeScript) | ✅ |
+| 1.5.5 | 루트 generate 스크립트 설정 | ✅ |
 
 ---
 
@@ -40,15 +40,16 @@ flowchart TD
     end
 
     OpenAPI -->|oapi-codegen| GoCode
-    OpenAPI -->|openapi-generator| TSCode
+    OpenAPI -->|@hey-api/openapi-ts| TSCode
 
     subgraph GoCode["Go 서버 코드"]
-        GO_TYPES[apps/backend/internal/generated/<br/>types.gen.go<br/>server.gen.go]
+        GO_TYPES[apps/backend/internal/generated/<br/>api.gen.go]
     end
 
-    subgraph TSCode["TypeScript 클라이언트"]
-        TS_WEB[apps/web/src/api/generated/]
-        TS_EXT[apps/extension/src/api/generated/]
+    subgraph TSCode["TypeScript (Hey API)"]
+        TS_TYPES[types.gen.ts<br/>TypeScript 타입]
+        TS_SDK[sdk.gen.ts<br/>API SDK]
+        TS_ZOD[zod.gen.ts<br/>Zod v4 스키마]
     end
 
     style Source fill:#e1f5fe
@@ -67,14 +68,14 @@ TypeSpec 기반 API 스펙 정의 환경 구성
 
 ### 체크리스트
 
-- [ ] **디렉토리 생성**
+- [x] **디렉토리 생성**
 
   ```bash
   mkdir -p packages/protocol/src/{common,auth,sessions,events,mindmap}
   ```
 
-- [ ] **package.json 작성**
-  - [ ] `packages/protocol/package.json`
+- [x] **package.json 작성**
+  - [x] `packages/protocol/package.json`
 
     ```json
     {
@@ -96,8 +97,8 @@ TypeSpec 기반 API 스펙 정의 환경 구성
     }
     ```
 
-- [ ] **tspconfig.yaml 작성**
-  - [ ] `packages/protocol/tspconfig.yaml`
+- [x] **tspconfig.yaml 작성**
+  - [x] `packages/protocol/tspconfig.yaml`
 
     ```yaml
     emit:
@@ -109,16 +110,18 @@ TypeSpec 기반 API 스펙 정의 환경 구성
         emitter-output-dir: "{project-root}/tsp-output/openapi"
     ```
 
-- [ ] **main.tsp 작성**
-  - [ ] `packages/protocol/src/main.tsp`
+- [x] **main.tsp 작성**
+  - [x] `packages/protocol/main.tsp` (루트에 위치)
+
+    > **Note**: TypeSpec 컴파일러는 기본적으로 루트의 `main.tsp`를 찾습니다.
 
     ```typespec
     import "@typespec/http";
     import "@typespec/rest";
     import "@typespec/openapi";
 
-    import "./common/errors.tsp";
-    import "./auth/auth.tsp";
+    import "./src/common/errors.tsp";
+    import "./src/auth/auth.tsp";
 
     using TypeSpec.Http;
     using TypeSpec.Rest;
@@ -131,7 +134,7 @@ TypeSpec 기반 API 스펙 정의 환경 구성
     namespace MindHit;
     ```
 
-- [ ] **의존성 설치**
+- [x] **의존성 설치**
 
   ```bash
   cd packages/protocol
@@ -150,10 +153,13 @@ pnpm run build
 
 ```
 packages/protocol/
+├── main.tsp              # 루트에 위치
 ├── src/
-│   ├── main.tsp
 │   ├── common/
+│   │   ├── errors.tsp
+│   │   └── pagination.tsp
 │   ├── auth/
+│   │   └── auth.tsp
 │   ├── sessions/
 │   ├── events/
 │   └── mindmap/
@@ -174,8 +180,8 @@ packages/protocol/
 
 ### 체크리스트
 
-- [ ] **공통 에러 타입**
-  - [ ] `packages/protocol/src/common/errors.tsp`
+- [x] **공통 에러 타입**
+  - [x] `packages/protocol/src/common/errors.tsp`
 
     ```typespec
     namespace MindHit.Common;
@@ -202,8 +208,8 @@ packages/protocol/
     }
     ```
 
-- [ ] **페이지네이션 타입**
-  - [ ] `packages/protocol/src/common/pagination.tsp`
+- [x] **페이지네이션 타입**
+  - [x] `packages/protocol/src/common/pagination.tsp`
 
     ```typespec
     namespace MindHit.Common;
@@ -226,8 +232,8 @@ packages/protocol/
     }
     ```
 
-- [ ] **Auth API 스펙**
-  - [ ] `packages/protocol/src/auth/auth.tsp`
+- [x] **Auth API 스펙**
+  - [x] `packages/protocol/src/auth/auth.tsp`
 
     ```typespec
     import "../common/errors.tsp";
@@ -320,7 +326,7 @@ packages/protocol/
     }
     ```
 
-- [ ] **OpenAPI 생성 확인**
+- [x] **OpenAPI 생성 확인**
 
   ```bash
   cd packages/protocol
@@ -352,14 +358,16 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
 
 ### 체크리스트
 
-- [ ] **oapi-codegen 설치**
+- [x] **oapi-codegen 설치**
+
+  > **Note**: 패키지 경로가 변경되었습니다.
 
   ```bash
-  go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
+  go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
   ```
 
-- [ ] **설정 파일 작성**
-  - [ ] `apps/backend/oapi-codegen.yaml`
+- [x] **설정 파일 작성**
+  - [x] `apps/backend/oapi-codegen.yaml`
 
     ```yaml
     package: generated
@@ -371,14 +379,14 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
       embedded-spec: true
     ```
 
-- [ ] **generated 디렉토리 생성**
+- [x] **generated 디렉토리 생성**
 
   ```bash
   mkdir -p apps/backend/internal/generated
   ```
 
-- [ ] **Makefile에 타겟 추가**
-  - [ ] `apps/backend/Makefile`
+- [x] **Makefile에 타겟 추가**
+  - [x] `apps/backend/Makefile`
 
     ```makefile
     .PHONY: generate-api build test lint run
@@ -401,17 +409,25 @@ OpenAPI 스펙에서 Go 서버 코드 자동 생성
      go run ./cmd/server
     ```
 
-- [ ] **코드 생성 실행**
+- [x] **코드 생성 실행**
 
   ```bash
   cd apps/backend
   make generate-api
   ```
 
-- [ ] **생성된 코드 확인**
-  - [ ] `internal/generated/api.gen.go` 파일 존재
-  - [ ] `SignupRequest`, `LoginRequest`, `AuthResponse` 타입 확인
-  - [ ] `StrictServerInterface` 인터페이스 확인
+- [x] **생성된 코드 확인**
+  - [x] `internal/generated/api.gen.go` 파일 존재
+  - [x] `SignupRequest`, `LoginRequest`, `AuthResponse` 타입 확인
+  - [x] `StrictServerInterface` 인터페이스 확인
+
+- [x] **필요 의존성 추가**
+
+  ```bash
+  go get github.com/getkin/kin-openapi/openapi3
+  go get github.com/oapi-codegen/runtime
+  go get github.com/oapi-codegen/runtime/strictmiddleware/gin
+  ```
 
 ### 검증
 
@@ -438,15 +454,18 @@ apps/backend/
 
 ---
 
-## Step 1.5.4: openapi-generator 설정 (TypeScript)
+## Step 1.5.4: @hey-api/openapi-ts 설정 (TypeScript)
 
 ### 목표
 
-OpenAPI 스펙에서 TypeScript 클라이언트 자동 생성
+OpenAPI 스펙에서 TypeScript 클라이언트 + Zod 스키마 자동 생성
+
+> **Note**: [@hey-api/openapi-ts](https://heyapi.dev/openapi-ts/plugins/zod)는 타입, SDK, Zod 스키마를 한 번에 생성합니다.
+> Zod v4를 지원하며, validation 규칙이 자동으로 Zod 스키마에 포함됩니다.
 
 ### 체크리스트
 
-- [ ] **apps/web 초기화** (아직 없다면)
+- [x] **apps/web 초기화** (아직 없다면)
 
   ```bash
   mkdir -p apps/web
@@ -454,15 +473,39 @@ OpenAPI 스펙에서 TypeScript 클라이언트 자동 생성
   pnpm init
   ```
 
-- [ ] **openapi-generator-cli 설치**
+- [x] **@hey-api/openapi-ts 설치**
 
   ```bash
   cd apps/web
-  pnpm add -D @openapitools/openapi-generator-cli
+  pnpm add -D @hey-api/openapi-ts
+  pnpm add zod axios
   ```
 
-- [ ] **package.json 스크립트 추가**
-  - [ ] `apps/web/package.json`
+- [x] **설정 파일 작성**
+  - [x] `apps/web/openapi-ts.config.ts`
+
+    ```typescript
+    import { defineConfig } from '@hey-api/openapi-ts';
+
+    export default defineConfig({
+      input: '../../packages/protocol/tsp-output/openapi/openapi.yaml',
+      output: {
+        path: 'src/api/generated',
+        format: 'prettier',
+      },
+      plugins: [
+        '@hey-api/typescript',
+        '@hey-api/sdk',
+        {
+          name: 'zod',
+          // Zod v4 is the default
+        },
+      ],
+    });
+    ```
+
+- [x] **package.json 스크립트 추가**
+  - [x] `apps/web/package.json`
 
     ```json
     {
@@ -470,60 +513,56 @@ OpenAPI 스펙에서 TypeScript 클라이언트 자동 생성
       "version": "0.1.0",
       "private": true,
       "scripts": {
-        "generate:api": "openapi-generator-cli generate -i ../../packages/protocol/tsp-output/openapi/openapi.yaml -g typescript-axios -o src/api/generated --additional-properties=supportsES6=true,withSeparateModelsAndApi=true,apiPackage=api,modelPackage=models"
-      },
-      "devDependencies": {
-        "@openapitools/openapi-generator-cli": "^2.13.0"
+        "generate": "openapi-ts"
       },
       "dependencies": {
-        "axios": "^1.6.0"
+        "axios": "^1.6.0",
+        "zod": "^4.2.1"
+      },
+      "devDependencies": {
+        "@hey-api/openapi-ts": "^0.89.2"
       }
     }
     ```
 
-- [ ] **generated 디렉토리 생성**
-
-  ```bash
-  mkdir -p apps/web/src/api/generated
-  ```
-
-- [ ] **코드 생성 실행**
+- [x] **코드 생성 실행**
 
   ```bash
   cd apps/web
-  pnpm run generate:api
+  pnpm run generate
   ```
 
-- [ ] **API 클라이언트 래퍼 작성**
-  - [ ] `apps/web/src/lib/api.ts`
+- [x] **API 클라이언트 래퍼 작성**
+  - [x] `apps/web/src/lib/api.ts`
 
     ```typescript
-    import { Configuration, AuthApi } from '../api/generated';
+    import { createClient } from '../api/generated';
 
-    const config = new Configuration({
-      basePath: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
-      accessToken: () => {
-        if (typeof window !== 'undefined') {
-          return localStorage.getItem('token') || '';
-        }
-        return '';
-      },
+    export const apiClient = createClient({
+      baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
     });
 
-    export const authApi = new AuthApi(config);
+    // Re-export SDK functions for convenience
+    export * from '../api/generated/sdk.gen';
+
+    // Re-export Zod schemas for validation
+    export * from '../api/generated/zod.gen';
+
+    // Re-export types
+    export type * from '../api/generated/types.gen';
     ```
 
 - [ ] **Extension용 설정** (선택)
-  - [ ] `apps/extension/package.json`에 동일한 generate:api 스크립트 추가
+  - [ ] `apps/extension/`에 동일한 설정 추가
   - [ ] 또는 web의 generated 코드를 symlink
 
 ### 검증
 
 ```bash
 cd apps/web
-pnpm run generate:api
+pnpm run generate
 ls src/api/generated/
-# api/ models/ 디렉토리 확인
+# types.gen.ts, sdk.gen.ts, zod.gen.ts 확인
 ```
 
 ### 결과물
@@ -531,17 +570,47 @@ ls src/api/generated/
 ```
 apps/web/
 ├── package.json
+├── openapi-ts.config.ts     # Hey API 설정
 └── src/
     ├── api/
     │   └── generated/
-    │       ├── api/
-    │       │   └── auth-api.ts
-    │       └── models/
-    │           ├── signup-request.ts
-    │           ├── login-request.ts
-    │           └── auth-response.ts
+    │       ├── types.gen.ts    # TypeScript 타입
+    │       ├── sdk.gen.ts      # API SDK 함수
+    │       ├── zod.gen.ts      # Zod v4 스키마 (validation 포함)
+    │       ├── client.gen.ts   # HTTP 클라이언트
+    │       └── index.ts        # 통합 export
     └── lib/
-        └── api.ts
+        └── api.ts              # 편의 래퍼
+```
+
+### Validation 사용 예시
+
+```typescript
+import { zAuthSignupRequest } from '../api/generated/zod.gen';
+
+// 폼 validation
+const result = zAuthSignupRequest.safeParse({
+  email: 'test@example.com',
+  password: '1234',  // 8자 미만 → 실패
+});
+
+if (!result.success) {
+  console.log(result.error.issues);
+  // [{ code: 'too_small', minimum: 8, path: ['password'], ... }]
+}
+```
+
+### API 호출 예시
+
+```typescript
+import { routesLogin } from '../api/generated/sdk.gen';
+import { apiClient } from '../lib/api';
+
+// SDK 함수로 API 호출
+const response = await routesLogin({
+  client: apiClient,
+  body: { email: 'user@example.com', password: 'password123' },
+});
 ```
 
 ---
@@ -554,8 +623,8 @@ apps/web/
 
 ### 체크리스트
 
-- [ ] **루트 package.json 업데이트**
-  - [ ] `package.json`
+- [x] **루트 package.json 업데이트**
+  - [x] `package.json`
 
     ```json
     {
@@ -566,6 +635,7 @@ apps/web/
         "build": "moonx :build",
         "test": "moonx :test",
         "lint": "moonx :lint",
+        "ci": "moon ci",
         "generate": "pnpm run generate:protocol && pnpm run generate:api:go && pnpm run generate:api:ts",
         "generate:protocol": "pnpm --filter @mindhit/protocol build",
         "generate:api:go": "cd apps/backend && make generate-api",
@@ -586,8 +656,8 @@ apps/web/
         platform: system
     ```
 
-- [ ] **CI용 변경 감지 스크립트**
-  - [ ] `scripts/check-generated.sh`
+- [x] **CI용 변경 감지 스크립트**
+  - [x] `scripts/check-generated.sh`
 
     ```bash
     #!/bin/bash
@@ -606,13 +676,13 @@ apps/web/
     echo "✅ All generated files are up to date"
     ```
 
-- [ ] **실행 권한 부여**
+- [x] **실행 권한 부여**
 
   ```bash
   chmod +x scripts/check-generated.sh
   ```
 
-- [ ] **.gitignore 업데이트**
+- [ ] **.gitignore 업데이트** (선택)
 
   ```
   # Generated files (commit these)
@@ -647,28 +717,28 @@ ls apps/web/src/api/generated/
 
 ### 전체 검증 체크리스트
 
-- [ ] **TypeSpec 컴파일**
+- [x] **TypeSpec 컴파일**
 
   ```bash
   cd packages/protocol && pnpm run build
   cat tsp-output/openapi/openapi.yaml | head -50
   ```
 
-- [ ] **Go 코드 생성**
+- [x] **Go 코드 생성**
 
   ```bash
   cd apps/backend && make generate-api
   grep "StrictServerInterface" internal/generated/api.gen.go
   ```
 
-- [ ] **TypeScript 클라이언트 생성**
+- [x] **TypeScript 클라이언트 생성**
 
   ```bash
   cd apps/web && pnpm run generate:api
   ls src/api/generated/
   ```
 
-- [ ] **전체 생성 스크립트**
+- [x] **전체 생성 스크립트**
 
   ```bash
   pnpm run generate
@@ -694,12 +764,14 @@ cd apps/web && pnpm run typecheck
 
 ### 산출물 요약
 
-| 항목 | 위치 |
-| ---- | ---- |
-| TypeSpec 소스 | `packages/protocol/src/` |
-| OpenAPI 스펙 | `packages/protocol/tsp-output/openapi/openapi.yaml` |
-| Go 생성 코드 | `apps/backend/internal/generated/api.gen.go` |
-| TS 클라이언트 | `apps/web/src/api/generated/` |
+| 항목 | 위치 | 용도 |
+| ---- | ---- | ---- |
+| TypeSpec 소스 | `packages/protocol/src/` | API 스펙 정의 (Single Source) |
+| OpenAPI 스펙 | `packages/protocol/tsp-output/openapi/openapi.yaml` | 중간 산출물 |
+| Go 생성 코드 | `apps/backend/internal/generated/api.gen.go` | 서버 타입/인터페이스 |
+| TS 타입 | `apps/web/src/api/generated/types.gen.ts` | TypeScript 타입 |
+| TS SDK | `apps/web/src/api/generated/sdk.gen.ts` | API 호출 함수 |
+| Zod 스키마 | `apps/web/src/api/generated/zod.gen.ts` | 런타임 validation (Zod v4) |
 
 ### API 변경 시 워크플로우
 
