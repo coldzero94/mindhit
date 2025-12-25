@@ -18,6 +18,8 @@ type Tx struct {
 	MindmapGraph *MindmapGraphClient
 	// PageVisit is the client for interacting with the PageVisit builders.
 	PageVisit *PageVisitClient
+	// PasswordResetToken is the client for interacting with the PasswordResetToken builders.
+	PasswordResetToken *PasswordResetTokenClient
 	// RawEvent is the client for interacting with the RawEvent builders.
 	RawEvent *RawEventClient
 	// Session is the client for interacting with the Session builders.
@@ -162,6 +164,7 @@ func (tx *Tx) init() {
 	tx.Highlight = NewHighlightClient(tx.config)
 	tx.MindmapGraph = NewMindmapGraphClient(tx.config)
 	tx.PageVisit = NewPageVisitClient(tx.config)
+	tx.PasswordResetToken = NewPasswordResetTokenClient(tx.config)
 	tx.RawEvent = NewRawEventClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)
 	tx.URL = NewURLClient(tx.config)

@@ -34,6 +34,25 @@ model LoginRequest {
   password: string;
 }
 
+@doc("비밀번호 재설정 요청")
+model ForgotPasswordRequest {
+  @minLength(1)
+  @doc("이메일 주소")
+  email: string;
+}
+
+@doc("비밀번호 재설정 완료 요청")
+model ResetPasswordRequest {
+  @minLength(1)
+  @doc("재설정 토큰")
+  token: string;
+
+  @minLength(8)
+  @encodedName("application/json", "new_password")
+  @doc("새 비밀번호 (최소 8자)")
+  newPassword: string;
+}
+
 @doc("인증 응답")
 model AuthResponse {
   user: User;
@@ -83,6 +102,58 @@ namespace Routes {
     @body body: { token: string };
   } | {
     @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  };
+
+  @get
+  @route("/me")
+  @doc("현재 사용자 정보 조회")
+  op me(
+    @header authorization: string
+  ): {
+    @statusCode statusCode: 200;
+    @body body: { user: User };
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/logout")
+  @doc("로그아웃")
+  op logout(
+    @header authorization: string
+  ): {
+    @statusCode statusCode: 200;
+    @body body: { message: string };
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/forgot-password")
+  @doc("비밀번호 재설정 이메일 요청")
+  op forgotPassword(
+    @body body: ForgotPasswordRequest
+  ): {
+    @statusCode statusCode: 200;
+    @body body: { message: string };
+  } | {
+    @statusCode statusCode: 400;
+    @body body: Common.ValidationError;
+  };
+
+  @post
+  @route("/reset-password")
+  @doc("비밀번호 재설정 완료")
+  op resetPassword(
+    @body body: ResetPasswordRequest
+  ): {
+    @statusCode statusCode: 200;
+    @body body: { message: string };
+  } | {
+    @statusCode statusCode: 400;
     @body body: Common.ErrorResponse;
   };
 }

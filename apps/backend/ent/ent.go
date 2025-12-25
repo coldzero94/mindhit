@@ -15,6 +15,7 @@ import (
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
+	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
 	"github.com/mindhit/api/ent/url"
@@ -80,14 +81,15 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			highlight.Table:    highlight.ValidColumn,
-			mindmapgraph.Table: mindmapgraph.ValidColumn,
-			pagevisit.Table:    pagevisit.ValidColumn,
-			rawevent.Table:     rawevent.ValidColumn,
-			session.Table:      session.ValidColumn,
-			url.Table:          url.ValidColumn,
-			user.Table:         user.ValidColumn,
-			usersettings.Table: usersettings.ValidColumn,
+			highlight.Table:          highlight.ValidColumn,
+			mindmapgraph.Table:       mindmapgraph.ValidColumn,
+			pagevisit.Table:          pagevisit.ValidColumn,
+			passwordresettoken.Table: passwordresettoken.ValidColumn,
+			rawevent.Table:           rawevent.ValidColumn,
+			session.Table:            session.ValidColumn,
+			url.Table:                url.ValidColumn,
+			user.Table:               user.ValidColumn,
+			usersettings.Table:       usersettings.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

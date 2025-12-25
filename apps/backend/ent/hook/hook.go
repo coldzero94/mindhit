@@ -45,6 +45,18 @@ func (f PageVisitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PageVisitMutation", m)
 }
 
+// The PasswordResetTokenFunc type is an adapter to allow the use of ordinary
+// function as PasswordResetToken mutator.
+type PasswordResetTokenFunc func(context.Context, *ent.PasswordResetTokenMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PasswordResetTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PasswordResetTokenMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PasswordResetTokenMutation", m)
+}
+
 // The RawEventFunc type is an adapter to allow the use of ordinary
 // function as RawEvent mutator.
 type RawEventFunc func(context.Context, *ent.RawEventMutation) (ent.Value, error)

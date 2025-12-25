@@ -120,7 +120,8 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 0 | ✅ Done | 3-Stage Dev Environment |
 | Phase 1 | ✅ Done | Project Initialization |
 | Phase 1.5 | ✅ Done | API Spec Standardization |
-| Phase 2 | ⬜ Pending | Authentication System |
+| Phase 2 | ✅ Done | Authentication System |
+| Phase 2.1 | ⬜ Pending | Google OAuth (after Phase 6, before Phase 7) |
 | Phase 3 | ⬜ Pending | Session Management API |
 | Phase 4 | ⬜ Pending | Event Collection API |
 | Phase 5 | ⬜ Pending | Monitoring & Infra (Basic) |
@@ -143,6 +144,8 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-26] Phase 2 completed: JWT authentication (signup, login, refresh, password reset, logout, me)
+- [2025-12-26] Google OAuth split to Phase 2.1 (to be implemented after Phase 6, before Phase 7)
 - [2025-12-25] Phase 1.5 completed: TypeSpec → OpenAPI → Go/TypeScript code generation pipeline
 - [2025-12-25] Phase 1 completed: Go backend project initialized with Ent ORM, PostgreSQL, and test infrastructure
 - [2025-12-25] Phase 0 completed: Moon + Docker development environment setup

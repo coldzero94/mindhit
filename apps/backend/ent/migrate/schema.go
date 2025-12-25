@@ -105,6 +105,46 @@ var (
 			},
 		},
 	}
+	// PasswordResetTokensColumns holds the columns for the "password_reset_tokens" table.
+	PasswordResetTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token", Type: field.TypeString, Unique: true},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "used", Type: field.TypeBool, Default: false},
+		{Name: "user_id", Type: field.TypeUUID},
+	}
+	// PasswordResetTokensTable holds the schema information for the "password_reset_tokens" table.
+	PasswordResetTokensTable = &schema.Table{
+		Name:       "password_reset_tokens",
+		Columns:    PasswordResetTokensColumns,
+		PrimaryKey: []*schema.Column{PasswordResetTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "password_reset_tokens_users_password_reset_tokens",
+				Columns:    []*schema.Column{PasswordResetTokensColumns[5]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "passwordresettoken_token",
+				Unique:  false,
+				Columns: []*schema.Column{PasswordResetTokensColumns[1]},
+			},
+			{
+				Name:    "passwordresettoken_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{PasswordResetTokensColumns[5]},
+			},
+			{
+				Name:    "passwordresettoken_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{PasswordResetTokensColumns[2]},
+			},
+		},
+	}
 	// RawEventsColumns holds the columns for the "raw_events" table.
 	RawEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -268,6 +308,7 @@ var (
 		HighlightsTable,
 		MindmapGraphsTable,
 		PageVisitsTable,
+		PasswordResetTokensTable,
 		RawEventsTable,
 		SessionsTable,
 		UrLsTable,
@@ -282,6 +323,7 @@ func init() {
 	MindmapGraphsTable.ForeignKeys[0].RefTable = SessionsTable
 	PageVisitsTable.ForeignKeys[0].RefTable = UrLsTable
 	PageVisitsTable.ForeignKeys[1].RefTable = SessionsTable
+	PasswordResetTokensTable.ForeignKeys[0].RefTable = UsersTable
 	RawEventsTable.ForeignKeys[0].RefTable = SessionsTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
 	UserSettingsTable.ForeignKeys[0].RefTable = UsersTable

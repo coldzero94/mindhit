@@ -4,6 +4,35 @@ info:
   version: 1.0.0
 tags: []
 paths:
+  /v1/auth/forgot-password:
+    post:
+      operationId: Routes_forgotPassword
+      description: 비밀번호 재설정 이메일 요청
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ValidationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.ForgotPasswordRequest'
   /v1/auth/login:
     post:
       operationId: Routes_login
@@ -28,6 +57,62 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Auth.LoginRequest'
+  /v1/auth/logout:
+    post:
+      operationId: Routes_logout
+      description: 로그아웃
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/auth/me:
+    get:
+      operationId: Routes_me
+      description: 현재 사용자 정보 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/Auth.User'
+                required:
+                  - user
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
   /v1/auth/refresh:
     post:
       operationId: Routes_refresh
@@ -56,6 +141,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/auth/reset-password:
+    post:
+      operationId: Routes_resetPassword
+      description: 비밀번호 재설정 완료
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.ResetPasswordRequest'
   /v1/auth/signup:
     post:
       operationId: Routes_signup
@@ -99,6 +213,16 @@ components:
         token:
           type: string
       description: 인증 응답
+    Auth.ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          minLength: 1
+          description: 이메일 주소
+      description: 비밀번호 재설정 요청
     Auth.LoginRequest:
       type: object
       required:
@@ -110,6 +234,21 @@ components:
         password:
           type: string
       description: 로그인 요청
+    Auth.ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - new_password
+      properties:
+        token:
+          type: string
+          minLength: 1
+          description: 재설정 토큰
+        new_password:
+          type: string
+          minLength: 8
+          description: 새 비밀번호 (최소 8자)
+      description: 비밀번호 재설정 완료 요청
     Auth.SignupRequest:
       type: object
       required:

@@ -3,11 +3,26 @@
 import { z } from 'zod';
 
 /**
+ * 비밀번호 재설정 요청
+ */
+export const zAuthForgotPasswordRequest = z.object({
+    email: z.string().min(1)
+});
+
+/**
  * 로그인 요청
  */
 export const zAuthLoginRequest = z.object({
     email: z.string(),
     password: z.string()
+});
+
+/**
+ * 비밀번호 재설정 완료 요청
+ */
+export const zAuthResetPasswordRequest = z.object({
+    token: z.string().min(1),
+    new_password: z.string().min(8)
 });
 
 /**
@@ -61,6 +76,19 @@ export const zCommonValidationError = z.object({
     })
 });
 
+export const zRoutesForgotPasswordData = z.object({
+    body: zAuthForgotPasswordRequest,
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesForgotPasswordResponse = z.object({
+    message: z.string()
+});
+
 export const zRoutesLoginData = z.object({
     body: zAuthLoginRequest,
     path: z.optional(z.never()),
@@ -71,6 +99,38 @@ export const zRoutesLoginData = z.object({
  * The request has succeeded.
  */
 export const zRoutesLoginResponse = zAuthAuthResponse;
+
+export const zRoutesLogoutData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesLogoutResponse = z.object({
+    message: z.string()
+});
+
+export const zRoutesMeData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesMeResponse = z.object({
+    user: zAuthUser
+});
 
 export const zRoutesRefreshData = z.object({
     body: z.optional(z.never()),
@@ -86,6 +146,19 @@ export const zRoutesRefreshData = z.object({
  */
 export const zRoutesRefreshResponse = z.object({
     token: z.string()
+});
+
+export const zRoutesResetPasswordData = z.object({
+    body: zAuthResetPasswordRequest,
+    path: z.optional(z.never()),
+    query: z.optional(z.never())
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesResetPasswordResponse = z.object({
+    message: z.string()
 });
 
 export const zRoutesSignupData = z.object({

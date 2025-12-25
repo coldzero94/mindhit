@@ -15,6 +15,9 @@ type MindmapGraph func(*sql.Selector)
 // PageVisit is the predicate function for pagevisit builders.
 type PageVisit func(*sql.Selector)
 
+// PasswordResetToken is the predicate function for passwordresettoken builders.
+type PasswordResetToken func(*sql.Selector)
+
 // RawEvent is the predicate function for rawevent builders.
 type RawEvent func(*sql.Selector)
 

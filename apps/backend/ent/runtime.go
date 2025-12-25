@@ -9,6 +9,7 @@ import (
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
+	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/schema"
 	"github.com/mindhit/api/ent/session"
@@ -102,6 +103,24 @@ func init() {
 	pagevisitDescID := pagevisitMixinFields0[0].Descriptor()
 	// pagevisit.DefaultID holds the default value on creation for the id field.
 	pagevisit.DefaultID = pagevisitDescID.Default.(func() uuid.UUID)
+	passwordresettokenFields := schema.PasswordResetToken{}.Fields()
+	_ = passwordresettokenFields
+	// passwordresettokenDescToken is the schema descriptor for token field.
+	passwordresettokenDescToken := passwordresettokenFields[1].Descriptor()
+	// passwordresettoken.TokenValidator is a validator for the "token" field. It is called by the builders before save.
+	passwordresettoken.TokenValidator = passwordresettokenDescToken.Validators[0].(func(string) error)
+	// passwordresettokenDescCreatedAt is the schema descriptor for created_at field.
+	passwordresettokenDescCreatedAt := passwordresettokenFields[4].Descriptor()
+	// passwordresettoken.DefaultCreatedAt holds the default value on creation for the created_at field.
+	passwordresettoken.DefaultCreatedAt = passwordresettokenDescCreatedAt.Default.(func() time.Time)
+	// passwordresettokenDescUsed is the schema descriptor for used field.
+	passwordresettokenDescUsed := passwordresettokenFields[5].Descriptor()
+	// passwordresettoken.DefaultUsed holds the default value on creation for the used field.
+	passwordresettoken.DefaultUsed = passwordresettokenDescUsed.Default.(bool)
+	// passwordresettokenDescID is the schema descriptor for id field.
+	passwordresettokenDescID := passwordresettokenFields[0].Descriptor()
+	// passwordresettoken.DefaultID holds the default value on creation for the id field.
+	passwordresettoken.DefaultID = passwordresettokenDescID.Default.(func() uuid.UUID)
 	raweventMixin := schema.RawEvent{}.Mixin()
 	raweventMixinFields0 := raweventMixin[0].Fields()
 	_ = raweventMixinFields0

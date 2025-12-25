@@ -37,7 +37,8 @@ phases/
 | 0 | [3단계 개발 환경 (go run + kind + EKS)](./phase-0-dev-environment.md) | ✅ 완료 | 6 steps |
 | 1 | [프로젝트 초기화](./phase-1-project-init.md) | ✅ 완료 | 9 steps |
 | 1.5 | [API 스펙 공통화](./phase-1.5-api-spec.md) | ✅ 완료 | 5 steps |
-| 2 | [인증 시스템](./phase-2-auth.md) | ⬜ 대기 | 5 steps |
+| 2 | [인증 시스템](./phase-2-auth.md) | ✅ 완료 | 6 steps |
+| 2.1 | [Google OAuth](./phase-2.1-oauth.md) | ⬜ 대기 | 1 step |
 | 3 | [세션 관리 API](./phase-3-sessions.md) | ⬜ 대기 | 3 steps |
 | 4 | [이벤트 수집 API](./phase-4-events.md) | ⬜ 대기 | 3 steps |
 | 5 | [모니터링 및 인프라 (기초)](./phase-5-infra.md) | ⬜ 대기 | 3 steps |
@@ -71,10 +72,14 @@ flowchart TD
     P4 --> P5[Phase 5<br/>인프라 기초]
     P5 --> P6[Phase 6<br/>Worker]
 
-    %% Phase 7: 인증 + 세션 + 인프라 필요
+    %% Phase 2.1: Google OAuth (Phase 6 이후, Phase 7 전)
+    P6 --> P2_1[Phase 2.1<br/>Google OAuth]
+
+    %% Phase 7: 인증 + 세션 + 인프라 + OAuth 필요
     P2 --> P7[Phase 7<br/>웹앱]
     P3 --> P7
     P5 --> P7
+    P2_1 --> P7
 
     %% Phase 8: 인증 + 이벤트 API 필요
     P2 --> P8[Phase 8<br/>Extension]
@@ -100,6 +105,7 @@ flowchart TD
     style P1 fill:#e1f5fe
     style P1_5 fill:#e1f5fe
     style P2 fill:#fff3e0
+    style P2_1 fill:#fff3e0
     style P3 fill:#fff3e0
     style P4 fill:#fff3e0
     style P5 fill:#e8f5e9
@@ -172,23 +178,24 @@ flowchart TD
 ### Core Features
 
 6. Phase 6 (Worker)
-7. Phase 7 (웹앱 기본) - Phase 2, 3, 5 의존
-8. Phase 9 (플랜/사용량) - Phase 8 이후
-9. Phase 10 (AI) - Phase 6, 9 의존
-10. **Core 완료**: 마인드맵 생성 가능
+7. Phase 2.1 (Google OAuth) - Phase 6 이후, Phase 7 전에 구현
+8. Phase 7 (웹앱 기본) - Phase 2, 3, 5, 2.1 의존
+9. Phase 9 (플랜/사용량) - Phase 8 이후
+10. Phase 10 (AI) - Phase 6, 9 의존
+11. **Core 완료**: 마인드맵 생성 가능
 
 ### Dashboard & Polish
 
-11. Phase 11 (대시보드) - Phase 7, 10 의존
+12. Phase 11 (대시보드) - Phase 7, 10 의존
 
 ### 프로덕션 준비
 
-12. Phase 12 (프로덕션 모니터링)
-13. Phase 13 (배포/운영)
+13. Phase 12 (프로덕션 모니터링)
+14. Phase 13 (배포/운영)
 
 ### 수익화
 
-14. Phase 14 (Stripe 결제)
+15. Phase 14 (Stripe 결제)
 
 ---
 

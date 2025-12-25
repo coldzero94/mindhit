@@ -44,9 +44,11 @@ type UserEdges struct {
 	Settings *UserSettings `json:"settings,omitempty"`
 	// Sessions holds the value of the sessions edge.
 	Sessions []*Session `json:"sessions,omitempty"`
+	// PasswordResetTokens holds the value of the password_reset_tokens edge.
+	PasswordResetTokens []*PasswordResetToken `json:"password_reset_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // SettingsOrErr returns the Settings value or an error if the edge
@@ -67,6 +69,15 @@ func (e UserEdges) SessionsOrErr() ([]*Session, error) {
 		return e.Sessions, nil
 	}
 	return nil, &NotLoadedError{edge: "sessions"}
+}
+
+// PasswordResetTokensOrErr returns the PasswordResetTokens value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PasswordResetTokensOrErr() ([]*PasswordResetToken, error) {
+	if e.loadedTypes[2] {
+		return e.PasswordResetTokens, nil
+	}
+	return nil, &NotLoadedError{edge: "password_reset_tokens"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -159,6 +170,11 @@ func (_m *User) QuerySettings() *UserSettingsQuery {
 // QuerySessions queries the "sessions" edge of the User entity.
 func (_m *User) QuerySessions() *SessionQuery {
 	return NewUserClient(_m.config).QuerySessions(_m)
+}
+
+// QueryPasswordResetTokens queries the "password_reset_tokens" edge of the User entity.
+func (_m *User) QueryPasswordResetTokens() *PasswordResetTokenQuery {
+	return NewUserClient(_m.config).QueryPasswordResetTokens(_m)
 }
 
 // Update returns a builder for updating this User.

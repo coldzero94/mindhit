@@ -35,6 +35,7 @@ func (User) Edges() []ent.Edge {
 		edge.To("settings", UserSettings.Type).
 			Unique(),
 		edge.To("sessions", Session.Type),
+		edge.To("password_reset_tokens", PasswordResetToken.Type),
 	}
 }
 

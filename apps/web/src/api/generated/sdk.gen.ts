@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { RoutesLoginData, RoutesLoginErrors, RoutesLoginResponses, RoutesRefreshData, RoutesRefreshErrors, RoutesRefreshResponses, RoutesSignupData, RoutesSignupErrors, RoutesSignupResponses } from './types.gen';
+import type { RoutesForgotPasswordData, RoutesForgotPasswordErrors, RoutesForgotPasswordResponses, RoutesLoginData, RoutesLoginErrors, RoutesLoginResponses, RoutesLogoutData, RoutesLogoutErrors, RoutesLogoutResponses, RoutesMeData, RoutesMeErrors, RoutesMeResponses, RoutesRefreshData, RoutesRefreshErrors, RoutesRefreshResponses, RoutesResetPasswordData, RoutesResetPasswordErrors, RoutesResetPasswordResponses, RoutesSignupData, RoutesSignupErrors, RoutesSignupResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -19,6 +19,18 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
+ * 비밀번호 재설정 이메일 요청
+ */
+export const routesForgotPassword = <ThrowOnError extends boolean = false>(options: Options<RoutesForgotPasswordData, ThrowOnError>) => (options.client ?? client).post<RoutesForgotPasswordResponses, RoutesForgotPasswordErrors, ThrowOnError>({
+    url: '/v1/auth/forgot-password',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * 로그인
  */
 export const routesLogin = <ThrowOnError extends boolean = false>(options: Options<RoutesLoginData, ThrowOnError>) => (options.client ?? client).post<RoutesLoginResponses, RoutesLoginErrors, ThrowOnError>({
@@ -31,9 +43,31 @@ export const routesLogin = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
+ * 로그아웃
+ */
+export const routesLogout = <ThrowOnError extends boolean = false>(options: Options<RoutesLogoutData, ThrowOnError>) => (options.client ?? client).post<RoutesLogoutResponses, RoutesLogoutErrors, ThrowOnError>({ url: '/v1/auth/logout', ...options });
+
+/**
+ * 현재 사용자 정보 조회
+ */
+export const routesMe = <ThrowOnError extends boolean = false>(options: Options<RoutesMeData, ThrowOnError>) => (options.client ?? client).get<RoutesMeResponses, RoutesMeErrors, ThrowOnError>({ url: '/v1/auth/me', ...options });
+
+/**
  * 토큰 갱신
  */
 export const routesRefresh = <ThrowOnError extends boolean = false>(options: Options<RoutesRefreshData, ThrowOnError>) => (options.client ?? client).post<RoutesRefreshResponses, RoutesRefreshErrors, ThrowOnError>({ url: '/v1/auth/refresh', ...options });
+
+/**
+ * 비밀번호 재설정 완료
+ */
+export const routesResetPassword = <ThrowOnError extends boolean = false>(options: Options<RoutesResetPasswordData, ThrowOnError>) => (options.client ?? client).post<RoutesResetPasswordResponses, RoutesResetPasswordErrors, ThrowOnError>({
+    url: '/v1/auth/reset-password',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * 회원가입

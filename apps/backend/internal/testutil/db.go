@@ -65,6 +65,9 @@ func cleanupTables(t *testing.T, client *ent.Client) {
 	if _, err := client.Session.Delete().Exec(ctx); err != nil {
 		t.Logf("failed to clean sessions: %v", err)
 	}
+	if _, err := client.PasswordResetToken.Delete().Exec(ctx); err != nil {
+		t.Logf("failed to clean password_reset_tokens: %v", err)
+	}
 	if _, err := client.UserSettings.Delete().Exec(ctx); err != nil {
 		t.Logf("failed to clean user_settings: %v", err)
 	}

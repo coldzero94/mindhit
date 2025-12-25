@@ -13,11 +13,35 @@ export type AuthAuthResponse = {
 };
 
 /**
+ * 비밀번호 재설정 요청
+ */
+export type AuthForgotPasswordRequest = {
+    /**
+     * 이메일 주소
+     */
+    email: string;
+};
+
+/**
  * 로그인 요청
  */
 export type AuthLoginRequest = {
     email: string;
     password: string;
+};
+
+/**
+ * 비밀번호 재설정 완료 요청
+ */
+export type AuthResetPasswordRequest = {
+    /**
+     * 재설정 토큰
+     */
+    token: string;
+    /**
+     * 새 비밀번호 (최소 8자)
+     */
+    new_password: string;
 };
 
 /**
@@ -69,6 +93,33 @@ export type CommonValidationError = {
     };
 };
 
+export type RoutesForgotPasswordData = {
+    body: AuthForgotPasswordRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/auth/forgot-password';
+};
+
+export type RoutesForgotPasswordErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: CommonValidationError;
+};
+
+export type RoutesForgotPasswordError = RoutesForgotPasswordErrors[keyof RoutesForgotPasswordErrors];
+
+export type RoutesForgotPasswordResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type RoutesForgotPasswordResponse = RoutesForgotPasswordResponses[keyof RoutesForgotPasswordResponses];
+
 export type RoutesLoginData = {
     body: AuthLoginRequest;
     path?: never;
@@ -93,6 +144,66 @@ export type RoutesLoginResponses = {
 };
 
 export type RoutesLoginResponse = RoutesLoginResponses[keyof RoutesLoginResponses];
+
+export type RoutesLogoutData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/auth/logout';
+};
+
+export type RoutesLogoutErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+};
+
+export type RoutesLogoutError = RoutesLogoutErrors[keyof RoutesLogoutErrors];
+
+export type RoutesLogoutResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type RoutesLogoutResponse = RoutesLogoutResponses[keyof RoutesLogoutResponses];
+
+export type RoutesMeData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/auth/me';
+};
+
+export type RoutesMeErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+};
+
+export type RoutesMeError = RoutesMeErrors[keyof RoutesMeErrors];
+
+export type RoutesMeResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: {
+        user: AuthUser;
+    };
+};
+
+export type RoutesMeResponse = RoutesMeResponses[keyof RoutesMeResponses];
 
 export type RoutesRefreshData = {
     body?: never;
@@ -123,6 +234,33 @@ export type RoutesRefreshResponses = {
 };
 
 export type RoutesRefreshResponse = RoutesRefreshResponses[keyof RoutesRefreshResponses];
+
+export type RoutesResetPasswordData = {
+    body: AuthResetPasswordRequest;
+    path?: never;
+    query?: never;
+    url: '/v1/auth/reset-password';
+};
+
+export type RoutesResetPasswordErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: CommonErrorResponse;
+};
+
+export type RoutesResetPasswordError = RoutesResetPasswordErrors[keyof RoutesResetPasswordErrors];
+
+export type RoutesResetPasswordResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type RoutesResetPasswordResponse = RoutesResetPasswordResponses[keyof RoutesResetPasswordResponses];
 
 export type RoutesSignupData = {
     body: AuthSignupRequest;

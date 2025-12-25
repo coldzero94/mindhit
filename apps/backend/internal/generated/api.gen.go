@@ -30,10 +30,25 @@ type AuthAuthResponse struct {
 	User AuthUser `json:"user"`
 }
 
+// AuthForgotPasswordRequest 비밀번호 재설정 요청
+type AuthForgotPasswordRequest struct {
+	// Email 이메일 주소
+	Email string `json:"email"`
+}
+
 // AuthLoginRequest 로그인 요청
 type AuthLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+// AuthResetPasswordRequest 비밀번호 재설정 완료 요청
+type AuthResetPasswordRequest struct {
+	// NewPassword 새 비밀번호 (최소 8자)
+	NewPassword string `json:"new_password"`
+
+	// Token 재설정 토큰
+	Token string `json:"token"`
 }
 
 // AuthSignupRequest 회원가입 요청
@@ -75,13 +90,29 @@ type CommonValidationError struct {
 	} `json:"error"`
 }
 
+// RoutesLogoutParams defines parameters for RoutesLogout.
+type RoutesLogoutParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesMeParams defines parameters for RoutesMe.
+type RoutesMeParams struct {
+	Authorization string `json:"authorization"`
+}
+
 // RoutesRefreshParams defines parameters for RoutesRefresh.
 type RoutesRefreshParams struct {
 	Authorization string `json:"authorization"`
 }
 
+// RoutesForgotPasswordJSONRequestBody defines body for RoutesForgotPassword for application/json ContentType.
+type RoutesForgotPasswordJSONRequestBody = AuthForgotPasswordRequest
+
 // RoutesLoginJSONRequestBody defines body for RoutesLogin for application/json ContentType.
 type RoutesLoginJSONRequestBody = AuthLoginRequest
+
+// RoutesResetPasswordJSONRequestBody defines body for RoutesResetPassword for application/json ContentType.
+type RoutesResetPasswordJSONRequestBody = AuthResetPasswordRequest
 
 // RoutesSignupJSONRequestBody defines body for RoutesSignup for application/json ContentType.
 type RoutesSignupJSONRequestBody = AuthSignupRequest
@@ -89,11 +120,23 @@ type RoutesSignupJSONRequestBody = AuthSignupRequest
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (POST /v1/auth/forgot-password)
+	RoutesForgotPassword(c *gin.Context)
+
 	// (POST /v1/auth/login)
 	RoutesLogin(c *gin.Context)
 
+	// (POST /v1/auth/logout)
+	RoutesLogout(c *gin.Context, params RoutesLogoutParams)
+
+	// (GET /v1/auth/me)
+	RoutesMe(c *gin.Context, params RoutesMeParams)
+
 	// (POST /v1/auth/refresh)
 	RoutesRefresh(c *gin.Context, params RoutesRefreshParams)
+
+	// (POST /v1/auth/reset-password)
+	RoutesResetPassword(c *gin.Context)
 
 	// (POST /v1/auth/signup)
 	RoutesSignup(c *gin.Context)
@@ -108,6 +151,19 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(c *gin.Context)
 
+// RoutesForgotPassword operation middleware
+func (siw *ServerInterfaceWrapper) RoutesForgotPassword(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesForgotPassword(c)
+}
+
 // RoutesLogin operation middleware
 func (siw *ServerInterfaceWrapper) RoutesLogin(c *gin.Context) {
 
@@ -119,6 +175,90 @@ func (siw *ServerInterfaceWrapper) RoutesLogin(c *gin.Context) {
 	}
 
 	siw.Handler.RoutesLogin(c)
+}
+
+// RoutesLogout operation middleware
+func (siw *ServerInterfaceWrapper) RoutesLogout(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesLogoutParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesLogout(c, params)
+}
+
+// RoutesMe operation middleware
+func (siw *ServerInterfaceWrapper) RoutesMe(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesMeParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesMe(c, params)
 }
 
 // RoutesRefresh operation middleware
@@ -163,6 +303,19 @@ func (siw *ServerInterfaceWrapper) RoutesRefresh(c *gin.Context) {
 	siw.Handler.RoutesRefresh(c, params)
 }
 
+// RoutesResetPassword operation middleware
+func (siw *ServerInterfaceWrapper) RoutesResetPassword(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesResetPassword(c)
+}
+
 // RoutesSignup operation middleware
 func (siw *ServerInterfaceWrapper) RoutesSignup(c *gin.Context) {
 
@@ -203,9 +356,41 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/v1/auth/forgot-password", wrapper.RoutesForgotPassword)
 	router.POST(options.BaseURL+"/v1/auth/login", wrapper.RoutesLogin)
+	router.POST(options.BaseURL+"/v1/auth/logout", wrapper.RoutesLogout)
+	router.GET(options.BaseURL+"/v1/auth/me", wrapper.RoutesMe)
 	router.POST(options.BaseURL+"/v1/auth/refresh", wrapper.RoutesRefresh)
+	router.POST(options.BaseURL+"/v1/auth/reset-password", wrapper.RoutesResetPassword)
 	router.POST(options.BaseURL+"/v1/auth/signup", wrapper.RoutesSignup)
+}
+
+type RoutesForgotPasswordRequestObject struct {
+	Body *RoutesForgotPasswordJSONRequestBody
+}
+
+type RoutesForgotPasswordResponseObject interface {
+	VisitRoutesForgotPasswordResponse(w http.ResponseWriter) error
+}
+
+type RoutesForgotPassword200JSONResponse struct {
+	Message string `json:"message"`
+}
+
+func (response RoutesForgotPassword200JSONResponse) VisitRoutesForgotPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesForgotPassword400JSONResponse CommonValidationError
+
+func (response RoutesForgotPassword400JSONResponse) VisitRoutesForgotPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type RoutesLoginRequestObject struct {
@@ -228,6 +413,63 @@ func (response RoutesLogin200JSONResponse) VisitRoutesLoginResponse(w http.Respo
 type RoutesLogin401JSONResponse CommonErrorResponse
 
 func (response RoutesLogin401JSONResponse) VisitRoutesLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesLogoutRequestObject struct {
+	Params RoutesLogoutParams
+}
+
+type RoutesLogoutResponseObject interface {
+	VisitRoutesLogoutResponse(w http.ResponseWriter) error
+}
+
+type RoutesLogout200JSONResponse struct {
+	Message string `json:"message"`
+}
+
+func (response RoutesLogout200JSONResponse) VisitRoutesLogoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesLogout401JSONResponse CommonErrorResponse
+
+func (response RoutesLogout401JSONResponse) VisitRoutesLogoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesMeRequestObject struct {
+	Params RoutesMeParams
+}
+
+type RoutesMeResponseObject interface {
+	VisitRoutesMeResponse(w http.ResponseWriter) error
+}
+
+type RoutesMe200JSONResponse struct {
+	// User 사용자 정보
+	User AuthUser `json:"user"`
+}
+
+func (response RoutesMe200JSONResponse) VisitRoutesMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesMe401JSONResponse CommonErrorResponse
+
+func (response RoutesMe401JSONResponse) VisitRoutesMeResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
 
@@ -258,6 +500,34 @@ type RoutesRefresh401JSONResponse CommonErrorResponse
 func (response RoutesRefresh401JSONResponse) VisitRoutesRefreshResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResetPasswordRequestObject struct {
+	Body *RoutesResetPasswordJSONRequestBody
+}
+
+type RoutesResetPasswordResponseObject interface {
+	VisitRoutesResetPasswordResponse(w http.ResponseWriter) error
+}
+
+type RoutesResetPassword200JSONResponse struct {
+	Message string `json:"message"`
+}
+
+func (response RoutesResetPassword200JSONResponse) VisitRoutesResetPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResetPassword400JSONResponse CommonErrorResponse
+
+func (response RoutesResetPassword400JSONResponse) VisitRoutesResetPasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -300,11 +570,23 @@ func (response RoutesSignup409JSONResponse) VisitRoutesSignupResponse(w http.Res
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
+	// (POST /v1/auth/forgot-password)
+	RoutesForgotPassword(ctx context.Context, request RoutesForgotPasswordRequestObject) (RoutesForgotPasswordResponseObject, error)
+
 	// (POST /v1/auth/login)
 	RoutesLogin(ctx context.Context, request RoutesLoginRequestObject) (RoutesLoginResponseObject, error)
 
+	// (POST /v1/auth/logout)
+	RoutesLogout(ctx context.Context, request RoutesLogoutRequestObject) (RoutesLogoutResponseObject, error)
+
+	// (GET /v1/auth/me)
+	RoutesMe(ctx context.Context, request RoutesMeRequestObject) (RoutesMeResponseObject, error)
+
 	// (POST /v1/auth/refresh)
 	RoutesRefresh(ctx context.Context, request RoutesRefreshRequestObject) (RoutesRefreshResponseObject, error)
+
+	// (POST /v1/auth/reset-password)
+	RoutesResetPassword(ctx context.Context, request RoutesResetPasswordRequestObject) (RoutesResetPasswordResponseObject, error)
 
 	// (POST /v1/auth/signup)
 	RoutesSignup(ctx context.Context, request RoutesSignupRequestObject) (RoutesSignupResponseObject, error)
@@ -320,6 +602,39 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// RoutesForgotPassword operation middleware
+func (sh *strictHandler) RoutesForgotPassword(ctx *gin.Context) {
+	var request RoutesForgotPasswordRequestObject
+
+	var body RoutesForgotPasswordJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesForgotPassword(ctx, request.(RoutesForgotPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesForgotPassword")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesForgotPasswordResponseObject); ok {
+		if err := validResponse.VisitRoutesForgotPasswordResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // RoutesLogin operation middleware
@@ -355,6 +670,60 @@ func (sh *strictHandler) RoutesLogin(ctx *gin.Context) {
 	}
 }
 
+// RoutesLogout operation middleware
+func (sh *strictHandler) RoutesLogout(ctx *gin.Context, params RoutesLogoutParams) {
+	var request RoutesLogoutRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesLogout(ctx, request.(RoutesLogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesLogout")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesLogoutResponseObject); ok {
+		if err := validResponse.VisitRoutesLogoutResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesMe operation middleware
+func (sh *strictHandler) RoutesMe(ctx *gin.Context, params RoutesMeParams) {
+	var request RoutesMeRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesMe(ctx, request.(RoutesMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesMe")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesMeResponseObject); ok {
+		if err := validResponse.VisitRoutesMeResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RoutesRefresh operation middleware
 func (sh *strictHandler) RoutesRefresh(ctx *gin.Context, params RoutesRefreshParams) {
 	var request RoutesRefreshRequestObject
@@ -375,6 +744,39 @@ func (sh *strictHandler) RoutesRefresh(ctx *gin.Context, params RoutesRefreshPar
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(RoutesRefreshResponseObject); ok {
 		if err := validResponse.VisitRoutesRefreshResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesResetPassword operation middleware
+func (sh *strictHandler) RoutesResetPassword(ctx *gin.Context) {
+	var request RoutesResetPasswordRequestObject
+
+	var body RoutesResetPasswordJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesResetPassword(ctx, request.(RoutesResetPasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesResetPassword")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesResetPasswordResponseObject); ok {
+		if err := validResponse.VisitRoutesResetPasswordResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -418,23 +820,27 @@ func (sh *strictHandler) RoutesSignup(ctx *gin.Context) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"H4sIAAAAAAAC/+xYUWscNxf9K0Lf99DCZHfd9sHdt7RJaSCB4DZ9CSYoo7s7SmekiaSx65oFt9maQPzg",
+	"QkxTx3YdUkoDLmychG4hv8ir/Q9Fml17Z3bG9jp2G4e+GHlGe+bcc4+urrSIfRHFggPXCtcXsfIDiIgb",
+	"Xkx0ULF/ZkDFgiuwDykoX7JYM8FxHZvNrvltE5nNH3sPXmEPx1LEIDUDB6DF18DdYCEGXMdKS8abuOXh",
+	"RIG0L/4voYHr+H/VAxLVAYOq+/wNO7HV8rCEuwmTQHH9ZvprbwA/6w3hxe074GsL7376mZBNoa8TpeaF",
+	"pDNwNwGlx0Po/dXudZZ6u/f7j7rIbO2Y9q9mew2Z9Ydm94+xkCAiLCzS4WXv2UOz+RqZp6/N8gr2cMT4",
+	"VeBNHeD6lJdXIBdQiloayVXRZLw8gCcbe392zWb3SM5jaYgH4hS8LGQ48otSsjOg4OSq/9zuPV0pC4TD",
+	"/K1Ryrkc3LuPMrDvmVcbZnkFTZut1fezGZn2xsXYd2sOdp9cf3m7/11nwtSmqF6We6l4X7AmT+JS1frr",
+	"K+bx6l5nyWz9cMYOzZrjkORNpPKJXXVjUDByQX2/Y9afma1VZLbXei9ejonhSyAa6C3ixGwIGdkRpkTD",
+	"Bc0iwAVxly8XRouLWUwn/EhOBkaxt6/FCOUMdJE0n4ooErxyWUohy4v0XrfTe9FF5qfV3i87ZbUaLIYd",
+	"5AQUFAqDjkAp0oSjK8dw4jj/vBkcg0PC/IqEjBIb1CXQgxxl2TYYhPTN6KYQ3iG0C/hcHoqXs+fGdn/9",
+	"d9N+jvZ2l9w+6VJwXO2pi9INmYZIHbVhlsnU2g+BSEkW/tns2XmMN4T7FNOhfXeNcfo50+ji9SvYw3Mg",
+	"VarXVKVWqVl6IgZOYobr+EP3yFYIHTgBqnNTVZLooNpw2/uF0SoVi0m2moOCOCykVnwn3BWK63hGJBpU",
+	"tovAadCg9CeCLqQLhGvg7rMkjkPmO4DqHSX4QTt1rFanuF9pZYXWMgH3IF3sTpIParWJmGRddhpWaHk5",
+	"zb8MAA2EQgFRSCW+D0CBVmx6P5qQ8ESmT9diCScFcg4k8kUSUsSFRgmnIJUmnCI9wpkmgLRAjM9ZXKQW",
+	"uCbfVCxqyzuwYGj7skOMN2zMSqzl2rqzdFSmbzwDIx1JIHN4OIFNpk7bJtmdsoDRRd8HpRBTKOE2x0Ky",
+	"bx2dscyLRB+Z+rW2eXyvPPsWwpY2SSLQIBWu31zE1lE4AELdGYeTyBXuARUHgvN59EZEyK/h2fNfLN5a",
+	"F0ROiCYUdeqP2mZrB+UbVGSedPrrKyWWuAbnzA6ncIx/pw0ioSFBBeV1Ij1Sor3Oc/Ngu8QVMwOQ82WN",
+	"srufwuPxO24CBW/Sp7orkVJvjFy2nGUrUXir819vejpGOv3OVLl7pEPqzshFUom10quos/RU9rLrWGaa",
+	"ekv6U2TTQhCHeSRBiUT64CbcBuBocIODiELEvk5Cfc6PPZb7x//Kshgy8wVvhMzXCs0zHTjSfiIlcI2U",
+	"JhqQaLiHaaTpemh5OP033S6z4JdgDkIRRw7BzcIeTmRot1St43q1GgqfhIFQuj5dm67h1mzr7wAAAP//",
+	"iGBpsCwZAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
