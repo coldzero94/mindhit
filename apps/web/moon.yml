@@ -1,0 +1,41 @@
+language: typescript
+type: application
+
+tasks:
+  dev:
+    command: next dev
+    local: true
+
+  build:
+    command: next build
+    inputs:
+      - "src/**/*"
+      - "public/**/*"
+      - "next.config.ts"
+      - "tailwind.config.ts"
+    outputs:
+      - ".next"
+
+  start:
+    command: next start
+    local: true
+
+  lint:
+    command: eslint
+    inputs:
+      - "src/**/*"
+      - "eslint.config.mjs"
+
+  typecheck:
+    command: tsc --noEmit
+    inputs:
+      - "src/**/*"
+      - "tsconfig.json"
+
+  generate:
+    command: pnpm openapi-ts
+    inputs:
+      - "openapi-ts.config.ts"
+      - "/packages/protocol/tsp-output/openapi/openapi.yaml"
+    outputs:
+      - "src/api/generated"

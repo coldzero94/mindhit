@@ -141,7 +141,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 4 | ✅ Done | Event Collection API |
 | Phase 5 | ✅ Done | Monitoring & Infra (Basic) |
 | Phase 6 | ✅ Done | Worker & Job Queue |
-| Phase 7 | ⬜ Pending | Next.js Web App |
+| Phase 7 | ✅ Done | Next.js Web App |
 | Phase 8 | ⬜ Pending | Chrome Extension |
 | Phase 9 | ⬜ Pending | Plan & Usage System |
 | Phase 10 | ⬜ Pending | AI Mindmap Generation |
@@ -159,6 +159,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-27] Phase 7 completed: Next.js Web App - Auth UI (login/signup), Sessions list/detail pages, Zustand + React Query, zod v4
 - [2025-12-26] Phase 6 completed: Worker & Job Queue - Asynq queue, session processing handler, cleanup scheduler, cmd/api and cmd/worker separation
 - [2025-12-26] Phase 5 completed: Monitoring & Infra - Prometheus metrics, slog logger, Request ID, HTTP logging middleware
 - [2025-12-26] Phase 4 completed: Event Collection API (batch events, list events, event stats) with TypeSpec integration

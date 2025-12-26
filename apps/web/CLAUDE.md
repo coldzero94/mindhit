@@ -8,16 +8,40 @@ Next.js web application for MindHit.
 apps/web/
 ├── src/
 │   ├── api/
-│   │   └── generated/       # @hey-api/openapi-ts generated (committed)
-│   │       ├── types.gen.ts   # TypeScript types
-│   │       ├── sdk.gen.ts     # API SDK functions
-│   │       ├── zod.gen.ts     # Zod v4 validation schemas
-│   │       └── client.gen.ts  # HTTP client config
-│   ├── app/                 # Next.js App Router pages
-│   ├── components/          # React components
-│   ├── hooks/               # Custom React hooks
-│   └── lib/                 # Utilities and API client wrapper
-├── openapi-ts.config.ts     # Hey API configuration
+│   │   └── generated/          # @hey-api/openapi-ts generated (committed)
+│   │       ├── types.gen.ts    # TypeScript types
+│   │       ├── sdk.gen.ts      # API SDK functions
+│   │       ├── zod.gen.ts      # Zod v4 validation schemas
+│   │       └── client.gen.ts   # HTTP client config
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── (auth)/             # Auth routes (login, signup)
+│   │   │   ├── login/page.tsx
+│   │   │   ├── signup/page.tsx
+│   │   │   └── layout.tsx
+│   │   ├── (dashboard)/        # Protected routes (requires auth)
+│   │   │   ├── sessions/
+│   │   │   │   ├── page.tsx       # Session list
+│   │   │   │   └── [id]/page.tsx  # Session detail
+│   │   │   └── layout.tsx         # Dashboard layout with auth guard
+│   │   ├── layout.tsx          # Root layout with Providers
+│   │   ├── page.tsx            # Home (redirects to /login or /sessions)
+│   │   └── providers.tsx       # React Query + Toaster
+│   ├── components/
+│   │   ├── ui/                 # shadcn/ui components
+│   │   ├── auth/               # Auth components (login-form, signup-form)
+│   │   └── sessions/           # Session components (session-card, session-list)
+│   ├── lib/
+│   │   ├── api/                # API client wrappers
+│   │   │   ├── client.ts       # Axios client with interceptors
+│   │   │   ├── auth.ts         # Auth API functions
+│   │   │   └── sessions.ts     # Sessions API functions
+│   │   ├── hooks/              # React Query hooks
+│   │   │   └── use-sessions.ts # Sessions query/mutation hooks
+│   │   └── utils.ts            # Utility functions (cn)
+│   └── stores/
+│       └── auth-store.ts       # Zustand auth store with persist
+├── openapi-ts.config.ts        # Hey API configuration
+├── moon.yml                    # Moon task definitions
 └── package.json
 ```
 
@@ -25,67 +49,88 @@ apps/web/
 
 - **Framework**: Next.js 16.1 (App Router)
 - **Language**: TypeScript
-- **Styling**: TailwindCSS
-- **API Client**: @hey-api/openapi-ts (generated from OpenAPI)
+- **Styling**: TailwindCSS v4
+- **UI Components**: shadcn/ui
+- **State Management**: Zustand (auth), React Query (server state)
+- **API Client**: Axios + @hey-api/openapi-ts (types)
 - **Validation**: Zod v4
+- **Toast**: Sonner
 
 ## Key Patterns
 
+### Authentication Flow
+
+1. **Auth Store** (`stores/auth-store.ts`): Zustand store with localStorage persistence
+2. **API Client** (`lib/api/client.ts`): Axios interceptor adds Bearer token
+3. **Dashboard Layout** (`app/(dashboard)/layout.tsx`): Auth guard redirects to /login
+4. **Home Page** (`app/page.tsx`): Redirects based on auth state
+
 ### API Code Generation
 
-Client code is generated from OpenAPI spec:
+Client types are generated from OpenAPI spec:
 
 ```bash
-pnpm run generate  # Generates src/api/generated/*
+moonx web:generate  # Generates src/api/generated/*
 ```
 
 Source: `packages/protocol/tsp-output/openapi/openapi.yaml`
 
-### Generated Files
-
-| File | Purpose |
-|------|---------|
-| `types.gen.ts` | Request/Response TypeScript types |
-| `sdk.gen.ts` | API call functions (routesLogin, routesSignup, etc.) |
-| `zod.gen.ts` | Zod schemas for runtime validation |
-| `client.gen.ts` | HTTP client configuration |
-
-### API Usage Example
+### React Query Hooks
 
 ```typescript
-import { routesLogin, zAuthLoginRequest } from '@/lib/api';
+// Query hooks
+const { data, isLoading } = useSessions(limit, offset);
+const { data: session } = useSession(id);
 
-// Validate input with Zod
-const validated = zAuthLoginRequest.parse({ email, password });
+// Mutation hooks
+const deleteSession = useDeleteSession();
+await deleteSession.mutateAsync(sessionId);
+```
 
-// Type-safe API call
-const { data, error } = await routesLogin({ body: validated });
+### Form Validation with Zod v4
+
+```typescript
+const result = loginSchema.safeParse(formData);
+if (!result.success) {
+  result.error.issues.forEach((issue) => {
+    // Handle validation errors
+  });
+}
 ```
 
 ## Commands
 
 ```bash
 # Development
-pnpm run dev       # Start dev server
+moonx web:dev        # Start dev server (localhost:3000)
+pnpm dev             # Alternative
 
-# Code Generation
-pnpm run generate  # Generate API client from OpenAPI
+# Code Quality
+moonx web:lint       # Run ESLint
+moonx web:typecheck  # Run TypeScript check
 
 # Build
-pnpm run build     # Production build
-pnpm run lint      # Lint code
+moonx web:build      # Production build
+
+# Code Generation
+moonx web:generate   # Generate API client from OpenAPI
 ```
 
 ## Important Files
 
 | File | Purpose |
 |------|---------|
+| `src/stores/auth-store.ts` | Zustand auth state (user, tokens) |
+| `src/lib/api/client.ts` | Axios client with auth interceptor |
+| `src/lib/hooks/use-sessions.ts` | React Query hooks for sessions |
+| `src/app/providers.tsx` | QueryClient + Toaster setup |
+| `eslint.config.mjs` | ESLint config (ignores generated files) |
 | `openapi-ts.config.ts` | Hey API generation config |
-| `src/api/generated/*` | Generated API client (committed) |
-| `src/lib/api.ts` | API client wrapper and re-exports |
 
 ## Notes
 
 - Generated files in `src/api/generated/` are committed (not gitignored)
-- Zod schemas include validation rules from TypeSpec (e.g., `@minLength`)
-- Use `zod.gen.ts` for form validation before API calls
+- Generated files are excluded from ESLint (`src/api/generated/**`)
+- Zod v4 is used (supports `z.iso.datetime()`, `z.int()`)
+- Use `error.issues` instead of `error.errors` for Zod v4 compatibility
+- Sonner is used for toasts (not deprecated toast component)
