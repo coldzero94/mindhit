@@ -132,7 +132,7 @@
 ### 검증
 
 ```bash
-curl http://localhost:8080/metrics | head -20
+curl http://localhost:9000/metrics | head -20
 # mindhit_http_requests_total{...} 등 메트릭 확인
 ```
 
@@ -182,7 +182,7 @@ ENVIRONMENT=production go run ./cmd/server
 # JSON 로그 출력
 
 # Request ID 확인
-curl -i http://localhost:8080/v1/health
+curl -i http://localhost:9000/health
 # X-Request-ID 헤더 포함 확인
 ```
 
@@ -273,25 +273,27 @@ curl -i http://localhost:8080/v1/health
     ```
 
 - [x] **환경 변수 문서화**
-  - [x] `apps/backend/.env.example` 업데이트
+  - [x] 루트 `/.env.example` 업데이트
+
+    > **Note**: 모든 환경변수는 프로젝트 루트의 `.env` 파일에서 통합 관리합니다.
 
     ```
     # Server
-    PORT=8080
-    ENVIRONMENT=development
+    PORT=9000
+    ENVIRONMENT=local
 
     # Database
-    DATABASE_URL=postgres://postgres:password@localhost:5432/mindhit?sslmode=disable
-    DEV_DATABASE_URL=postgres://postgres:password@localhost:5432/mindhit_dev?sslmode=disable
+    DATABASE_URL=postgres://postgres:password@localhost:5433/mindhit?sslmode=disable
+    DEV_DATABASE_URL=postgres://postgres:password@localhost:5433/mindhit_dev?sslmode=disable
 
     # Auth
     JWT_SECRET=your-secret-key-change-in-production
 
     # Redis
-    REDIS_URL=redis://localhost:6379
+    REDIS_URL=redis://localhost:6380
 
     # OpenAI (Phase 9)
-    OPENAI_API_KEY=sk-...
+    # OPENAI_API_KEY=sk-...
     ```
 
 ### 검증
