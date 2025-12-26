@@ -20,7 +20,7 @@ func setupEventServiceTest(t *testing.T) (*ent.Client, *service.EventService, *s
 	client := testutil.SetupTestDB(t)
 	urlService := service.NewURLService(client)
 	eventService := service.NewEventService(client, urlService)
-	sessionService := service.NewSessionService(client)
+	sessionService := service.NewSessionService(client, nil) // nil queue client for tests
 	authService := service.NewAuthService(client)
 	return client, eventService, urlService, sessionService, authService
 }

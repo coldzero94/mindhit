@@ -56,8 +56,8 @@ flowchart TB
 docker ps | grep -E "postgres|redis"
 
 # 테스트 DB URL (기본값)
-# postgres://postgres:password@localhost:5432/mindhit_test
-# Redis URL: redis://localhost:6379
+# postgres://postgres:password@localhost:5433/mindhit_test
+# Redis URL: redis://localhost:6380
 ```
 
 테스트 헬퍼: `internal/testutil/db.go`의 `SetupTestDB(t)` 사용
@@ -68,9 +68,9 @@ docker ps | grep -E "postgres|redis"
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 6.1 | Asynq 설정 및 Worker 기본 구조 | ⬜ |
-| 6.2 | Job 정의 및 Handler 구현 | ⬜ |
-| 6.3 | API에서 Job Enqueue 연동 | ⬜ |
+| 6.1 | Asynq 설정 및 Worker 기본 구조 | ✅ |
+| 6.2 | Job 정의 및 Handler 구현 | ✅ |
+| 6.3 | API에서 Job Enqueue 연동 | ✅ |
 
 ---
 
@@ -78,15 +78,15 @@ docker ps | grep -E "postgres|redis"
 
 ### 체크리스트
 
-- [ ] **의존성 추가**
+- [x] **의존성 추가**
 
   ```bash
   cd apps/backend
   go get github.com/hibiken/asynq
   ```
 
-- [ ] **Asynq 클라이언트 (Job Enqueue용)**
-  - [ ] `internal/infrastructure/queue/client.go`
+- [x] **Asynq 클라이언트 (Job Enqueue용)**
+  - [x] `internal/infrastructure/queue/client.go`
 
     ```go
     package queue
@@ -115,8 +115,8 @@ docker ps | grep -E "postgres|redis"
     }
     ```
 
-- [ ] **Asynq 서버 설정 (Worker용)**
-  - [ ] `internal/infrastructure/queue/server.go`
+- [x] **Asynq 서버 설정 (Worker용)**
+  - [x] `internal/infrastructure/queue/server.go`
 
     ```go
     package queue
@@ -184,8 +184,8 @@ docker ps | grep -E "postgres|redis"
     }
     ```
 
-- [ ] **Worker 엔트리포인트**
-  - [ ] `cmd/worker/main.go`
+- [x] **Worker 엔트리포인트**
+  - [x] `cmd/worker/main.go`
 
     ```go
     package main
@@ -254,8 +254,8 @@ docker ps | grep -E "postgres|redis"
     }
     ```
 
-- [ ] **Config 업데이트**
-  - [ ] `internal/infrastructure/config/config.go`에 Redis 설정 추가
+- [x] **Config 업데이트**
+  - [x] `internal/infrastructure/config/config.go`에 Redis 설정 추가
 
     ```go
     type Config struct {
@@ -267,7 +267,7 @@ docker ps | grep -E "postgres|redis"
     func Load() *Config {
         return &Config{
             // ... existing fields
-            RedisAddr:         getEnv("REDIS_ADDR", "localhost:6379"),
+            RedisAddr:         getEnv("REDIS_ADDR", "localhost:6380"),
             WorkerConcurrency: getEnvInt("WORKER_CONCURRENCY", 10),
         }
     }
@@ -293,8 +293,8 @@ go build ./cmd/worker
 
 ### 체크리스트
 
-- [ ] **Task 타입 정의**
-  - [ ] `internal/infrastructure/queue/tasks.go`
+- [x] **Task 타입 정의**
+  - [x] `internal/infrastructure/queue/tasks.go`
 
     ```go
     package queue
@@ -374,8 +374,8 @@ go build ./cmd/worker
     }
     ```
 
-- [ ] **Handler 등록**
-  - [ ] `internal/worker/handler/handler.go`
+- [x] **Handler 등록**
+  - [x] `internal/worker/handler/handler.go`
 
     ```go
     package handler
@@ -401,8 +401,8 @@ go build ./cmd/worker
     }
     ```
 
-- [ ] **Session Process Handler**
-  - [ ] `internal/worker/handler/session.go`
+- [x] **Session Process Handler**
+  - [x] `internal/worker/handler/session.go`
 
     ```go
     package handler
@@ -453,8 +453,8 @@ go build ./cmd/worker
     }
     ```
 
-- [ ] **Session Cleanup Handler**
-  - [ ] `internal/worker/handler/cleanup.go`
+- [x] **Session Cleanup Handler**
+  - [x] `internal/worker/handler/cleanup.go`
 
     ```go
     package handler
@@ -525,8 +525,8 @@ go build ./cmd/worker
 
 ### 체크리스트
 
-- [ ] **API에 Queue Client 추가**
-  - [ ] `cmd/api/main.go`에 Queue Client 초기화
+- [x] **API에 Queue Client 추가**
+  - [x] `cmd/api/main.go`에 Queue Client 초기화
 
     ```go
     import "github.com/mindhit/api/internal/infrastructure/queue"
@@ -538,8 +538,8 @@ go build ./cmd/worker
     // Pass to services/controllers that need it
     ```
 
-- [ ] **SessionService에 Enqueue 연동**
-  - [ ] `internal/service/session_service.go` 수정
+- [x] **SessionService에 Enqueue 연동**
+  - [x] `internal/service/session_service.go` 수정
 
     ```go
     package service
@@ -603,8 +603,8 @@ go build ./cmd/worker
     }
     ```
 
-- [ ] **주기적 Cleanup Task 스케줄링**
-  - [ ] `internal/infrastructure/queue/scheduler.go`
+- [x] **주기적 Cleanup Task 스케줄링**
+  - [x] `internal/infrastructure/queue/scheduler.go`
 
     ```go
     package queue
@@ -652,8 +652,8 @@ go build ./cmd/worker
     }
     ```
 
-- [ ] **Worker에 Scheduler 통합 (선택적)**
-  - [ ] `cmd/worker/main.go`에 스케줄러 추가
+- [x] **Worker에 Scheduler 통합 (선택적)**
+  - [x] `cmd/worker/main.go`에 스케줄러 추가
 
     ```go
     // Option 1: Worker와 Scheduler를 함께 실행
@@ -691,7 +691,7 @@ moonx backend:dev-worker
 moonx backend:dev-api
 
 # 4. 세션 종료 API 호출 후 Worker 로그 확인
-curl -X POST http://localhost:8080/api/v1/sessions/{session_id}/stop
+curl -X POST http://localhost:9000/api/v1/sessions/{session_id}/stop
 
 # Worker 로그:
 # "processing session" session_id=...
@@ -709,9 +709,9 @@ curl -X POST http://localhost:8080/api/v1/sessions/{session_id}/stop
 go install github.com/hibiken/asynqmon@latest
 
 # 실행
-asynqmon --redis-addr=localhost:6379
+asynqmon --redis-addr=localhost:6380
 
-# 브라우저에서 http://localhost:8080 접속
+# 브라우저에서 http://localhost:9090 접속 (Docker로 띄운 경우)
 ```
 
 ### K8s에서 Asynqmon 배포
@@ -747,25 +747,34 @@ spec:
 
 ### 전체 검증 체크리스트
 
-- [ ] Worker 서버 시작 로그
-- [ ] API에서 세션 종료 시 Job Enqueue 로그
-- [ ] Worker에서 Job 처리 로그
-- [ ] 주기적 Cleanup Task 실행 로그
+- [x] Worker 서버 시작 로그
+- [x] API에서 세션 종료 시 Job Enqueue 로그
+- [x] Worker에서 Job 처리 로그
+- [x] 주기적 Cleanup Task 실행 로그
 
 ### 테스트 요구사항
 
 | 테스트 유형 | 대상 | 파일 |
 | ----------- | ---- | ---- |
-| 단위 테스트 | Task 직렬화/역직렬화 | `queue/tasks_test.go` |
-| 단위 테스트 | Session Handler 로직 | `handler/session_test.go` |
-| 통합 테스트 | Redis 연결 및 Job 처리 | `queue/integration_test.go` |
+| 단위 테스트 | Task 직렬화/역직렬화 | `internal/infrastructure/queue/tasks_test.go` |
+| 단위 테스트 | Client 생성 | `internal/infrastructure/queue/client_test.go` |
+| 단위 테스트 | Server 생성 | `internal/infrastructure/queue/server_test.go` |
+| 단위 테스트 | Scheduler 생성 | `internal/infrastructure/queue/scheduler_test.go` |
+| 단위 테스트 | Handler 로직 | `internal/worker/handler/handler_test.go` |
+| 통합 테스트 | Redis 연결 및 Job 처리 | `internal/infrastructure/queue/integration_test.go` |
 
 ```bash
 # Phase 6 테스트 실행
-moonx backend:test -- -run "TestQueue|TestHandler"
+moonx backend:test
+
+# 또는 직접 실행 (apps/backend 디렉토리에서)
+go test ./internal/infrastructure/queue/... ./internal/worker/handler/...
 ```
 
-> **Note**: Worker 테스트는 Redis가 필요합니다. `moonx infra:dev-up`으로 Redis를 먼저 시작하세요.
+> **Note**: 통합 테스트는 Redis가 필요합니다. Redis가 없으면 해당 테스트는 자동으로 skip됩니다.
+> `moonx infra:dev-up`으로 Redis를 시작하면 통합 테스트도 실행됩니다.
+>
+> **커버리지**: Phase 6 커버리지는 [10-test-coverage.md](../10-test-coverage.md)에서 확인하세요.
 
 ### 산출물 요약
 
@@ -778,7 +787,8 @@ moonx backend:test -- -run "TestQueue|TestHandler"
 | Worker 엔트리포인트 | `cmd/worker/main.go` |
 | Session Handler | `internal/worker/handler/session.go` |
 | Cleanup Handler | `internal/worker/handler/cleanup.go` |
-| 테스트 | `internal/infrastructure/queue/*_test.go` |
+| Queue 테스트 | `internal/infrastructure/queue/*_test.go` |
+| Handler 테스트 | `internal/worker/handler/handler_test.go` |
 
 ---
 

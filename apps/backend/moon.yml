@@ -38,20 +38,20 @@ tasks:
       - bin/worker
       - ./cmd/worker
 
-  # 빌드 (server)
+  # 빌드 (legacy - use build-api instead)
   build:
     command: go
     args:
       - build
       - -o
-      - ./bin/server
-      - ./cmd/server
+      - ./bin/api
+      - ./cmd/api
     inputs:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
     outputs:
-      - "bin/server"
+      - "bin/api"
 
   # 테스트
   test:
@@ -111,12 +111,20 @@ tasks:
     inputs:
       - "ent/schema/**/*.go"
 
-  # run server
+  # run API server
   run:
     command: go
     args:
       - run
-      - ./cmd/server
+      - ./cmd/api
+    local: true
+
+  # run Worker
+  run-worker:
+    command: go
+    args:
+      - run
+      - ./cmd/worker
     local: true
 
   # DB 마이그레이션

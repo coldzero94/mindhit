@@ -3,13 +3,16 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/session"
 	"github.com/mindhit/api/ent/user"
+	"github.com/mindhit/api/internal/infrastructure/queue"
 )
 
 // Session soft delete status value (uses "inactive" from SoftDeleteMixin)
@@ -24,12 +27,16 @@ var (
 
 // SessionService handles session-related business logic.
 type SessionService struct {
-	client *ent.Client
+	client      *ent.Client
+	queueClient *queue.Client
 }
 
 // NewSessionService creates a new SessionService instance.
-func NewSessionService(client *ent.Client) *SessionService {
-	return &SessionService{client: client}
+func NewSessionService(client *ent.Client, queueClient *queue.Client) *SessionService {
+	return &SessionService{
+		client:      client,
+		queueClient: queueClient,
+	}
 }
 
 // activeSessions returns a query filtered to active (non-deleted) sessions only.
@@ -93,11 +100,33 @@ func (s *SessionService) Stop(ctx context.Context, sessionID, userID uuid.UUID) 
 	}
 
 	now := time.Now()
-	return s.client.Session.
+	sess, err = s.client.Session.
 		UpdateOneID(sessionID).
 		SetSessionStatus(session.SessionStatusProcessing).
 		SetEndedAt(now).
 		Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enqueue processing task
+	if s.queueClient != nil {
+		task, err := queue.NewSessionProcessTask(sessionID.String())
+		if err != nil {
+			slog.Error("failed to create task", "error", err)
+			return sess, nil // Don't fail the request
+		}
+
+		_, err = s.queueClient.Enqueue(task, asynq.MaxRetry(3))
+		if err != nil {
+			slog.Error("failed to enqueue task", "error", err)
+			return sess, nil // Don't fail the request
+		}
+
+		slog.Info("session processing enqueued", "session_id", sessionID)
+	}
+
+	return sess, nil
 }
 
 // Get retrieves a session by ID with ownership check

@@ -17,7 +17,7 @@ import (
 
 func setupSessionServiceTest(t *testing.T) (*ent.Client, *service.SessionService, *service.AuthService) {
 	client := testutil.SetupTestDB(t)
-	sessionService := service.NewSessionService(client)
+	sessionService := service.NewSessionService(client, nil) // nil queue client for tests
 	authService := service.NewAuthService(client)
 	return client, sessionService, authService
 }

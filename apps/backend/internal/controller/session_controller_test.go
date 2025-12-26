@@ -23,7 +23,7 @@ func setupSessionControllerTest(t *testing.T) (*SessionController, *service.Auth
 	client := testutil.SetupTestDB(t)
 	authService := service.NewAuthService(client)
 	jwtService := service.NewJWTService("test-secret")
-	sessionService := service.NewSessionService(client)
+	sessionService := service.NewSessionService(client, nil) // nil queue client for tests
 	controller := NewSessionController(sessionService, jwtService)
 
 	cleanup := func() {

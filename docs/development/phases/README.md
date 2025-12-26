@@ -42,7 +42,7 @@ phases/
 | 3 | [세션 관리 API](./phase-3-sessions.md) | ✅ 완료 | 3 steps |
 | 4 | [이벤트 수집 API](./phase-4-events.md) | ✅ 완료 | 3 steps |
 | 5 | [모니터링 및 인프라 (기초)](./phase-5-infra.md) | ✅ 완료 | 3 steps |
-| 6 | [Worker 및 Job Queue](./phase-6-worker.md) | ⬜ 대기 | 3 steps |
+| 6 | [Worker 및 Job Queue](./phase-6-worker.md) | ✅ 완료 | 3 steps |
 | 7 | [Next.js 웹앱](./phase-7-webapp.md) | ⬜ 대기 | 4 steps |
 | 8 | [Chrome Extension](./phase-8-extension.md) | ⬜ 대기 | 5 steps |
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ⬜ 대기 | 5 steps |

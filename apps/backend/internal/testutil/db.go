@@ -26,7 +26,7 @@ func getTestDatabaseURL() string {
 	if url := os.Getenv("TEST_DATABASE_URL"); url != "" {
 		return url
 	}
-	return "postgres://postgres:password@localhost:5432/mindhit_test?sslmode=disable"
+	return "postgres://postgres:password@localhost:5433/mindhit_test?sslmode=disable"
 }
 
 // getSharedDB returns a shared database connection pool
