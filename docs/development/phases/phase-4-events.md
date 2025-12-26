@@ -60,10 +60,10 @@ flowchart LR
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 4.1 | Event 서비스 구현 | ⬜ |
-| 4.2 | URL 서비스 구현 | ⬜ |
-| 4.3 | Event 컨트롤러 구현 | ⬜ |
-| 4.4 | 이벤트 조회 API 구현 | ⬜ |
+| 4.1 | Event 서비스 구현 | ✅ |
+| 4.2 | URL 서비스 구현 | ✅ |
+| 4.3 | Event 컨트롤러 구현 | ✅ |
+| 4.4 | 이벤트 조회 API 구현 | ✅ |
 
 ---
 
@@ -75,15 +75,15 @@ flowchart LR
 
 ### 체크리스트
 
-- [ ] **gjson 의존성 추가**
+- [x] **gjson 의존성 추가**
 
   ```bash
   cd apps/backend
   go get github.com/tidwall/gjson
   ```
 
-- [ ] **Event 서비스 작성**
-  - [ ] `internal/service/event_service.go`
+- [x] **Event 서비스 작성**
+  - [x] `internal/service/event_service.go`
 
     ```go
     package service
@@ -285,14 +285,14 @@ URL 중복 처리 및 콘텐츠 저장
 
 ### 체크리스트
 
-- [ ] **crypto 의존성** (해싱용)
+- [x] **crypto 의존성** (해싱용)
 
   ```bash
   # 표준 라이브러리 사용
   ```
 
-- [ ] **URL 서비스 작성**
-  - [ ] `internal/service/url_service.go`
+- [x] **URL 서비스 작성**
+  - [x] `internal/service/url_service.go`
 
     ```go
     package service
@@ -432,7 +432,7 @@ URL 중복 처리 및 콘텐츠 저장
     }
     ```
 
-- [ ] **uuid import 추가**
+- [x] **uuid import 추가**
 
   ```go
   import "github.com/google/uuid"
@@ -454,8 +454,8 @@ go build ./...
 
 ### 체크리스트
 
-- [ ] **Event 컨트롤러 작성**
-  - [ ] `internal/api/controller/event_controller.go`
+- [x] **Event 컨트롤러 작성**
+  - [x] `internal/controller/event_controller.go`
 
     > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
     > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
@@ -549,7 +549,7 @@ go build ./...
     }
     ```
 
-- [ ] **main.go에 라우트 추가**
+- [x] **main.go에 라우트 추가**
 
   ```go
   // Services
@@ -563,7 +563,7 @@ go build ./...
   sessions.POST("/:sessionId/events", eventController.BatchEvents)
   ```
 
-- [ ] **Sessions TypeSpec 업데이트** (Phase 1.5에서 추가)
+- [ ] **Sessions TypeSpec 업데이트** (Phase 1.5에서 추가, 스킵됨)
   - [ ] `packages/protocol/src/events/events.tsp`
 
     ```typespec
@@ -669,8 +669,8 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
 
 ### 체크리스트
 
-- [ ] **Event 서비스에 조회 메서드 추가**
-  - [ ] `internal/service/event_service.go`에 추가
+- [x] **Event 서비스에 조회 메서드 추가**
+  - [x] `internal/service/event_service.go`에 추가
 
     ```go
     // GetEventsBySession retrieves all events for a session
@@ -772,8 +772,8 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     }
     ```
 
-- [ ] **Event 컨트롤러에 조회 엔드포인트 추가**
-  - [ ] `internal/api/controller/event_controller.go`에 추가
+- [x] **Event 컨트롤러에 조회 엔드포인트 추가**
+  - [x] `internal/controller/event_controller.go`에 추가
 
     > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
 
@@ -861,7 +861,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
     }
     ```
 
-- [ ] **main.go에 조회 라우트 추가**
+- [x] **main.go에 조회 라우트 추가**
 
   ```go
   // Event routes (protected, under sessions)
@@ -870,7 +870,7 @@ curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
   sessions.GET("/:sessionId/events/stats", eventController.GetEventStats)
   ```
 
-- [ ] **import 추가**
+- [x] **import 추가**
 
   ```go
   import "strconv"
@@ -959,7 +959,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### 전체 검증 체크리스트
 
-- [ ] **이벤트 배치 전송**
+- [x] **이벤트 배치 전송**
 
   ```bash
   curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
@@ -969,7 +969,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   # {"processed":1,"total":1}
   ```
 
-- [ ] **빈 배치 거부**
+- [x] **빈 배치 거부**
 
   ```bash
   curl -X POST "http://localhost:8080/v1/sessions/$SESSION_ID/events" \
@@ -979,14 +979,14 @@ curl -H "Authorization: Bearer $TOKEN" \
   # 400 Bad Request
   ```
 
-- [ ] **다른 사용자 세션 접근 거부**
+- [x] **다른 사용자 세션 접근 거부**
 
   ```bash
   # 다른 사용자 토큰으로 요청
   # 403 Forbidden
   ```
 
-- [ ] **URL 중복 처리**
+- [x] **URL 중복 처리**
   - 같은 URL로 두 번 이벤트 전송
   - urls 테이블에 1개만 존재하는지 확인
 
@@ -1011,7 +1011,7 @@ moonx backend:test -- -run "TestEvent|TestURL"
 | ---- | ---- |
 | Event 서비스 | `internal/service/event_service.go` |
 | URL 서비스 | `internal/service/url_service.go` |
-| Event 컨트롤러 | `internal/api/controller/event_controller.go` |
+| Event 컨트롤러 | `internal/controller/event_controller.go` |
 | 테스트 | `internal/service/event_service_test.go` |
 
 ---

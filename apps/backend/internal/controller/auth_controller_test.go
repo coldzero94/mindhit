@@ -12,6 +12,8 @@ import (
 	"github.com/mindhit/api/internal/testutil"
 )
 
+// uniqueEmail is defined in session_controller_test.go
+
 func TestAuthController_RoutesSignup(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
@@ -23,9 +25,10 @@ func TestAuthController_RoutesSignup(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successful signup", func(t *testing.T) {
+		email := uniqueEmail("signup")
 		req := generated.RoutesSignupRequestObject{
 			Body: &generated.RoutesSignupJSONRequestBody{
-				Email:    "signup@test.com",
+				Email:    email,
 				Password: "password123",
 			},
 		}
@@ -36,15 +39,16 @@ func TestAuthController_RoutesSignup(t *testing.T) {
 		successResp, ok := resp.(generated.RoutesSignup201JSONResponse)
 		require.True(t, ok, "expected 201 response")
 		assert.NotEmpty(t, successResp.Token)
-		assert.Equal(t, "signup@test.com", successResp.User.Email)
+		assert.Equal(t, email, successResp.User.Email)
 		assert.NotEmpty(t, successResp.User.Id)
 	})
 
 	t.Run("duplicate email returns 409", func(t *testing.T) {
+		email := uniqueEmail("duplicate")
 		// First signup
 		req := generated.RoutesSignupRequestObject{
 			Body: &generated.RoutesSignupJSONRequestBody{
-				Email:    "duplicate@test.com",
+				Email:    email,
 				Password: "password123",
 			},
 		}
@@ -82,14 +86,15 @@ func TestAuthController_RoutesLogin(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create test user
-	_, err := authService.Signup(ctx, "login@test.com", "password123")
+	// Create test user with unique email
+	email := uniqueEmail("login")
+	_, err := authService.Signup(ctx, email, "password123")
 	require.NoError(t, err)
 
 	t.Run("successful login", func(t *testing.T) {
 		req := generated.RoutesLoginRequestObject{
 			Body: &generated.RoutesLoginJSONRequestBody{
-				Email:    "login@test.com",
+				Email:    email,
 				Password: "password123",
 			},
 		}
@@ -100,13 +105,13 @@ func TestAuthController_RoutesLogin(t *testing.T) {
 		successResp, ok := resp.(generated.RoutesLogin200JSONResponse)
 		require.True(t, ok, "expected 200 response")
 		assert.NotEmpty(t, successResp.Token)
-		assert.Equal(t, "login@test.com", successResp.User.Email)
+		assert.Equal(t, email, successResp.User.Email)
 	})
 
 	t.Run("wrong password returns 401", func(t *testing.T) {
 		req := generated.RoutesLoginRequestObject{
 			Body: &generated.RoutesLoginJSONRequestBody{
-				Email:    "login@test.com",
+				Email:    email,
 				Password: "wrongpassword",
 			},
 		}
@@ -121,7 +126,7 @@ func TestAuthController_RoutesLogin(t *testing.T) {
 	t.Run("non-existent user returns 401", func(t *testing.T) {
 		req := generated.RoutesLoginRequestObject{
 			Body: &generated.RoutesLoginJSONRequestBody{
-				Email:    "nonexistent@test.com",
+				Email:    uniqueEmail("nonexistent"),
 				Password: "password123",
 			},
 		}
@@ -157,7 +162,8 @@ func TestAuthController_RoutesRefresh(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test user and get tokens
-	user, err := authService.Signup(ctx, "refresh@test.com", "password123")
+	email := uniqueEmail("refresh")
+	user, err := authService.Signup(ctx, email, "password123")
 	require.NoError(t, err)
 
 	tokenPair, err := jwtService.GenerateTokenPair(user.ID)
@@ -236,7 +242,8 @@ func TestAuthController_RoutesMe(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test user and get tokens
-	user, err := authService.Signup(ctx, "me@test.com", "password123")
+	email := uniqueEmail("me")
+	user, err := authService.Signup(ctx, email, "password123")
 	require.NoError(t, err)
 
 	tokenPair, err := jwtService.GenerateTokenPair(user.ID)
@@ -254,7 +261,7 @@ func TestAuthController_RoutesMe(t *testing.T) {
 
 		successResp, ok := resp.(generated.RoutesMe200JSONResponse)
 		require.True(t, ok, "expected 200 response")
-		assert.Equal(t, "me@test.com", successResp.User.Email)
+		assert.Equal(t, email, successResp.User.Email)
 		assert.Equal(t, user.ID.String(), successResp.User.Id)
 	})
 
@@ -312,7 +319,8 @@ func TestAuthController_RoutesLogout(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test user and get tokens
-	user, err := authService.Signup(ctx, "logout@test.com", "password123")
+	email := uniqueEmail("logout")
+	user, err := authService.Signup(ctx, email, "password123")
 	require.NoError(t, err)
 
 	tokenPair, err := jwtService.GenerateTokenPair(user.ID)
@@ -373,13 +381,14 @@ func TestAuthController_RoutesForgotPassword(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test user
-	_, err := authService.Signup(ctx, "forgot@test.com", "password123")
+	email := uniqueEmail("forgot")
+	_, err := authService.Signup(ctx, email, "password123")
 	require.NoError(t, err)
 
 	t.Run("successful forgot password request", func(t *testing.T) {
 		req := generated.RoutesForgotPasswordRequestObject{
 			Body: &generated.RoutesForgotPasswordJSONRequestBody{
-				Email: "forgot@test.com",
+				Email: email,
 			},
 		}
 
@@ -394,7 +403,7 @@ func TestAuthController_RoutesForgotPassword(t *testing.T) {
 	t.Run("non-existent email still returns 200 (security)", func(t *testing.T) {
 		req := generated.RoutesForgotPasswordRequestObject{
 			Body: &generated.RoutesForgotPasswordJSONRequestBody{
-				Email: "nonexistent@test.com",
+				Email: uniqueEmail("nonexistent"),
 			},
 		}
 
@@ -431,10 +440,11 @@ func TestAuthController_RoutesResetPassword(t *testing.T) {
 
 	t.Run("successful password reset", func(t *testing.T) {
 		// Create test user and generate reset token for this test
-		_, err := authService.Signup(ctx, "reset1@test.com", "oldpassword123")
+		email := uniqueEmail("reset1")
+		_, err := authService.Signup(ctx, email, "oldpassword123")
 		require.NoError(t, err)
 
-		token, err := authService.RequestPasswordReset(ctx, "reset1@test.com")
+		token, err := authService.RequestPasswordReset(ctx, email)
 		require.NoError(t, err)
 		require.NotEmpty(t, token)
 
@@ -453,9 +463,9 @@ func TestAuthController_RoutesResetPassword(t *testing.T) {
 		assert.Contains(t, successResp.Message, "successfully")
 
 		// Verify login with new password works
-		user, err := authService.Login(ctx, "reset1@test.com", "newpassword123")
+		user, err := authService.Login(ctx, email, "newpassword123")
 		require.NoError(t, err)
-		assert.Equal(t, "reset1@test.com", user.Email)
+		assert.Equal(t, email, user.Email)
 	})
 
 	t.Run("invalid token returns 400", func(t *testing.T) {
@@ -475,10 +485,11 @@ func TestAuthController_RoutesResetPassword(t *testing.T) {
 
 	t.Run("already used token returns 400", func(t *testing.T) {
 		// Create another user with a token
-		_, err := authService.Signup(ctx, "reset2@test.com", "password123")
+		email := uniqueEmail("reset2")
+		_, err := authService.Signup(ctx, email, "password123")
 		require.NoError(t, err)
 
-		token2, err := authService.RequestPasswordReset(ctx, "reset2@test.com")
+		token2, err := authService.RequestPasswordReset(ctx, email)
 		require.NoError(t, err)
 
 		// Use the token

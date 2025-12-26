@@ -77,6 +77,88 @@ export const zCommonValidationError = z.object({
 });
 
 /**
+ * 이벤트 배치 응답
+ */
+export const zEventsBatchEventsResponse = z.object({
+    processed: z.int(),
+    total: z.int()
+});
+
+/**
+ * 이벤트 데이터
+ */
+export const zEventsEventData = z.object({
+    type: z.string(),
+    timestamp: z.coerce.bigint(),
+    url: z.optional(z.string()),
+    title: z.optional(z.string()),
+    text: z.optional(z.string()),
+    selector: z.optional(z.string()),
+    color: z.optional(z.string()),
+    note: z.optional(z.string()),
+    metadata: z.optional(z.string())
+});
+
+/**
+ * 이벤트 배치 요청
+ */
+export const zEventsBatchEventsRequest = z.object({
+    events: z.array(zEventsEventData).min(1).max(100)
+});
+
+/**
+ * 이벤트 통계 응답
+ */
+export const zEventsEventStatsResponse = z.object({
+    total_events: z.int(),
+    page_visits: z.int(),
+    highlights: z.int(),
+    unique_urls: z.int()
+});
+
+/**
+ * 이벤트 타입
+ */
+export const zEventsEventType = z.enum([
+    'page_visit',
+    'highlight',
+    'scroll',
+    'click'
+]);
+
+/**
+ * 하이라이트 정보
+ */
+export const zEventsHighlight = z.object({
+    id: z.string(),
+    text: z.string(),
+    selector: z.optional(z.string()),
+    color: z.string(),
+    note: z.optional(z.string()),
+    created_at: z.iso.datetime()
+});
+
+/**
+ * 페이지 방문 정보
+ */
+export const zEventsPageVisit = z.object({
+    id: z.string(),
+    url: z.string(),
+    title: z.optional(z.string()),
+    visited_at: z.iso.datetime(),
+    duration_ms: z.optional(z.int())
+});
+
+/**
+ * 이벤트 목록 응답
+ */
+export const zEventsEventListResponse = z.object({
+    page_visits: z.array(zEventsPageVisit),
+    highlights: z.array(zEventsHighlight),
+    total: z.int()
+});
+
+/**
  * 세션 상태
  */
 export const zSessionSessionStatus = z.enum([
@@ -345,3 +427,55 @@ export const zRoutesStopData = z.object({
  * The request has succeeded.
  */
 export const zRoutesStopResponse = zSessionSessionResponse;
+
+export const zRoutesListEventsData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        sessionId: z.string()
+    }),
+    query: z.optional(z.object({
+        type: z.optional(z.string()),
+        limit: z.optional(z.int()).default(50),
+        offset: z.optional(z.int()).default(0)
+    })),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesListEventsResponse = zEventsEventListResponse;
+
+export const zRoutesBatchEventsData = z.object({
+    body: zEventsBatchEventsRequest,
+    path: z.object({
+        sessionId: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesBatchEventsResponse = zEventsBatchEventsResponse;
+
+export const zRoutesGetEventStatsData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        sessionId: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesGetEventStatsResponse = zEventsEventStatsResponse;

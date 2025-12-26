@@ -520,6 +520,159 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/sessions/{sessionId}/events:
+    post:
+      operationId: Routes_batchEvents
+      description: 이벤트 배치 전송
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Events.BatchEventsResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Events.BatchEventsRequest'
+    get:
+      operationId: Routes_listEvents
+      description: 이벤트 목록 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          explode: false
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 50
+          explode: false
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Events.EventListResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/sessions/{sessionId}/events/stats:
+    get:
+      operationId: Routes_getEventStats
+      description: 이벤트 통계 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Events.EventStatsResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
 components:
   schemas:
     Auth.AuthResponse:
@@ -645,6 +798,159 @@ components:
           required:
             - message
       description: 유효성 검증 에러
+    Events.BatchEventsRequest:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/Events.EventData'
+          minItems: 1
+          maxItems: 100
+          description: 이벤트 배열 (1-100개)
+      description: 이벤트 배치 요청
+    Events.BatchEventsResponse:
+      type: object
+      required:
+        - processed
+        - total
+      properties:
+        processed:
+          type: integer
+          format: int32
+          description: 처리된 이벤트 수
+        total:
+          type: integer
+          format: int32
+          description: 총 이벤트 수
+      description: 이벤트 배치 응답
+    Events.EventData:
+      type: object
+      required:
+        - type
+        - timestamp
+      properties:
+        type:
+          type: string
+          description: 이벤트 타입
+        timestamp:
+          type: integer
+          format: int64
+          description: 이벤트 발생 시간 (Unix timestamp ms)
+        url:
+          type: string
+          description: 페이지 URL
+        title:
+          type: string
+          description: 페이지 제목
+        text:
+          type: string
+          description: 하이라이트 텍스트
+        selector:
+          type: string
+          description: CSS 선택자
+        color:
+          type: string
+          description: 하이라이트 색상
+        note:
+          type: string
+          description: 사용자 노트
+        metadata:
+          type: string
+          description: 추가 메타데이터 (JSON)
+      description: 이벤트 데이터
+    Events.EventListResponse:
+      type: object
+      required:
+        - page_visits
+        - highlights
+        - total
+      properties:
+        page_visits:
+          type: array
+          items:
+            $ref: '#/components/schemas/Events.PageVisit'
+        highlights:
+          type: array
+          items:
+            $ref: '#/components/schemas/Events.Highlight'
+        total:
+          type: integer
+          format: int32
+      description: 이벤트 목록 응답
+    Events.EventStatsResponse:
+      type: object
+      required:
+        - total_events
+        - page_visits
+        - highlights
+        - unique_urls
+      properties:
+        total_events:
+          type: integer
+          format: int32
+        page_visits:
+          type: integer
+          format: int32
+        highlights:
+          type: integer
+          format: int32
+        unique_urls:
+          type: integer
+          format: int32
+      description: 이벤트 통계 응답
+    Events.EventType:
+      type: string
+      enum:
+        - page_visit
+        - highlight
+        - scroll
+        - click
+      description: 이벤트 타입
+    Events.Highlight:
+      type: object
+      required:
+        - id
+        - text
+        - color
+        - created_at
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        selector:
+          type: string
+        color:
+          type: string
+        note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      description: 하이라이트 정보
+    Events.PageVisit:
+      type: object
+      required:
+        - id
+        - url
+        - visited_at
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        visited_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+          format: int32
+      description: 페이지 방문 정보
     Session.Session:
       type: object
       required:

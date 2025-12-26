@@ -10,13 +10,15 @@ import (
 type Handler struct {
 	*AuthController
 	*SessionController
+	*EventController
 }
 
 // NewHandler creates a new Handler with all controllers
-func NewHandler(auth *AuthController, session *SessionController) *Handler {
+func NewHandler(auth *AuthController, session *SessionController, event *EventController) *Handler {
 	return &Handler{
 		AuthController:    auth,
 		SessionController: session,
+		EventController:   event,
 	}
 }
 
@@ -100,4 +102,19 @@ func (h *Handler) RoutesResume(ctx context.Context, request generated.RoutesResu
 // RoutesStop delegates to SessionController
 func (h *Handler) RoutesStop(ctx context.Context, request generated.RoutesStopRequestObject) (generated.RoutesStopResponseObject, error) {
 	return h.SessionController.RoutesStop(ctx, request)
+}
+
+// RoutesBatchEvents delegates to EventController
+func (h *Handler) RoutesBatchEvents(ctx context.Context, request generated.RoutesBatchEventsRequestObject) (generated.RoutesBatchEventsResponseObject, error) {
+	return h.EventController.RoutesBatchEvents(ctx, request)
+}
+
+// RoutesListEvents delegates to EventController
+func (h *Handler) RoutesListEvents(ctx context.Context, request generated.RoutesListEventsRequestObject) (generated.RoutesListEventsResponseObject, error) {
+	return h.EventController.RoutesListEvents(ctx, request)
+}
+
+// RoutesGetEventStats delegates to EventController
+func (h *Handler) RoutesGetEventStats(ctx context.Context, request generated.RoutesGetEventStatsRequestObject) (generated.RoutesGetEventStatsResponseObject, error) {
+	return h.EventController.RoutesGetEventStats(ctx, request)
 }

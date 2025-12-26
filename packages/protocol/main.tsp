@@ -5,6 +5,7 @@ import "@typespec/openapi";
 import "./src/common/errors.tsp";
 import "./src/auth/auth.tsp";
 import "./src/session/session.tsp";
+import "./src/events/events.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.Rest;

@@ -94,6 +94,119 @@ export type CommonValidationError = {
 };
 
 /**
+ * 이벤트 배치 요청
+ */
+export type EventsBatchEventsRequest = {
+    /**
+     * 이벤트 배열 (1-100개)
+     */
+    events: Array<EventsEventData>;
+};
+
+/**
+ * 이벤트 배치 응답
+ */
+export type EventsBatchEventsResponse = {
+    /**
+     * 처리된 이벤트 수
+     */
+    processed: number;
+    /**
+     * 총 이벤트 수
+     */
+    total: number;
+};
+
+/**
+ * 이벤트 데이터
+ */
+export type EventsEventData = {
+    /**
+     * 이벤트 타입
+     */
+    type: string;
+    /**
+     * 이벤트 발생 시간 (Unix timestamp ms)
+     */
+    timestamp: number;
+    /**
+     * 페이지 URL
+     */
+    url?: string;
+    /**
+     * 페이지 제목
+     */
+    title?: string;
+    /**
+     * 하이라이트 텍스트
+     */
+    text?: string;
+    /**
+     * CSS 선택자
+     */
+    selector?: string;
+    /**
+     * 하이라이트 색상
+     */
+    color?: string;
+    /**
+     * 사용자 노트
+     */
+    note?: string;
+    /**
+     * 추가 메타데이터 (JSON)
+     */
+    metadata?: string;
+};
+
+/**
+ * 이벤트 목록 응답
+ */
+export type EventsEventListResponse = {
+    page_visits: Array<EventsPageVisit>;
+    highlights: Array<EventsHighlight>;
+    total: number;
+};
+
+/**
+ * 이벤트 통계 응답
+ */
+export type EventsEventStatsResponse = {
+    total_events: number;
+    page_visits: number;
+    highlights: number;
+    unique_urls: number;
+};
+
+/**
+ * 이벤트 타입
+ */
+export type EventsEventType = 'page_visit' | 'highlight' | 'scroll' | 'click';
+
+/**
+ * 하이라이트 정보
+ */
+export type EventsHighlight = {
+    id: string;
+    text: string;
+    selector?: string;
+    color: string;
+    note?: string;
+    created_at: string;
+};
+
+/**
+ * 페이지 방문 정보
+ */
+export type EventsPageVisit = {
+    id: string;
+    url: string;
+    title?: string;
+    visited_at: string;
+    duration_ms?: number;
+};
+
+/**
  * 세션 정보
  */
 export type SessionSession = {
@@ -630,3 +743,125 @@ export type RoutesStopResponses = {
 };
 
 export type RoutesStopResponse = RoutesStopResponses[keyof RoutesStopResponses];
+
+export type RoutesListEventsData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        sessionId: string;
+    };
+    query?: {
+        type?: string;
+        limit?: number;
+        offset?: number;
+    };
+    url: '/v1/sessions/{sessionId}/events';
+};
+
+export type RoutesListEventsErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesListEventsError = RoutesListEventsErrors[keyof RoutesListEventsErrors];
+
+export type RoutesListEventsResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: EventsEventListResponse;
+};
+
+export type RoutesListEventsResponse = RoutesListEventsResponses[keyof RoutesListEventsResponses];
+
+export type RoutesBatchEventsData = {
+    body: EventsBatchEventsRequest;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        sessionId: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{sessionId}/events';
+};
+
+export type RoutesBatchEventsErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: CommonErrorResponse;
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesBatchEventsError = RoutesBatchEventsErrors[keyof RoutesBatchEventsErrors];
+
+export type RoutesBatchEventsResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: EventsBatchEventsResponse;
+};
+
+export type RoutesBatchEventsResponse = RoutesBatchEventsResponses[keyof RoutesBatchEventsResponses];
+
+export type RoutesGetEventStatsData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        sessionId: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{sessionId}/events/stats';
+};
+
+export type RoutesGetEventStatsErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesGetEventStatsError = RoutesGetEventStatsErrors[keyof RoutesGetEventStatsErrors];
+
+export type RoutesGetEventStatsResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: EventsEventStatsResponse;
+};
+
+export type RoutesGetEventStatsResponse = RoutesGetEventStatsResponses[keyof RoutesGetEventStatsResponses];

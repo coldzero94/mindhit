@@ -28,12 +28,12 @@ out/
 build/
 dist/
 
-# Go
+# Go build outputs (binaries in root, not source directories)
 bin/
-server
-api
-worker
-seed
+/server
+/api
+/worker
+/seed
 *.exe
 *.exe~
 *.dll

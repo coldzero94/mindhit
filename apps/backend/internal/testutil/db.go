@@ -3,13 +3,22 @@ package testutil
 
 import (
 	"context"
+	"database/sql"
 	"os"
+	"sync"
 	"testing"
 
 	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
 	_ "github.com/lib/pq" // PostgreSQL driver
 
 	"github.com/mindhit/api/ent"
+)
+
+var (
+	sharedDB   *sql.DB
+	sharedOnce sync.Once
+	schemaOnce sync.Once
 )
 
 // getTestDatabaseURL returns the test database URL from environment or default
@@ -20,67 +29,49 @@ func getTestDatabaseURL() string {
 	return "postgres://postgres:password@localhost:5432/mindhit_test?sslmode=disable"
 }
 
-// SetupTestDB creates a test database client with PostgreSQL
-// It also cleans up existing data for a fresh test environment
+// getSharedDB returns a shared database connection pool
+func getSharedDB(t *testing.T) *sql.DB {
+	sharedOnce.Do(func() {
+		var err error
+		sharedDB, err = sql.Open("postgres", getTestDatabaseURL())
+		if err != nil {
+			t.Fatalf("failed to open postgres: %v", err)
+		}
+		sharedDB.SetMaxOpenConns(25)
+		sharedDB.SetMaxIdleConns(10)
+	})
+	return sharedDB
+}
+
+// ensureSchema ensures the database schema is created (only once)
+func ensureSchema(t *testing.T, client *ent.Client) {
+	schemaOnce.Do(func() {
+		ctx := context.Background()
+		if err := client.Schema.Create(ctx); err != nil {
+			t.Fatalf("failed to create schema: %v", err)
+		}
+	})
+}
+
+// SetupTestDB creates a test database client.
+// Uses a shared connection pool for efficiency.
+// Tests should use unique identifiers (emails, etc.) to avoid conflicts.
 func SetupTestDB(t *testing.T) *ent.Client {
 	t.Helper()
-	client, err := ent.Open(dialect.Postgres, getTestDatabaseURL())
-	if err != nil {
-		t.Fatalf("failed to open postgres: %v", err)
-	}
 
-	ctx := context.Background()
+	db := getSharedDB(t)
+	drv := entsql.OpenDB(dialect.Postgres, db)
+	client := ent.NewClient(ent.Driver(drv))
 
-	// Auto migrate schema
-	if err := client.Schema.Create(ctx); err != nil {
-		t.Fatalf("failed to create schema: %v", err)
-	}
-
-	// Clean up all tables for fresh test
-	cleanupTables(t, client)
+	// Ensure schema exists (only once across all tests)
+	ensureSchema(t, client)
 
 	return client
 }
 
-// cleanupTables deletes all data from tables (order matters due to foreign keys)
-func cleanupTables(t *testing.T, client *ent.Client) {
+// CleanupTestDB is kept for backward compatibility.
+// With shared connection pool, we don't close individual clients.
+func CleanupTestDB(t *testing.T, _ *ent.Client) {
 	t.Helper()
-	ctx := context.Background()
-
-	// Delete in reverse dependency order
-	if _, err := client.MindmapGraph.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean mindmap_graphs: %v", err)
-	}
-	if _, err := client.RawEvent.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean raw_events: %v", err)
-	}
-	if _, err := client.Highlight.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean highlights: %v", err)
-	}
-	if _, err := client.PageVisit.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean page_visits: %v", err)
-	}
-	if _, err := client.URL.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean urls: %v", err)
-	}
-	if _, err := client.Session.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean sessions: %v", err)
-	}
-	if _, err := client.PasswordResetToken.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean password_reset_tokens: %v", err)
-	}
-	if _, err := client.UserSettings.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean user_settings: %v", err)
-	}
-	if _, err := client.User.Delete().Exec(ctx); err != nil {
-		t.Logf("failed to clean users: %v", err)
-	}
-}
-
-// CleanupTestDB closes the test database client
-func CleanupTestDB(t *testing.T, client *ent.Client) {
-	t.Helper()
-	if err := client.Close(); err != nil {
-		t.Errorf("failed to close client: %v", err)
-	}
+	// No-op: using shared connection pool
 }

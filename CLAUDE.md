@@ -123,7 +123,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 2 | ✅ Done | Authentication System |
 | Phase 2.1 | ⬜ Pending | Google OAuth (after Phase 6, before Phase 7) |
 | Phase 3 | ✅ Done | Session Management API |
-| Phase 4 | ⬜ Pending | Event Collection API |
+| Phase 4 | ✅ Done | Event Collection API |
 | Phase 5 | ⬜ Pending | Monitoring & Infra (Basic) |
 | Phase 6 | ⬜ Pending | Worker & Job Queue |
 | Phase 7 | ⬜ Pending | Next.js Web App |
@@ -144,6 +144,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-26] Phase 4 completed: Event Collection API (batch events, list events, event stats) with TypeSpec integration
 - [2025-12-26] Phase 3 completed: Session Management API (start, pause, resume, stop, list, get, update, delete)
 - [2025-12-26] Phase 2 completed: JWT authentication (signup, login, refresh, password reset, logout, me)
 - [2025-12-26] Google OAuth split to Phase 2.1 (to be implemented after Phase 6, before Phase 7)

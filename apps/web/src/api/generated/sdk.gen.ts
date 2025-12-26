@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { RoutesDeleteData, RoutesDeleteErrors, RoutesDeleteResponses, RoutesForgotPasswordData, RoutesForgotPasswordErrors, RoutesForgotPasswordResponses, RoutesGetData, RoutesGetErrors, RoutesGetResponses, RoutesListData, RoutesListErrors, RoutesListResponses, RoutesLoginData, RoutesLoginErrors, RoutesLoginResponses, RoutesLogoutData, RoutesLogoutErrors, RoutesLogoutResponses, RoutesMeData, RoutesMeErrors, RoutesMeResponses, RoutesPauseData, RoutesPauseErrors, RoutesPauseResponses, RoutesRefreshData, RoutesRefreshErrors, RoutesRefreshResponses, RoutesResetPasswordData, RoutesResetPasswordErrors, RoutesResetPasswordResponses, RoutesResumeData, RoutesResumeErrors, RoutesResumeResponses, RoutesSignupData, RoutesSignupErrors, RoutesSignupResponses, RoutesStartData, RoutesStartErrors, RoutesStartResponses, RoutesStopData, RoutesStopErrors, RoutesStopResponses, RoutesUpdateData, RoutesUpdateErrors, RoutesUpdateResponses } from './types.gen';
+import type { RoutesBatchEventsData, RoutesBatchEventsErrors, RoutesBatchEventsResponses, RoutesDeleteData, RoutesDeleteErrors, RoutesDeleteResponses, RoutesForgotPasswordData, RoutesForgotPasswordErrors, RoutesForgotPasswordResponses, RoutesGetData, RoutesGetErrors, RoutesGetEventStatsData, RoutesGetEventStatsErrors, RoutesGetEventStatsResponses, RoutesGetResponses, RoutesListData, RoutesListErrors, RoutesListEventsData, RoutesListEventsErrors, RoutesListEventsResponses, RoutesListResponses, RoutesLoginData, RoutesLoginErrors, RoutesLoginResponses, RoutesLogoutData, RoutesLogoutErrors, RoutesLogoutResponses, RoutesMeData, RoutesMeErrors, RoutesMeResponses, RoutesPauseData, RoutesPauseErrors, RoutesPauseResponses, RoutesRefreshData, RoutesRefreshErrors, RoutesRefreshResponses, RoutesResetPasswordData, RoutesResetPasswordErrors, RoutesResetPasswordResponses, RoutesResumeData, RoutesResumeErrors, RoutesResumeResponses, RoutesSignupData, RoutesSignupErrors, RoutesSignupResponses, RoutesStartData, RoutesStartErrors, RoutesStartResponses, RoutesStopData, RoutesStopErrors, RoutesStopResponses, RoutesUpdateData, RoutesUpdateErrors, RoutesUpdateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -127,3 +127,25 @@ export const routesResume = <ThrowOnError extends boolean = false>(options: Opti
  * 세션 종료
  */
 export const routesStop = <ThrowOnError extends boolean = false>(options: Options<RoutesStopData, ThrowOnError>) => (options.client ?? client).post<RoutesStopResponses, RoutesStopErrors, ThrowOnError>({ url: '/v1/sessions/{id}/stop', ...options });
+
+/**
+ * 이벤트 목록 조회
+ */
+export const routesListEvents = <ThrowOnError extends boolean = false>(options: Options<RoutesListEventsData, ThrowOnError>) => (options.client ?? client).get<RoutesListEventsResponses, RoutesListEventsErrors, ThrowOnError>({ url: '/v1/sessions/{sessionId}/events', ...options });
+
+/**
+ * 이벤트 배치 전송
+ */
+export const routesBatchEvents = <ThrowOnError extends boolean = false>(options: Options<RoutesBatchEventsData, ThrowOnError>) => (options.client ?? client).post<RoutesBatchEventsResponses, RoutesBatchEventsErrors, ThrowOnError>({
+    url: '/v1/sessions/{sessionId}/events',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 이벤트 통계 조회
+ */
+export const routesGetEventStats = <ThrowOnError extends boolean = false>(options: Options<RoutesGetEventStatsData, ThrowOnError>) => (options.client ?? client).get<RoutesGetEventStatsResponses, RoutesGetEventStatsErrors, ThrowOnError>({ url: '/v1/sessions/{sessionId}/events/stats', ...options });
