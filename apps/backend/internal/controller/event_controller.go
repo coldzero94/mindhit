@@ -64,7 +64,7 @@ func (c *EventController) RoutesBatchEvents(ctx context.Context, request generat
 		}, nil
 	}
 
-	sessionID, err := uuid.Parse(request.SessionId)
+	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesBatchEvents400JSONResponse{
 			Error: struct {
@@ -150,7 +150,7 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 		}, nil
 	}
 
-	sessionID, err := uuid.Parse(request.SessionId)
+	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesListEvents404JSONResponse{
 			Error: struct {
@@ -254,7 +254,7 @@ func (c *EventController) RoutesGetEventStats(ctx context.Context, request gener
 		}, nil
 	}
 
-	sessionID, err := uuid.Parse(request.SessionId)
+	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesGetEventStats404JSONResponse{
 			Error: struct {

@@ -93,6 +93,15 @@ tasks:
     inputs:
       - "**/*.go"
 
+  lint-fix:
+    command: golangci-lint
+    args:
+      - run
+      - --fix
+      - ./...
+    inputs:
+      - "**/*.go"
+
   # Ent generate
   generate:
     command: go
@@ -132,3 +141,21 @@ tasks:
       - migrate
       - status
     local: true
+
+  # OpenAPI 코드 생성
+  generate-api:
+    command: oapi-codegen
+    args:
+      - -config
+      - oapi-codegen.yaml
+      - ../../packages/protocol/tsp-output/openapi/openapi.yaml
+    local: true
+
+  # 클린업
+  clean:
+    command: rm
+    args:
+      - -rf
+      - bin/
+      - coverage.out
+      - coverage.html

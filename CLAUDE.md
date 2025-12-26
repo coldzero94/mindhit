@@ -56,6 +56,21 @@ mindhit/
 - **Database**: PostgreSQL
 - **Queue**: Redis + Asynq
 
+### Environment Variables
+
+All environment variables are managed in the **project root**:
+
+| File           | Purpose                  | Git         |
+|----------------|--------------------------|-------------|
+| `/.env`        | Actual values (local dev)| `.gitignore`|
+| `/.env.example`| Sample template          | Committed   |
+
+**IMPORTANT**:
+
+- Backend loads env from `../../.env` (relative to `apps/backend/`)
+- Docker services (Grafana, PostgreSQL, etc.) settings are in `docker-compose.yml`
+- Do NOT create `.env` files in subdirectories (e.g., `apps/backend/.env`)
+
 ---
 
 ## Documentation Guidelines
@@ -124,7 +139,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 2.1 | ⬜ Pending | Google OAuth (after Phase 6, before Phase 7) |
 | Phase 3 | ✅ Done | Session Management API |
 | Phase 4 | ✅ Done | Event Collection API |
-| Phase 5 | ⬜ Pending | Monitoring & Infra (Basic) |
+| Phase 5 | ✅ Done | Monitoring & Infra (Basic) |
 | Phase 6 | ⬜ Pending | Worker & Job Queue |
 | Phase 7 | ⬜ Pending | Next.js Web App |
 | Phase 8 | ⬜ Pending | Chrome Extension |
@@ -144,6 +159,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-26] Phase 5 completed: Monitoring & Infra - Prometheus metrics, slog logger, Request ID, HTTP logging middleware
 - [2025-12-26] Phase 4 completed: Event Collection API (batch events, list events, event stats) with TypeSpec integration
 - [2025-12-26] Phase 3 completed: Session Management API (start, pause, resume, stop, list, get, update, delete)
 - [2025-12-26] Phase 2 completed: JWT authentication (signup, login, refresh, password reset, logout, me)

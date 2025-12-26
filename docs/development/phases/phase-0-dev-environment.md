@@ -324,20 +324,29 @@ mindhit/
 
 - [x] **docker-compose.yml 생성**
 
+  > **Note**: 기본 포트와 충돌을 피하기 위해 커스텀 포트를 사용합니다.
+
+  | 서비스     | 호스트 포트 | 컨테이너 포트 |
+  |------------|-------------|---------------|
+  | PostgreSQL | 5433        | 5432          |
+  | Redis      | 6380        | 6379          |
+  | Asynqmon   | 9090        | 9090          |
+  | Prometheus | 9091        | 9090          |
+  | Grafana    | 3010        | 3010          |
+
   ```yaml
   # infra/docker/docker-compose.yml
-  version: '3.8'
-
   services:
     postgres:
-      image: postgres:16-alpine
+      image: postgres:16
+      platform: linux/amd64
       container_name: mindhit-postgres
       environment:
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: password
         POSTGRES_DB: mindhit
       ports:
-        - "5432:5432"
+        - "5433:5432"
       volumes:
         - postgres_data:/var/lib/postgresql/data
       healthcheck:
@@ -347,10 +356,11 @@ mindhit/
         retries: 5
 
     redis:
-      image: redis:7-alpine
+      image: redis:7
+      platform: linux/amd64
       container_name: mindhit-redis
       ports:
-        - "6379:6379"
+        - "6380:6379"
       volumes:
         - redis_data:/data
       healthcheck:
@@ -359,42 +369,103 @@ mindhit/
         timeout: 5s
         retries: 5
 
-    # Asynqmon (선택사항) - Asynq 모니터링 UI
+    # Asynqmon - Asynq 모니터링 UI
     asynqmon:
       image: hibiken/asynqmon:latest
+      platform: linux/amd64
       container_name: mindhit-asynqmon
       ports:
-        - "8080:8080"
+        - "9090:9090"
       command:
+        - "--port=9090"
         - "--redis-addr=redis:6379"
       depends_on:
         - redis
 
+    # Prometheus - Metrics collection
+    prometheus:
+      image: prom/prometheus:latest
+      platform: linux/amd64
+      container_name: mindhit-prometheus
+      ports:
+        - "9091:9090"
+      volumes:
+        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+        - prometheus_data:/prometheus
+      command:
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        - "--storage.tsdb.path=/prometheus"
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+
+    # Grafana - Metrics visualization
+    grafana:
+      image: grafana/grafana:latest
+      platform: linux/amd64
+      container_name: mindhit-grafana
+      ports:
+        - "3010:3010"
+      volumes:
+        - grafana_data:/var/lib/grafana
+      environment:
+        - GF_SERVER_HTTP_PORT=3010
+        - GF_SECURITY_ADMIN_USER=admin
+        - GF_SECURITY_ADMIN_PASSWORD=admin
+      depends_on:
+        - prometheus
+
   volumes:
     postgres_data:
     redis_data:
+    prometheus_data:
+    grafana_data:
   ```
 
-- [x] **.env.local 생성** (apps/backend/)
+- [x] **루트 .env 생성** (프로젝트 루트)
+
+  > **Note**: 모든 환경변수는 프로젝트 루트의 `.env` 파일에서 통합 관리합니다.
+  > `.env.example`은 샘플 템플릿으로 커밋되며, `.env`는 `.gitignore`에 포함됩니다.
 
   ```bash
-  # apps/backend/.env.local
+  # /.env (프로젝트 루트)
+  # ===================
+  # Backend
+  # ===================
+
+  # Server
+  PORT=9000
   ENVIRONMENT=local
 
   # Database
-  DATABASE_URL=postgres://postgres:password@localhost:5432/mindhit?sslmode=disable
+  DATABASE_URL=postgres://postgres:password@localhost:5433/mindhit?sslmode=disable
+  DEV_DATABASE_URL=postgres://postgres:password@localhost:5433/mindhit_dev?sslmode=disable
+
+  # Auth
+  JWT_SECRET=your-secret-key-change-in-production
 
   # Redis
-  REDIS_URL=redis://localhost:6379
+  REDIS_URL=redis://localhost:6380
 
-  # Server
-  API_PORT=8081
+  # Worker
   WORKER_CONCURRENCY=10
 
-  # AI (개발용 - 필요시 설정)
+  # AI (Phase 9+)
   # OPENAI_API_KEY=sk-...
   # GEMINI_API_KEY=...
   # ANTHROPIC_API_KEY=sk-...
+
+  # ===================
+  # Docker Services
+  # ===================
+
+  # PostgreSQL
+  POSTGRES_USER=postgres
+  POSTGRES_PASSWORD=password
+  POSTGRES_DB=mindhit
+
+  # Grafana
+  GF_SECURITY_ADMIN_USER=admin
+  GF_SECURITY_ADMIN_PASSWORD=admin
   ```
 
 ### 검증

@@ -254,21 +254,6 @@ type RoutesUpdateParams struct {
 	Authorization string `json:"authorization"`
 }
 
-// RoutesPauseParams defines parameters for RoutesPause.
-type RoutesPauseParams struct {
-	Authorization string `json:"authorization"`
-}
-
-// RoutesResumeParams defines parameters for RoutesResume.
-type RoutesResumeParams struct {
-	Authorization string `json:"authorization"`
-}
-
-// RoutesStopParams defines parameters for RoutesStop.
-type RoutesStopParams struct {
-	Authorization string `json:"authorization"`
-}
-
 // RoutesListEventsParams defines parameters for RoutesListEvents.
 type RoutesListEventsParams struct {
 	Type          *string `form:"type,omitempty" json:"type,omitempty"`
@@ -284,6 +269,21 @@ type RoutesBatchEventsParams struct {
 
 // RoutesGetEventStatsParams defines parameters for RoutesGetEventStats.
 type RoutesGetEventStatsParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesPauseParams defines parameters for RoutesPause.
+type RoutesPauseParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesResumeParams defines parameters for RoutesResume.
+type RoutesResumeParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesStopParams defines parameters for RoutesStop.
+type RoutesStopParams struct {
 	Authorization string `json:"authorization"`
 }
 
@@ -344,6 +344,15 @@ type ServerInterface interface {
 	// (PUT /v1/sessions/{id})
 	RoutesUpdate(c *gin.Context, id string, params RoutesUpdateParams)
 
+	// (GET /v1/sessions/{id}/events)
+	RoutesListEvents(c *gin.Context, id string, params RoutesListEventsParams)
+
+	// (POST /v1/sessions/{id}/events)
+	RoutesBatchEvents(c *gin.Context, id string, params RoutesBatchEventsParams)
+
+	// (GET /v1/sessions/{id}/events/stats)
+	RoutesGetEventStats(c *gin.Context, id string, params RoutesGetEventStatsParams)
+
 	// (PATCH /v1/sessions/{id}/pause)
 	RoutesPause(c *gin.Context, id string, params RoutesPauseParams)
 
@@ -352,15 +361,6 @@ type ServerInterface interface {
 
 	// (POST /v1/sessions/{id}/stop)
 	RoutesStop(c *gin.Context, id string, params RoutesStopParams)
-
-	// (GET /v1/sessions/{sessionId}/events)
-	RoutesListEvents(c *gin.Context, sessionId string, params RoutesListEventsParams)
-
-	// (POST /v1/sessions/{sessionId}/events)
-	RoutesBatchEvents(c *gin.Context, sessionId string, params RoutesBatchEventsParams)
-
-	// (GET /v1/sessions/{sessionId}/events/stats)
-	RoutesGetEventStats(c *gin.Context, sessionId string, params RoutesGetEventStatsParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -803,6 +803,183 @@ func (siw *ServerInterfaceWrapper) RoutesUpdate(c *gin.Context) {
 	siw.Handler.RoutesUpdate(c, id, params)
 }
 
+// RoutesListEvents operation middleware
+func (siw *ServerInterfaceWrapper) RoutesListEvents(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesListEventsParams
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "type", c.Request.URL.Query(), &params.Type)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter type: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "limit", c.Request.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "offset", c.Request.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesListEvents(c, id, params)
+}
+
+// RoutesBatchEvents operation middleware
+func (siw *ServerInterfaceWrapper) RoutesBatchEvents(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesBatchEventsParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesBatchEvents(c, id, params)
+}
+
+// RoutesGetEventStats operation middleware
+func (siw *ServerInterfaceWrapper) RoutesGetEventStats(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesGetEventStatsParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesGetEventStats(c, id, params)
+}
+
 // RoutesPause operation middleware
 func (siw *ServerInterfaceWrapper) RoutesPause(c *gin.Context) {
 
@@ -956,183 +1133,6 @@ func (siw *ServerInterfaceWrapper) RoutesStop(c *gin.Context) {
 	siw.Handler.RoutesStop(c, id, params)
 }
 
-// RoutesListEvents operation middleware
-func (siw *ServerInterfaceWrapper) RoutesListEvents(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "sessionId" -------------
-	var sessionId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", c.Param("sessionId"), &sessionId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sessionId: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params RoutesListEventsParams
-
-	// ------------- Optional query parameter "type" -------------
-
-	err = runtime.BindQueryParameter("form", false, false, "type", c.Request.URL.Query(), &params.Type)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter type: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameter("form", false, false, "limit", c.Request.URL.Query(), &params.Limit)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// ------------- Optional query parameter "offset" -------------
-
-	err = runtime.BindQueryParameter("form", false, false, "offset", c.Request.URL.Query(), &params.Offset)
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	headers := c.Request.Header
-
-	// ------------- Required header parameter "authorization" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
-		var Authorization string
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
-		if err != nil {
-			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
-			return
-		}
-
-		params.Authorization = Authorization
-
-	} else {
-		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.RoutesListEvents(c, sessionId, params)
-}
-
-// RoutesBatchEvents operation middleware
-func (siw *ServerInterfaceWrapper) RoutesBatchEvents(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "sessionId" -------------
-	var sessionId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", c.Param("sessionId"), &sessionId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sessionId: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params RoutesBatchEventsParams
-
-	headers := c.Request.Header
-
-	// ------------- Required header parameter "authorization" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
-		var Authorization string
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
-		if err != nil {
-			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
-			return
-		}
-
-		params.Authorization = Authorization
-
-	} else {
-		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.RoutesBatchEvents(c, sessionId, params)
-}
-
-// RoutesGetEventStats operation middleware
-func (siw *ServerInterfaceWrapper) RoutesGetEventStats(c *gin.Context) {
-
-	var err error
-
-	// ------------- Path parameter "sessionId" -------------
-	var sessionId string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "sessionId", c.Param("sessionId"), &sessionId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sessionId: %w", err), http.StatusBadRequest)
-		return
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params RoutesGetEventStatsParams
-
-	headers := c.Request.Header
-
-	// ------------- Required header parameter "authorization" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
-		var Authorization string
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
-		if err != nil {
-			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
-			return
-		}
-
-		params.Authorization = Authorization
-
-	} else {
-		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
-		return
-	}
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		middleware(c)
-		if c.IsAborted() {
-			return
-		}
-	}
-
-	siw.Handler.RoutesGetEventStats(c, sessionId, params)
-}
-
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -1172,12 +1172,12 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/v1/sessions/:id", wrapper.RoutesDelete)
 	router.GET(options.BaseURL+"/v1/sessions/:id", wrapper.RoutesGet)
 	router.PUT(options.BaseURL+"/v1/sessions/:id", wrapper.RoutesUpdate)
+	router.GET(options.BaseURL+"/v1/sessions/:id/events", wrapper.RoutesListEvents)
+	router.POST(options.BaseURL+"/v1/sessions/:id/events", wrapper.RoutesBatchEvents)
+	router.GET(options.BaseURL+"/v1/sessions/:id/events/stats", wrapper.RoutesGetEventStats)
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/pause", wrapper.RoutesPause)
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/resume", wrapper.RoutesResume)
 	router.POST(options.BaseURL+"/v1/sessions/:id/stop", wrapper.RoutesStop)
-	router.GET(options.BaseURL+"/v1/sessions/:sessionId/events", wrapper.RoutesListEvents)
-	router.POST(options.BaseURL+"/v1/sessions/:sessionId/events", wrapper.RoutesBatchEvents)
-	router.GET(options.BaseURL+"/v1/sessions/:sessionId/events/stats", wrapper.RoutesGetEventStats)
 }
 
 type RoutesForgotPasswordRequestObject struct {
@@ -1569,6 +1569,151 @@ func (response RoutesUpdate404JSONResponse) VisitRoutesUpdateResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RoutesListEventsRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesListEventsParams
+}
+
+type RoutesListEventsResponseObject interface {
+	VisitRoutesListEventsResponse(w http.ResponseWriter) error
+}
+
+type RoutesListEvents200JSONResponse EventsEventListResponse
+
+func (response RoutesListEvents200JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesListEvents401JSONResponse CommonErrorResponse
+
+func (response RoutesListEvents401JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesListEvents403JSONResponse CommonErrorResponse
+
+func (response RoutesListEvents403JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesListEvents404JSONResponse CommonErrorResponse
+
+func (response RoutesListEvents404JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesBatchEventsRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesBatchEventsParams
+	Body   *RoutesBatchEventsJSONRequestBody
+}
+
+type RoutesBatchEventsResponseObject interface {
+	VisitRoutesBatchEventsResponse(w http.ResponseWriter) error
+}
+
+type RoutesBatchEvents200JSONResponse EventsBatchEventsResponse
+
+func (response RoutesBatchEvents200JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesBatchEvents400JSONResponse CommonErrorResponse
+
+func (response RoutesBatchEvents400JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesBatchEvents401JSONResponse CommonErrorResponse
+
+func (response RoutesBatchEvents401JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesBatchEvents403JSONResponse CommonErrorResponse
+
+func (response RoutesBatchEvents403JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesBatchEvents404JSONResponse CommonErrorResponse
+
+func (response RoutesBatchEvents404JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGetEventStatsRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesGetEventStatsParams
+}
+
+type RoutesGetEventStatsResponseObject interface {
+	VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error
+}
+
+type RoutesGetEventStats200JSONResponse EventsEventStatsResponse
+
+func (response RoutesGetEventStats200JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGetEventStats401JSONResponse CommonErrorResponse
+
+func (response RoutesGetEventStats401JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGetEventStats403JSONResponse CommonErrorResponse
+
+func (response RoutesGetEventStats403JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGetEventStats404JSONResponse CommonErrorResponse
+
+func (response RoutesGetEventStats404JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type RoutesPauseRequestObject struct {
 	Id     string `json:"id"`
 	Params RoutesPauseParams
@@ -1731,151 +1876,6 @@ func (response RoutesStop404JSONResponse) VisitRoutesStopResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type RoutesListEventsRequestObject struct {
-	SessionId string `json:"sessionId"`
-	Params    RoutesListEventsParams
-}
-
-type RoutesListEventsResponseObject interface {
-	VisitRoutesListEventsResponse(w http.ResponseWriter) error
-}
-
-type RoutesListEvents200JSONResponse EventsEventListResponse
-
-func (response RoutesListEvents200JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesListEvents401JSONResponse CommonErrorResponse
-
-func (response RoutesListEvents401JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesListEvents403JSONResponse CommonErrorResponse
-
-func (response RoutesListEvents403JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesListEvents404JSONResponse CommonErrorResponse
-
-func (response RoutesListEvents404JSONResponse) VisitRoutesListEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesBatchEventsRequestObject struct {
-	SessionId string `json:"sessionId"`
-	Params    RoutesBatchEventsParams
-	Body      *RoutesBatchEventsJSONRequestBody
-}
-
-type RoutesBatchEventsResponseObject interface {
-	VisitRoutesBatchEventsResponse(w http.ResponseWriter) error
-}
-
-type RoutesBatchEvents200JSONResponse EventsBatchEventsResponse
-
-func (response RoutesBatchEvents200JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesBatchEvents400JSONResponse CommonErrorResponse
-
-func (response RoutesBatchEvents400JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesBatchEvents401JSONResponse CommonErrorResponse
-
-func (response RoutesBatchEvents401JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesBatchEvents403JSONResponse CommonErrorResponse
-
-func (response RoutesBatchEvents403JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesBatchEvents404JSONResponse CommonErrorResponse
-
-func (response RoutesBatchEvents404JSONResponse) VisitRoutesBatchEventsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesGetEventStatsRequestObject struct {
-	SessionId string `json:"sessionId"`
-	Params    RoutesGetEventStatsParams
-}
-
-type RoutesGetEventStatsResponseObject interface {
-	VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error
-}
-
-type RoutesGetEventStats200JSONResponse EventsEventStatsResponse
-
-func (response RoutesGetEventStats200JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesGetEventStats401JSONResponse CommonErrorResponse
-
-func (response RoutesGetEventStats401JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(401)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesGetEventStats403JSONResponse CommonErrorResponse
-
-func (response RoutesGetEventStats403JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(403)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RoutesGetEventStats404JSONResponse CommonErrorResponse
-
-func (response RoutesGetEventStats404JSONResponse) VisitRoutesGetEventStatsResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
@@ -1915,6 +1915,15 @@ type StrictServerInterface interface {
 	// (PUT /v1/sessions/{id})
 	RoutesUpdate(ctx context.Context, request RoutesUpdateRequestObject) (RoutesUpdateResponseObject, error)
 
+	// (GET /v1/sessions/{id}/events)
+	RoutesListEvents(ctx context.Context, request RoutesListEventsRequestObject) (RoutesListEventsResponseObject, error)
+
+	// (POST /v1/sessions/{id}/events)
+	RoutesBatchEvents(ctx context.Context, request RoutesBatchEventsRequestObject) (RoutesBatchEventsResponseObject, error)
+
+	// (GET /v1/sessions/{id}/events/stats)
+	RoutesGetEventStats(ctx context.Context, request RoutesGetEventStatsRequestObject) (RoutesGetEventStatsResponseObject, error)
+
 	// (PATCH /v1/sessions/{id}/pause)
 	RoutesPause(ctx context.Context, request RoutesPauseRequestObject) (RoutesPauseResponseObject, error)
 
@@ -1923,15 +1932,6 @@ type StrictServerInterface interface {
 
 	// (POST /v1/sessions/{id}/stop)
 	RoutesStop(ctx context.Context, request RoutesStopRequestObject) (RoutesStopResponseObject, error)
-
-	// (GET /v1/sessions/{sessionId}/events)
-	RoutesListEvents(ctx context.Context, request RoutesListEventsRequestObject) (RoutesListEventsResponseObject, error)
-
-	// (POST /v1/sessions/{sessionId}/events)
-	RoutesBatchEvents(ctx context.Context, request RoutesBatchEventsRequestObject) (RoutesBatchEventsResponseObject, error)
-
-	// (GET /v1/sessions/{sessionId}/events/stats)
-	RoutesGetEventStats(ctx context.Context, request RoutesGetEventStatsRequestObject) (RoutesGetEventStatsResponseObject, error)
 }
 
 type StrictHandlerFunc = strictgin.StrictGinHandlerFunc
@@ -2305,6 +2305,98 @@ func (sh *strictHandler) RoutesUpdate(ctx *gin.Context, id string, params Routes
 	}
 }
 
+// RoutesListEvents operation middleware
+func (sh *strictHandler) RoutesListEvents(ctx *gin.Context, id string, params RoutesListEventsParams) {
+	var request RoutesListEventsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesListEvents(ctx, request.(RoutesListEventsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesListEvents")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesListEventsResponseObject); ok {
+		if err := validResponse.VisitRoutesListEventsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesBatchEvents operation middleware
+func (sh *strictHandler) RoutesBatchEvents(ctx *gin.Context, id string, params RoutesBatchEventsParams) {
+	var request RoutesBatchEventsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body RoutesBatchEventsJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesBatchEvents(ctx, request.(RoutesBatchEventsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesBatchEvents")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesBatchEventsResponseObject); ok {
+		if err := validResponse.VisitRoutesBatchEventsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesGetEventStats operation middleware
+func (sh *strictHandler) RoutesGetEventStats(ctx *gin.Context, id string, params RoutesGetEventStatsParams) {
+	var request RoutesGetEventStatsRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesGetEventStats(ctx, request.(RoutesGetEventStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesGetEventStats")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesGetEventStatsResponseObject); ok {
+		if err := validResponse.VisitRoutesGetEventStatsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RoutesPause operation middleware
 func (sh *strictHandler) RoutesPause(ctx *gin.Context, id string, params RoutesPauseParams) {
 	var request RoutesPauseRequestObject
@@ -2389,142 +2481,50 @@ func (sh *strictHandler) RoutesStop(ctx *gin.Context, id string, params RoutesSt
 	}
 }
 
-// RoutesListEvents operation middleware
-func (sh *strictHandler) RoutesListEvents(ctx *gin.Context, sessionId string, params RoutesListEventsParams) {
-	var request RoutesListEventsRequestObject
-
-	request.SessionId = sessionId
-	request.Params = params
-
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.RoutesListEvents(ctx, request.(RoutesListEventsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RoutesListEvents")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(RoutesListEventsResponseObject); ok {
-		if err := validResponse.VisitRoutesListEventsResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// RoutesBatchEvents operation middleware
-func (sh *strictHandler) RoutesBatchEvents(ctx *gin.Context, sessionId string, params RoutesBatchEventsParams) {
-	var request RoutesBatchEventsRequestObject
-
-	request.SessionId = sessionId
-	request.Params = params
-
-	var body RoutesBatchEventsJSONRequestBody
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		ctx.Status(http.StatusBadRequest)
-		ctx.Error(err)
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.RoutesBatchEvents(ctx, request.(RoutesBatchEventsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RoutesBatchEvents")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(RoutesBatchEventsResponseObject); ok {
-		if err := validResponse.VisitRoutesBatchEventsResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
-// RoutesGetEventStats operation middleware
-func (sh *strictHandler) RoutesGetEventStats(ctx *gin.Context, sessionId string, params RoutesGetEventStatsParams) {
-	var request RoutesGetEventStatsRequestObject
-
-	request.SessionId = sessionId
-	request.Params = params
-
-	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
-		return sh.ssi.RoutesGetEventStats(ctx, request.(RoutesGetEventStatsRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RoutesGetEventStats")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		ctx.Error(err)
-		ctx.Status(http.StatusInternalServerError)
-	} else if validResponse, ok := response.(RoutesGetEventStatsResponseObject); ok {
-		if err := validResponse.VisitRoutesGetEventStatsResponse(ctx.Writer); err != nil {
-			ctx.Error(err)
-		}
-	} else if response != nil {
-		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -110,13 +110,13 @@ model EventStatsResponse {
 
 // ============ Routes ============
 
-@route("/v1/sessions/{sessionId}/events")
+@route("/v1/sessions/{id}/events")
 namespace Routes {
   @post
   @doc("이벤트 배치 전송")
   op batchEvents(
     @header authorization: string,
-    @path sessionId: string,
+    @path id: string,
     @body body: BatchEventsRequest
   ): {
     @statusCode statusCode: 200;
@@ -139,7 +139,7 @@ namespace Routes {
   @doc("이벤트 목록 조회")
   op listEvents(
     @header authorization: string,
-    @path sessionId: string,
+    @path id: string,
     @query type?: string,
     @query limit?: int32 = 50,
     @query offset?: int32 = 0
@@ -162,7 +162,7 @@ namespace Routes {
   @doc("이벤트 통계 조회")
   op getEventStats(
     @header authorization: string,
-    @path sessionId: string
+    @path id: string
   ): {
     @statusCode statusCode: 200;
     @body body: EventStatsResponse;

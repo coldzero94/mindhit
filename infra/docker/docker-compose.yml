@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: mindhit
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     platform: linux/amd64
     container_name: mindhit-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -37,12 +37,47 @@ services:
     platform: linux/amd64
     container_name: mindhit-asynqmon
     ports:
-      - "8080:8080"
+      - "9090:9090"
     command:
+      - "--port=9090"
       - "--redis-addr=redis:6379"
     depends_on:
       - redis
 
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    platform: linux/amd64
+    container_name: mindhit-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    platform: linux/amd64
+    container_name: mindhit-grafana
+    ports:
+      - "3010:3010"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SERVER_HTTP_PORT=3010
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:

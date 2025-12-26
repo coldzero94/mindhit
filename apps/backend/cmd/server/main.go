@@ -11,11 +11,13 @@ import (
 	"entgo.io/ent/dialect"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/internal/controller"
 	"github.com/mindhit/api/internal/generated"
 	"github.com/mindhit/api/internal/infrastructure/config"
+	"github.com/mindhit/api/internal/infrastructure/logger"
 	"github.com/mindhit/api/internal/infrastructure/middleware"
 	"github.com/mindhit/api/internal/service"
 )
@@ -28,10 +30,10 @@ func main() {
 }
 
 func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
-
 	cfg := config.Load()
+
+	// Initialize logger based on environment
+	logger.Init(cfg.Environment)
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -72,13 +74,19 @@ func run() error {
 
 	// Router
 	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(middleware.CORS())
+	r.Use(middleware.RequestID())                           // 1. Generate Request ID
+	r.Use(middleware.NewLoggingMiddleware(cfg.Environment)) // 2. HTTP logging
+	r.Use(gin.Recovery())                                   // 3. Panic recovery
+	r.Use(middleware.CORS())                                // 4. CORS
+	r.Use(middleware.Metrics())                             // 5. Prometheus metrics
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// Metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Register API handlers using generated code
 	strictHandler := generated.NewStrictHandler(handler, nil)

@@ -15,9 +15,9 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 5.1 | Prometheus 메트릭 설정 | ⬜ |
-| 5.2 | 로깅 설정 | ⬜ |
-| 5.3 | Moon 태스크 설정 | ⬜ |
+| 5.1 | Prometheus 메트릭 설정 | ✅ |
+| 5.2 | 로깅 설정 | ✅ |
+| 5.3 | Moon 태스크 설정 | ✅ |
 
 ---
 
@@ -25,7 +25,7 @@
 
 ### 체크리스트
 
-- [ ] **의존성 추가**
+- [x] **의존성 추가**
 
   ```bash
   go get github.com/prometheus/client_golang/prometheus
@@ -33,8 +33,8 @@
   go get github.com/prometheus/client_golang/prometheus/promauto
   ```
 
-- [ ] **메트릭 미들웨어 작성**
-  - [ ] `internal/infrastructure/middleware/metrics.go`
+- [x] **메트릭 미들웨어 작성**
+  - [x] `internal/infrastructure/middleware/metrics.go`
 
     ```go
     package middleware
@@ -120,7 +120,7 @@
     }
     ```
 
-- [ ] **main.go에 메트릭 엔드포인트 추가**
+- [x] **main.go에 메트릭 엔드포인트 추가**
 
   ```go
   import "github.com/prometheus/client_golang/prometheus/promhttp"
@@ -145,20 +145,20 @@ curl http://localhost:8080/metrics | head -20
 
 ### 체크리스트
 
-- [ ] **Logger 패키지 작성**
-  - [ ] `internal/infrastructure/logger/logger.go`
+- [x] **Logger 패키지 작성**
+  - [x] `internal/infrastructure/logger/logger.go`
   - 상세 코드: [09-error-handling.md#3.3 로거 초기화](../09-error-handling.md#33-로거-초기화)
 
-- [ ] **Request ID 미들웨어**
-  - [ ] `internal/infrastructure/middleware/request_id.go`
+- [x] **Request ID 미들웨어**
+  - [x] `internal/infrastructure/middleware/request_id.go`
   - 상세 코드: [09-error-handling.md#4.1 미들웨어](../09-error-handling.md#41-미들웨어)
 
-- [ ] **HTTP 로깅 미들웨어**
-  - [ ] `internal/infrastructure/middleware/logging.go`
+- [x] **HTTP 로깅 미들웨어**
+  - [x] `internal/infrastructure/middleware/logging.go`
   - 상세 코드: [09-error-handling.md#5 HTTP 로깅 미들웨어](../09-error-handling.md#5-http-로깅-미들웨어)
 
-- [ ] **에러 응답 헬퍼**
-  - [ ] `internal/controller/response/error.go`
+- [x] **에러 응답 헬퍼**
+  - [x] `internal/controller/response/error.go`
   - 상세 코드: [09-error-handling.md#2.3 응답 헬퍼](../09-error-handling.md#23-응답-헬퍼)
 
 ### 구현 요약
@@ -192,8 +192,8 @@ curl -i http://localhost:8080/v1/health
 
 ### 체크리스트
 
-- [ ] **Moon 태스크 업데이트**
-  - [ ] `apps/backend/moon.yml`에 추가
+- [x] **Moon 태스크 업데이트**
+  - [x] `apps/backend/moon.yml`에 추가
 
     ```yaml
     # apps/backend/moon.yml
@@ -272,8 +272,8 @@ curl -i http://localhost:8080/v1/health
         args: [-rf, bin/, coverage.out, coverage.html]
     ```
 
-- [ ] **환경 변수 문서화**
-  - [ ] `apps/backend/.env.example` 업데이트
+- [x] **환경 변수 문서화**
+  - [x] `apps/backend/.env.example` 업데이트
 
     ```
     # Server
@@ -314,10 +314,10 @@ moonx backend:lint
 
 ### 전체 검증 체크리스트
 
-- [ ] `/metrics` 엔드포인트 동작
-- [ ] 구조화된 로그 출력
-- [ ] Request ID 헤더 추가됨
-- [ ] Moon 태스크 동작 (`moonx backend:test`)
+- [x] `/metrics` 엔드포인트 동작
+- [x] 구조화된 로그 출력
+- [x] Request ID 헤더 추가됨
+- [x] Moon 태스크 동작 (`moonx backend:test`)
 
 ### 테스트 요구사항
 

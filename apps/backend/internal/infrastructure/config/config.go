@@ -18,15 +18,15 @@ type Config struct {
 
 // Load reads configuration from environment variables and returns a Config struct.
 func Load() *Config {
-	// Load .env file if exists
-	_ = godotenv.Load()
+	// Load .env file from project root
+	_ = godotenv.Load("../../.env")
 
 	return &Config{
-		Port:        getEnv("API_PORT", "8080"),
+		Port:        getEnv("PORT", "9000"),
 		Environment: getEnv("ENVIRONMENT", "development"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/mindhit?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5433/mindhit?sslmode=disable"),
 		JWTSecret:   getEnv("JWT_SECRET", "your-secret-key"),
-		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379"),
+		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6380"),
 	}
 }
 
