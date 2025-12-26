@@ -2,7 +2,7 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-26 (Phase 6 완료 후)
+> **Last Updated**: 2025-12-26 (테스트 커버리지 개선 후)
 
 ---
 
@@ -12,7 +12,7 @@
 
 | 범위 | 커버리지 |
 | ---- | -------- |
-| Internal 패키지 전체 | 23.3% |
+| Internal 패키지 전체 | 30.6% |
 
 > Note: Ent 생성 코드를 제외한 `internal/` 패키지만 측정
 
@@ -22,8 +22,8 @@
 | ------ | -------- | ----- |
 | `internal/infrastructure/queue` | 81.4% | Phase 6 |
 | `internal/worker/handler` | 80.0% | Phase 6 |
-| `internal/service` | 62.5% | Phase 2-4 |
-| `internal/controller` | 50.1% | Phase 2-4 |
+| `internal/service` | 76.0% | Phase 2-4 |
+| `internal/controller` | 76.6% | Phase 2-4 |
 | `internal/infrastructure/config` | 0.0% | - |
 | `internal/infrastructure/logger` | 0.0% | - |
 | `internal/infrastructure/middleware` | 0.0% | - |
@@ -42,8 +42,9 @@
 | | `Login` | 87.5% |
 | | `GetUserByID` | 83.3% |
 | | `GetUserByEmail` | 83.3% |
-| | `RequestPasswordReset` | 0.0% |
-| | `ResetPassword` | 0.0% |
+| | `generateSecureToken` | 75.0% |
+| | `RequestPasswordReset` | 73.3% |
+| | `ResetPassword` | 66.7% |
 | `service/jwt_service.go` | `NewJWTService` | 100.0% |
 | | `GenerateTokenPair` | 71.4% |
 | | `GenerateAccessToken` | 75.0% |
@@ -65,12 +66,13 @@
 | 파일 | 함수 | 커버리지 |
 | ---- | ---- | -------- |
 | `service/session_service.go` | `NewSessionService` | 100.0% |
+| | `activeSessions` | 100.0% |
 | | `Start` | 100.0% |
 | | `Pause` | 100.0% |
 | | `Resume` | 83.3% |
 | | `Stop` | 45.0% |
 | | `Get` | 100.0% |
-| | `GetWithDetails` | 0.0% |
+| | `GetWithDetails` | 88.9% |
 | | `ListByUser` | 100.0% |
 | | `Update` | 100.0% |
 | | `Delete` | 100.0% |
@@ -99,14 +101,21 @@
 | | `ProcessBatchEventsFromJSON` | 0.0% |
 | | `GetEventsBySession` | 71.4% |
 | | `GetEventStats` | 69.2% |
+| | `toJSON` | 75.0% |
 | `service/url_service.go` | `NewURLService` | 100.0% |
 | | `GetOrCreate` | 93.3% |
-| | `GetByHash` | 0.0% |
-| | `UpdateSummary` | 0.0% |
-| | `GetURLsWithoutSummary` | 0.0% |
+| | `GetByHash` | 100.0% |
+| | `UpdateSummary` | 100.0% |
+| | `GetURLsWithoutSummary` | 100.0% |
 | | `normalizeURL` | 90.9% |
 | | `hashURL` | 100.0% |
-| `controller/event_controller.go` | 전체 | 0.0% |
+| `controller/event_controller.go` | `NewEventController` | 100.0% |
+| | `extractUserID` | 100.0% |
+| | `RoutesBatchEvents` | 84.6% |
+| | `RoutesListEvents` | 90.5% |
+| | `RoutesGetEventStats` | 78.9% |
+| | `ptrToString` | 100.0% |
+| | `getStringFromPayload` | 100.0% |
 
 ### Phase 6: Worker & Queue
 
@@ -142,16 +151,15 @@
 | `logger/logger.go` | 로거 초기화, 테스트 불필요 |
 | `middleware/*.go` | 통합 테스트에서 간접 검증 |
 | `controller/response/*.go` | 에러 응답 헬퍼, 간접 검증 |
+| `controller/handler.go` | 라우터 바인딩, 통합 테스트에서 검증 |
 
 ### 향후 테스트 필요
 
 | 파일 | 함수 | 우선순위 |
 | ---- | ---- | -------- |
-| `auth_service.go` | `RequestPasswordReset` | Medium |
-| `auth_service.go` | `ResetPassword` | Medium |
-| `session_service.go` | `GetWithDetails` | Low |
-| `event_controller.go` | 전체 | High |
-| `url_service.go` | `GetByHash`, `UpdateSummary` | Low |
+| `session_service.go` | `Stop` (queue 통합) | Medium |
+| `event_service.go` | `ProcessBatchEventsFromJSON` | Low |
+| `jwt_service.go` | `IsTestToken` | Low |
 
 ---
 
@@ -161,6 +169,7 @@
 | ---- | ---- | ----- |
 | `internal/controller/auth_controller_test.go` | Auth API 테스트 | Phase 2 |
 | `internal/controller/session_controller_test.go` | Session API 테스트 | Phase 3 |
+| `internal/controller/event_controller_test.go` | Event API 테스트 | Phase 4 |
 | `internal/service/auth_service_test.go` | Auth 서비스 테스트 | Phase 2 |
 | `internal/service/session_service_test.go` | Session 서비스 테스트 | Phase 3 |
 | `internal/service/event_service_test.go` | Event 서비스 테스트 | Phase 4 |
@@ -224,10 +233,11 @@ go tool cover -func=coverage.out | grep "service/"
 
 | 영역 | 목표 | 현재 | 상태 |
 | ---- | ---- | ---- | ---- |
-| Core Services | 60%+ | 62.5% | ✅ |
-| Controllers | 50%+ | 50.1% | ✅ |
+| Core Services | 60%+ | 76.0% | ✅ |
+| Controllers | 50%+ | 76.6% | ✅ |
 | New Code (Phase 6+) | 80%+ | 80%+ | ✅ |
-| Event Controller | 50%+ | 0.0% | ⚠️ |
+| Event Controller | 50%+ | 84.6% | ✅ |
+| URL Service | 80%+ | 100.0% | ✅ |
 
 ### Guidelines
 
@@ -256,9 +266,118 @@ go tool cover -func=coverage.out | grep "service/"
 
 ---
 
+## Integration & E2E Test Strategy
+
+### 테스트 피라미드
+
+```mermaid
+graph TB
+    subgraph "Test Pyramid"
+        E2E["🔺 E2E Tests<br/>Phase 8+"]
+        INT["🔶 Integration Tests<br/>Phase 7+"]
+        UNIT["🟢 Unit Tests<br/>Phase 2-6 ✅ 76%+"]
+    end
+
+    E2E --> INT --> UNIT
+
+    style UNIT fill:#22c55e,color:#fff
+    style INT fill:#f59e0b,color:#fff
+    style E2E fill:#ef4444,color:#fff
+```
+
+```mermaid
+timeline
+    title Test Strategy Timeline
+    Phase 2-6 : Unit Tests : Service 76% : Controller 76% : Queue 81%
+    Phase 7 : Backend Integration : Auth Flow : Session Flow : API 안정화
+    Phase 8 : E2E Tests : Playwright : Extension 연동
+    Phase 10 : Worker Integration : AI Pipeline : Full Flow
+```
+
+### 도입 시점
+
+| 테스트 유형 | 도입 시점 | 트리거 조건 |
+| ------------ | ---------- | ------------ |
+| **Unit Tests** | Phase 2-6 | ✅ 완료 |
+| **Backend Integration** | Phase 7 이후 | Web App 완성, API 안정화 |
+| **E2E (Playwright)** | Phase 8 이후 | Extension 완성, 전체 플로우 구현 |
+| **Worker Integration** | Phase 10 이후 | AI 연동 완료, 파이프라인 검증 필요 |
+
+### 왜 지금이 아닌가?
+
+1. **API 스펙 변경 가능성**: Phase 7-8에서 프론트엔드 요구사항에 따라 API 변경 가능
+2. **유지보수 비용**: Integration test는 변경에 취약 - 안정화 전 작성 시 지속적 수정 필요
+3. **현재 Unit Test 충분**: 76%+ 커버리지로 핵심 비즈니스 로직 검증 완료
+4. **외부 의존성**: Redis, PostgreSQL 연동 테스트는 CI 환경 구성 필요
+
+### Integration Test 계획 (Phase 7+)
+
+```text
+tests/integration/
+├── auth_flow_test.go      # 회원가입 → 로그인 → 토큰 갱신 → 로그아웃
+├── session_flow_test.go   # 세션 시작 → 이벤트 수집 → 종료 → Worker 처리
+└── worker_flow_test.go    # Queue Enqueue → Worker 처리 → DB 업데이트
+```
+
+**필요 인프라:**
+
+- Docker Compose (PostgreSQL + Redis)
+- Test fixtures (seed data)
+- CI workflow 수정
+
+### E2E Test 계획 (Phase 8+)
+
+```text
+tests/e2e/
+├── auth.spec.ts           # 로그인/회원가입 UI 플로우
+├── dashboard.spec.ts      # 대시보드 세션 목록/상세
+├── extension.spec.ts      # Extension ↔ Web 연동
+└── mindmap.spec.ts        # 마인드맵 생성/조회
+```
+
+**도구:**
+
+- Playwright (크로스 브라우저)
+- Chrome Extension testing
+- Visual regression (optional)
+
+### 현재 미테스트 영역 분석
+
+| 함수 | 커버리지 | 테스트 방법 | 우선순위 |
+| ------ | ---------- | ------------ | ---------- |
+| `Session.Stop` (queue) | 45% | Integration Test (Redis) | Phase 7 |
+| `ProcessBatchEventsFromJSON` | 0% | Unit Test 가능 | Low |
+| `scheduler.Run` | 0% | Skip (blocking operation) | N/A |
+| `middleware/*.go` | 0% | Integration Test | Phase 7 |
+
+### Integration Test 환경 (예정)
+
+```yaml
+# docker-compose.test.yml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mindhit_test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+
+  redis:
+    image: redis:7-alpine
+```
+
+```bash
+# 실행 명령 (Phase 7 이후)
+docker-compose -f docker-compose.test.yml up -d
+go test ./tests/integration/... -tags=integration
+```
+
+---
+
 ## History
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-26 | - | 테스트 커버리지 개선: Service 76.0%, Controller 76.6% |
 | 2025-12-26 | Phase 6 | Queue 81.4%, Handler 80.0% 달성 |
 | 2025-12-26 | Phase 2-4 | 상세 함수별 커버리지 문서화 |

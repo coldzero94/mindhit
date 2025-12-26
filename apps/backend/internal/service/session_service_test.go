@@ -473,6 +473,120 @@ func TestSessionService_Delete_NotOwned(t *testing.T) {
 	assert.ErrorIs(t, err, service.ErrSessionNotOwned)
 }
 
+// ==================== GetWithDetails Tests ====================
+
+func TestSessionService_GetWithDetails_Success(t *testing.T) {
+	client, sessionService, authService := setupSessionServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("details"))
+
+	sess, err := sessionService.Start(ctx, user.ID)
+	require.NoError(t, err)
+
+	// Get with details
+	detailedSess, err := sessionService.GetWithDetails(ctx, sess.ID, user.ID)
+
+	require.NoError(t, err)
+	assert.Equal(t, sess.ID, detailedSess.ID)
+	assert.NotNil(t, detailedSess.Edges.User)
+	assert.Equal(t, user.ID, detailedSess.Edges.User.ID)
+}
+
+func TestSessionService_GetWithDetails_NotFound(t *testing.T) {
+	client, sessionService, authService := setupSessionServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("details-notfound"))
+
+	_, err := sessionService.GetWithDetails(ctx, uuid.New(), user.ID)
+
+	assert.ErrorIs(t, err, service.ErrSessionNotFound)
+}
+
+func TestSessionService_GetWithDetails_NotOwned(t *testing.T) {
+	client, sessionService, authService := setupSessionServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user1 := createTestUser(t, authService, uniqueEmail("details-owner"))
+	user2 := createTestUser(t, authService, uniqueEmail("details-other"))
+
+	sess, err := sessionService.Start(ctx, user1.ID)
+	require.NoError(t, err)
+
+	_, err = sessionService.GetWithDetails(ctx, sess.ID, user2.ID)
+
+	assert.ErrorIs(t, err, service.ErrSessionNotOwned)
+}
+
+func TestSessionService_GetWithDetails_WithRelatedData(t *testing.T) {
+	client, sessionService, authService := setupSessionServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("details-related"))
+
+	sess, err := sessionService.Start(ctx, user.ID)
+	require.NoError(t, err)
+
+	// Create a URL for page visits with unique hash
+	urlHash := fmt.Sprintf("testhash-%s", uuid.New().String()[:8])
+	urlRecord, err := client.URL.Create().
+		SetURL("https://example.com/test-" + urlHash).
+		SetURLHash(urlHash).
+		SetTitle("Test Page").
+		Save(ctx)
+	require.NoError(t, err)
+
+	// Create a page visit
+	pageVisit, err := client.PageVisit.Create().
+		SetSession(sess).
+		SetURL(urlRecord).
+		SetDurationMs(60000).
+		Save(ctx)
+	require.NoError(t, err)
+
+	// Create a highlight linked to the page visit
+	_, err = client.Highlight.Create().
+		SetSession(sess).
+		SetText("Test highlight").
+		SetPageVisit(pageVisit).
+		Save(ctx)
+	require.NoError(t, err)
+
+	// Get with details
+	detailedSess, err := sessionService.GetWithDetails(ctx, sess.ID, user.ID)
+
+	require.NoError(t, err)
+	assert.Equal(t, sess.ID, detailedSess.ID)
+	assert.Len(t, detailedSess.Edges.PageVisits, 1)
+	assert.Len(t, detailedSess.Edges.Highlights, 1)
+	assert.Equal(t, "Test highlight", detailedSess.Edges.Highlights[0].Text)
+}
+
+func TestSessionService_GetWithDetails_DeletedSessionNotFound(t *testing.T) {
+	client, sessionService, authService := setupSessionServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("details-deleted"))
+
+	sess, err := sessionService.Start(ctx, user.ID)
+	require.NoError(t, err)
+
+	// Delete the session
+	err = sessionService.Delete(ctx, sess.ID, user.ID)
+	require.NoError(t, err)
+
+	// GetWithDetails should not find deleted session
+	_, err = sessionService.GetWithDetails(ctx, sess.ID, user.ID)
+
+	assert.ErrorIs(t, err, service.ErrSessionNotFound)
+}
+
 // ==================== State Transition Tests ====================
 
 func TestSessionService_StateTransitions(t *testing.T) {
