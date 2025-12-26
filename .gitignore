@@ -31,6 +31,9 @@ dist/
 # Go
 bin/
 server
+api
+worker
+seed
 *.exe
 *.exe~
 *.dll

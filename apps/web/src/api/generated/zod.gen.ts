@@ -76,6 +76,53 @@ export const zCommonValidationError = z.object({
     })
 });
 
+/**
+ * 세션 상태
+ */
+export const zSessionSessionStatus = z.enum([
+    'recording',
+    'paused',
+    'processing',
+    'completed',
+    'failed'
+]);
+
+/**
+ * 세션 정보
+ */
+export const zSessionSession = z.object({
+    id: z.string(),
+    title: z.optional(z.string()),
+    description: z.optional(z.string()),
+    session_status: zSessionSessionStatus,
+    started_at: z.iso.datetime(),
+    ended_at: z.optional(z.iso.datetime()),
+    created_at: z.iso.datetime(),
+    updated_at: z.iso.datetime()
+});
+
+/**
+ * 세션 목록 응답
+ */
+export const zSessionSessionListResponse = z.object({
+    sessions: z.array(zSessionSession)
+});
+
+/**
+ * 세션 응답
+ */
+export const zSessionSessionResponse = z.object({
+    session: zSessionSession
+});
+
+/**
+ * 세션 업데이트 요청
+ */
+export const zSessionUpdateSessionRequest = z.object({
+    title: z.optional(z.string()),
+    description: z.optional(z.string())
+});
+
 export const zRoutesForgotPasswordData = z.object({
     body: zAuthForgotPasswordRequest,
     path: z.optional(z.never()),
@@ -171,3 +218,130 @@ export const zRoutesSignupData = z.object({
  * The request has succeeded and a new resource has been created as a result.
  */
 export const zRoutesSignupResponse = zAuthAuthResponse;
+
+export const zRoutesListData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.object({
+        limit: z.optional(z.int()).default(20),
+        offset: z.optional(z.int()).default(0)
+    })),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesListResponse = zSessionSessionListResponse;
+
+export const zRoutesStartData = z.object({
+    body: z.optional(z.never()),
+    path: z.optional(z.never()),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded and a new resource has been created as a result.
+ */
+export const zRoutesStartResponse = zSessionSessionResponse;
+
+export const zRoutesDeleteData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        id: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * There is no content to send for this request, but the headers may be useful.
+ */
+export const zRoutesDeleteResponse = z.void();
+
+export const zRoutesGetData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        id: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesGetResponse = zSessionSessionResponse;
+
+export const zRoutesUpdateData = z.object({
+    body: zSessionUpdateSessionRequest,
+    path: z.object({
+        id: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesUpdateResponse = zSessionSessionResponse;
+
+export const zRoutesPauseData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        id: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesPauseResponse = zSessionSessionResponse;
+
+export const zRoutesResumeData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        id: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesResumeResponse = zSessionSessionResponse;
+
+export const zRoutesStopData = z.object({
+    body: z.optional(z.never()),
+    path: z.object({
+        id: z.string()
+    }),
+    query: z.optional(z.never()),
+    headers: z.object({
+        authorization: z.string()
+    })
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesStopResponse = zSessionSessionResponse;

@@ -107,32 +107,23 @@ sequenceDiagram
 
 ### 구현 요구사항
 
-- [ ] **Seed 데이터 생성**
-  - [ ] `scripts/seed_test_user.go` - 테스트 사용자 생성 스크립트
+- [x] **Seed 데이터 생성**
+  - [x] `scripts/seed.go` - 테스트 사용자 생성 스크립트
 
-  ```go
-  const TestUserEmail = "test@mindhit.dev"
+  ```bash
+  # 테스트 사용자 생성/업데이트
+  go run ./scripts/seed.go test-user
 
-  func SeedTestUser(ctx context.Context, client *ent.Client) (*ent.User, error) {
-      // 이미 존재하면 기존 사용자 반환
-      existing, err := client.User.Query().
-          Where(user.EmailEQ(TestUserEmail)).
-          Only(ctx)
-      if err == nil {
-          return existing, nil
-      }
-
-      hashedPassword, _ := bcrypt.GenerateFromPassword(
-          []byte("test1234!"),
-          bcrypt.DefaultCost,
-      )
-
-      return client.User.Create().
-          SetEmail(TestUserEmail).
-          SetPasswordHash(string(hashedPassword)).
-          Save(ctx)
-  }
+  # 모든 seed 실행
+  go run ./scripts/seed.go all
   ```
+
+  스크립트 위치: `apps/backend/scripts/seed.go`
+
+  | 명령어 | 설명 |
+  |--------|------|
+  | `test-user` | 테스트 사용자 생성 (이미 존재하면 비밀번호 업데이트) |
+  | `all` | 모든 seed 실행 (현재: test-user만, Phase 9에서 plans 추가) |
 
 - [ ] **환경별 토큰 검증**
   - [ ] `internal/service/jwt_service.go`에 테스트 토큰 지원 추가
@@ -164,11 +155,11 @@ sequenceDiagram
   TEST_REFRESH_TOKEN=mindhit-test-refresh-token-dev-only
   ```
 
-- [ ] **moonrepo task 추가** (`moon.yml`)
+- [x] **moonrepo task 추가** (`moon.yml`)
   ```yaml
   tasks:
-    seed-test-user:
-      command: go run ./scripts/seed_test_user.go
+    seed:
+      command: go run ./scripts/seed.go all
       deps:
         - migrate
   ```
@@ -786,12 +777,12 @@ cd apps/backend && go run ./cmd/server
 # 회원가입 테스트
 curl -X POST http://localhost:8080/v1/auth/signup \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
+  -d '{"email":"test@mindhit.dev","password":"test1234!"}'
 
 # 로그인 테스트
 curl -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
+  -d '{"email":"test@mindhit.dev","password":"test1234!"}'
 ```
 
 ---
@@ -926,7 +917,7 @@ curl -X GET http://localhost:8080/v1/sessions \
 # 토큰과 함께 요청 (로그인 후)
 TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}' | jq -r '.token')
+  -d '{"email":"test@mindhit.dev","password":"test1234!"}' | jq -r '.token')
 
 curl -X GET http://localhost:8080/v1/sessions \
   -H "Authorization: Bearer $TOKEN"
@@ -1149,7 +1140,7 @@ curl -X GET http://localhost:8080/v1/sessions \
 # 1. 회원가입 (access + refresh token 반환)
 curl -X POST http://localhost:8080/v1/auth/signup \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
+  -d '{"email":"test@mindhit.dev","password":"test1234!"}'
 
 # 2. 토큰 갱신
 curl -X POST http://localhost:8080/v1/auth/refresh \
@@ -1509,7 +1500,7 @@ sequenceDiagram
 # 1. 비밀번호 재설정 요청
 curl -X POST http://localhost:8080/v1/auth/forgot-password \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com"}'
+  -d '{"email":"test@mindhit.dev"}'
 # 200 OK + message (이메일 존재 여부와 무관하게 동일 응답)
 
 # 2. 비밀번호 재설정 (토큰은 DB 또는 로그에서 확인)
@@ -1521,7 +1512,7 @@ curl -X POST http://localhost:8080/v1/auth/reset-password \
 # 3. 새 비밀번호로 로그인 확인
 curl -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"newpassword123"}'
+  -d '{"email":"test@mindhit.dev","password":"newpassword123"}'
 # 200 OK + tokens
 ```
 

@@ -1,3 +1,4 @@
+// Package config provides application configuration loading from environment variables.
 package config
 
 import (
@@ -6,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config holds the application configuration values.
 type Config struct {
 	Port        string
 	Environment string
@@ -14,6 +16,7 @@ type Config struct {
 	RedisURL    string
 }
 
+// Load reads configuration from environment variables and returns a Config struct.
 func Load() *Config {
 	// Load .env file if exists
 	_ = godotenv.Load()

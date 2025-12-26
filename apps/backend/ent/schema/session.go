@@ -16,6 +16,7 @@ type Session struct {
 func (Session) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		BaseMixin{},
+		SoftDeleteMixin{},
 	}
 }
 

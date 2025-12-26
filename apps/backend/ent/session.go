@@ -25,6 +25,10 @@ type Session struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Record last update timestamp
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Record status for soft delete
+	Status session.Status `json:"status,omitempty"`
+	// Soft delete timestamp
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Session title
 	Title *string `json:"title,omitempty"`
 	// Session description
@@ -113,9 +117,9 @@ func (*Session) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case session.FieldTitle, session.FieldDescription, session.FieldSessionStatus:
+		case session.FieldStatus, session.FieldTitle, session.FieldDescription, session.FieldSessionStatus:
 			values[i] = new(sql.NullString)
-		case session.FieldCreatedAt, session.FieldUpdatedAt, session.FieldStartedAt, session.FieldEndedAt:
+		case session.FieldCreatedAt, session.FieldUpdatedAt, session.FieldDeletedAt, session.FieldStartedAt, session.FieldEndedAt:
 			values[i] = new(sql.NullTime)
 		case session.FieldID:
 			values[i] = new(uuid.UUID)
@@ -153,6 +157,19 @@ func (_m *Session) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
+			}
+		case session.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				_m.Status = session.Status(value.String)
+			}
+		case session.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				_m.DeletedAt = new(time.Time)
+				*_m.DeletedAt = value.Time
 			}
 		case session.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -260,6 +277,14 @@ func (_m *Session) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	if v := _m.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	if v := _m.Title; v != nil {
 		builder.WriteString("title=")

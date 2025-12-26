@@ -18,6 +18,7 @@ apps/backend/
 │   ├── infrastructure/# External services (DB, Redis, etc.)
 │   └── generated/     # oapi-codegen generated (from OpenAPI)
 ├── pkg/               # Shared code between API and Worker
+├── scripts/           # Development scripts (seed, etc.)
 ├── test/              # Test utilities
 ├── oapi-codegen.yaml  # OpenAPI code generation config
 ├── atlas.hcl          # Database migration config
@@ -79,6 +80,10 @@ make lint         # Run linter
 # Database
 make migrate-diff name=<name>  # Create migration
 make migrate-apply             # Apply migrations
+
+# Seed Data (Development)
+go run ./scripts/seed.go all        # Run all seeds
+go run ./scripts/seed.go test-user  # Create test user only
 ```
 
 ## Important Files
@@ -87,6 +92,7 @@ make migrate-apply             # Apply migrations
 |------|---------|
 | `ent/schema/*.go` | Entity definitions |
 | `internal/generated/api.gen.go` | Generated server interface |
+| `scripts/seed.go` | Development seed script |
 | `oapi-codegen.yaml` | Code generation config |
 | `atlas.hcl` | Migration config |
 
@@ -95,6 +101,18 @@ make migrate-apply             # Apply migrations
 See `.env.local` for required variables:
 - `DATABASE_URL` - PostgreSQL connection string
 - `REDIS_URL` - Redis connection string (for worker)
+- `TEST_ACCESS_TOKEN` - Test token for development (optional)
+
+## Test Credentials
+
+For development/testing:
+
+| Field    | Value              |
+|----------|--------------------|
+| Email    | `test@mindhit.dev` |
+| Password | `test1234!`        |
+
+Create with: `go run ./scripts/seed.go test-user`
 
 ## Notes
 

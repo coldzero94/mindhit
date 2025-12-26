@@ -1,3 +1,4 @@
+// Package fixture provides test data creation helpers.
 package fixture
 
 import (

@@ -22,6 +22,15 @@ import (
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
 )
 
+// Defines values for SessionSessionStatus.
+const (
+	Completed  SessionSessionStatus = "completed"
+	Failed     SessionSessionStatus = "failed"
+	Paused     SessionSessionStatus = "paused"
+	Processing SessionSessionStatus = "processing"
+	Recording  SessionSessionStatus = "recording"
+)
+
 // AuthAuthResponse 인증 응답
 type AuthAuthResponse struct {
 	Token string `json:"token"`
@@ -90,6 +99,40 @@ type CommonValidationError struct {
 	} `json:"error"`
 }
 
+// SessionSession 세션 정보
+type SessionSession struct {
+	CreatedAt   time.Time  `json:"created_at"`
+	Description *string    `json:"description,omitempty"`
+	EndedAt     *time.Time `json:"ended_at,omitempty"`
+	Id          string     `json:"id"`
+
+	// SessionStatus 세션 상태
+	SessionStatus SessionSessionStatus `json:"session_status"`
+	StartedAt     time.Time            `json:"started_at"`
+	Title         *string              `json:"title,omitempty"`
+	UpdatedAt     time.Time            `json:"updated_at"`
+}
+
+// SessionSessionListResponse 세션 목록 응답
+type SessionSessionListResponse struct {
+	Sessions []SessionSession `json:"sessions"`
+}
+
+// SessionSessionResponse 세션 응답
+type SessionSessionResponse struct {
+	// Session 세션 정보
+	Session SessionSession `json:"session"`
+}
+
+// SessionSessionStatus 세션 상태
+type SessionSessionStatus string
+
+// SessionUpdateSessionRequest 세션 업데이트 요청
+type SessionUpdateSessionRequest struct {
+	Description *string `json:"description,omitempty"`
+	Title       *string `json:"title,omitempty"`
+}
+
 // RoutesLogoutParams defines parameters for RoutesLogout.
 type RoutesLogoutParams struct {
 	Authorization string `json:"authorization"`
@@ -105,6 +148,48 @@ type RoutesRefreshParams struct {
 	Authorization string `json:"authorization"`
 }
 
+// RoutesListParams defines parameters for RoutesList.
+type RoutesListParams struct {
+	Limit         *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset        *int32 `form:"offset,omitempty" json:"offset,omitempty"`
+	Authorization string `json:"authorization"`
+}
+
+// RoutesStartParams defines parameters for RoutesStart.
+type RoutesStartParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesDeleteParams defines parameters for RoutesDelete.
+type RoutesDeleteParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesGetParams defines parameters for RoutesGet.
+type RoutesGetParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesUpdateParams defines parameters for RoutesUpdate.
+type RoutesUpdateParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesPauseParams defines parameters for RoutesPause.
+type RoutesPauseParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesResumeParams defines parameters for RoutesResume.
+type RoutesResumeParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// RoutesStopParams defines parameters for RoutesStop.
+type RoutesStopParams struct {
+	Authorization string `json:"authorization"`
+}
+
 // RoutesForgotPasswordJSONRequestBody defines body for RoutesForgotPassword for application/json ContentType.
 type RoutesForgotPasswordJSONRequestBody = AuthForgotPasswordRequest
 
@@ -116,6 +201,9 @@ type RoutesResetPasswordJSONRequestBody = AuthResetPasswordRequest
 
 // RoutesSignupJSONRequestBody defines body for RoutesSignup for application/json ContentType.
 type RoutesSignupJSONRequestBody = AuthSignupRequest
+
+// RoutesUpdateJSONRequestBody defines body for RoutesUpdate for application/json ContentType.
+type RoutesUpdateJSONRequestBody = SessionUpdateSessionRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -140,6 +228,30 @@ type ServerInterface interface {
 
 	// (POST /v1/auth/signup)
 	RoutesSignup(c *gin.Context)
+
+	// (GET /v1/sessions)
+	RoutesList(c *gin.Context, params RoutesListParams)
+
+	// (POST /v1/sessions/start)
+	RoutesStart(c *gin.Context, params RoutesStartParams)
+
+	// (DELETE /v1/sessions/{id})
+	RoutesDelete(c *gin.Context, id string, params RoutesDeleteParams)
+
+	// (GET /v1/sessions/{id})
+	RoutesGet(c *gin.Context, id string, params RoutesGetParams)
+
+	// (PUT /v1/sessions/{id})
+	RoutesUpdate(c *gin.Context, id string, params RoutesUpdateParams)
+
+	// (PATCH /v1/sessions/{id}/pause)
+	RoutesPause(c *gin.Context, id string, params RoutesPauseParams)
+
+	// (PATCH /v1/sessions/{id}/resume)
+	RoutesResume(c *gin.Context, id string, params RoutesResumeParams)
+
+	// (POST /v1/sessions/{id}/stop)
+	RoutesStop(c *gin.Context, id string, params RoutesStopParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -329,6 +441,412 @@ func (siw *ServerInterfaceWrapper) RoutesSignup(c *gin.Context) {
 	siw.Handler.RoutesSignup(c)
 }
 
+// RoutesList operation middleware
+func (siw *ServerInterfaceWrapper) RoutesList(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesListParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "limit", c.Request.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "offset", c.Request.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesList(c, params)
+}
+
+// RoutesStart operation middleware
+func (siw *ServerInterfaceWrapper) RoutesStart(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesStartParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesStart(c, params)
+}
+
+// RoutesDelete operation middleware
+func (siw *ServerInterfaceWrapper) RoutesDelete(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesDeleteParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesDelete(c, id, params)
+}
+
+// RoutesGet operation middleware
+func (siw *ServerInterfaceWrapper) RoutesGet(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesGetParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesGet(c, id, params)
+}
+
+// RoutesUpdate operation middleware
+func (siw *ServerInterfaceWrapper) RoutesUpdate(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesUpdateParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesUpdate(c, id, params)
+}
+
+// RoutesPause operation middleware
+func (siw *ServerInterfaceWrapper) RoutesPause(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesPauseParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesPause(c, id, params)
+}
+
+// RoutesResume operation middleware
+func (siw *ServerInterfaceWrapper) RoutesResume(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesResumeParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesResume(c, id, params)
+}
+
+// RoutesStop operation middleware
+func (siw *ServerInterfaceWrapper) RoutesStop(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RoutesStopParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RoutesStop(c, id, params)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -363,6 +881,14 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/v1/auth/refresh", wrapper.RoutesRefresh)
 	router.POST(options.BaseURL+"/v1/auth/reset-password", wrapper.RoutesResetPassword)
 	router.POST(options.BaseURL+"/v1/auth/signup", wrapper.RoutesSignup)
+	router.GET(options.BaseURL+"/v1/sessions", wrapper.RoutesList)
+	router.POST(options.BaseURL+"/v1/sessions/start", wrapper.RoutesStart)
+	router.DELETE(options.BaseURL+"/v1/sessions/:id", wrapper.RoutesDelete)
+	router.GET(options.BaseURL+"/v1/sessions/:id", wrapper.RoutesGet)
+	router.PUT(options.BaseURL+"/v1/sessions/:id", wrapper.RoutesUpdate)
+	router.PATCH(options.BaseURL+"/v1/sessions/:id/pause", wrapper.RoutesPause)
+	router.PATCH(options.BaseURL+"/v1/sessions/:id/resume", wrapper.RoutesResume)
+	router.POST(options.BaseURL+"/v1/sessions/:id/stop", wrapper.RoutesStop)
 }
 
 type RoutesForgotPasswordRequestObject struct {
@@ -567,6 +1093,355 @@ func (response RoutesSignup409JSONResponse) VisitRoutesSignupResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RoutesListRequestObject struct {
+	Params RoutesListParams
+}
+
+type RoutesListResponseObject interface {
+	VisitRoutesListResponse(w http.ResponseWriter) error
+}
+
+type RoutesList200JSONResponse SessionSessionListResponse
+
+func (response RoutesList200JSONResponse) VisitRoutesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesList401JSONResponse CommonErrorResponse
+
+func (response RoutesList401JSONResponse) VisitRoutesListResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStartRequestObject struct {
+	Params RoutesStartParams
+}
+
+type RoutesStartResponseObject interface {
+	VisitRoutesStartResponse(w http.ResponseWriter) error
+}
+
+type RoutesStart201JSONResponse SessionSessionResponse
+
+func (response RoutesStart201JSONResponse) VisitRoutesStartResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStart401JSONResponse CommonErrorResponse
+
+func (response RoutesStart401JSONResponse) VisitRoutesStartResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesDeleteRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesDeleteParams
+}
+
+type RoutesDeleteResponseObject interface {
+	VisitRoutesDeleteResponse(w http.ResponseWriter) error
+}
+
+type RoutesDelete204Response struct {
+}
+
+func (response RoutesDelete204Response) VisitRoutesDeleteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RoutesDelete401JSONResponse CommonErrorResponse
+
+func (response RoutesDelete401JSONResponse) VisitRoutesDeleteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesDelete403JSONResponse CommonErrorResponse
+
+func (response RoutesDelete403JSONResponse) VisitRoutesDeleteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesDelete404JSONResponse CommonErrorResponse
+
+func (response RoutesDelete404JSONResponse) VisitRoutesDeleteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGetRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesGetParams
+}
+
+type RoutesGetResponseObject interface {
+	VisitRoutesGetResponse(w http.ResponseWriter) error
+}
+
+type RoutesGet200JSONResponse SessionSessionResponse
+
+func (response RoutesGet200JSONResponse) VisitRoutesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGet401JSONResponse CommonErrorResponse
+
+func (response RoutesGet401JSONResponse) VisitRoutesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGet403JSONResponse CommonErrorResponse
+
+func (response RoutesGet403JSONResponse) VisitRoutesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesGet404JSONResponse CommonErrorResponse
+
+func (response RoutesGet404JSONResponse) VisitRoutesGetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesUpdateRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesUpdateParams
+	Body   *RoutesUpdateJSONRequestBody
+}
+
+type RoutesUpdateResponseObject interface {
+	VisitRoutesUpdateResponse(w http.ResponseWriter) error
+}
+
+type RoutesUpdate200JSONResponse SessionSessionResponse
+
+func (response RoutesUpdate200JSONResponse) VisitRoutesUpdateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesUpdate401JSONResponse CommonErrorResponse
+
+func (response RoutesUpdate401JSONResponse) VisitRoutesUpdateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesUpdate403JSONResponse CommonErrorResponse
+
+func (response RoutesUpdate403JSONResponse) VisitRoutesUpdateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesUpdate404JSONResponse CommonErrorResponse
+
+func (response RoutesUpdate404JSONResponse) VisitRoutesUpdateResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesPauseRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesPauseParams
+}
+
+type RoutesPauseResponseObject interface {
+	VisitRoutesPauseResponse(w http.ResponseWriter) error
+}
+
+type RoutesPause200JSONResponse SessionSessionResponse
+
+func (response RoutesPause200JSONResponse) VisitRoutesPauseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesPause400JSONResponse CommonErrorResponse
+
+func (response RoutesPause400JSONResponse) VisitRoutesPauseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesPause401JSONResponse CommonErrorResponse
+
+func (response RoutesPause401JSONResponse) VisitRoutesPauseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesPause403JSONResponse CommonErrorResponse
+
+func (response RoutesPause403JSONResponse) VisitRoutesPauseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesPause404JSONResponse CommonErrorResponse
+
+func (response RoutesPause404JSONResponse) VisitRoutesPauseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResumeRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesResumeParams
+}
+
+type RoutesResumeResponseObject interface {
+	VisitRoutesResumeResponse(w http.ResponseWriter) error
+}
+
+type RoutesResume200JSONResponse SessionSessionResponse
+
+func (response RoutesResume200JSONResponse) VisitRoutesResumeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResume400JSONResponse CommonErrorResponse
+
+func (response RoutesResume400JSONResponse) VisitRoutesResumeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResume401JSONResponse CommonErrorResponse
+
+func (response RoutesResume401JSONResponse) VisitRoutesResumeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResume403JSONResponse CommonErrorResponse
+
+func (response RoutesResume403JSONResponse) VisitRoutesResumeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesResume404JSONResponse CommonErrorResponse
+
+func (response RoutesResume404JSONResponse) VisitRoutesResumeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStopRequestObject struct {
+	Id     string `json:"id"`
+	Params RoutesStopParams
+}
+
+type RoutesStopResponseObject interface {
+	VisitRoutesStopResponse(w http.ResponseWriter) error
+}
+
+type RoutesStop200JSONResponse SessionSessionResponse
+
+func (response RoutesStop200JSONResponse) VisitRoutesStopResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStop400JSONResponse CommonErrorResponse
+
+func (response RoutesStop400JSONResponse) VisitRoutesStopResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStop401JSONResponse CommonErrorResponse
+
+func (response RoutesStop401JSONResponse) VisitRoutesStopResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStop403JSONResponse CommonErrorResponse
+
+func (response RoutesStop403JSONResponse) VisitRoutesStopResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RoutesStop404JSONResponse CommonErrorResponse
+
+func (response RoutesStop404JSONResponse) VisitRoutesStopResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
@@ -590,6 +1465,30 @@ type StrictServerInterface interface {
 
 	// (POST /v1/auth/signup)
 	RoutesSignup(ctx context.Context, request RoutesSignupRequestObject) (RoutesSignupResponseObject, error)
+
+	// (GET /v1/sessions)
+	RoutesList(ctx context.Context, request RoutesListRequestObject) (RoutesListResponseObject, error)
+
+	// (POST /v1/sessions/start)
+	RoutesStart(ctx context.Context, request RoutesStartRequestObject) (RoutesStartResponseObject, error)
+
+	// (DELETE /v1/sessions/{id})
+	RoutesDelete(ctx context.Context, request RoutesDeleteRequestObject) (RoutesDeleteResponseObject, error)
+
+	// (GET /v1/sessions/{id})
+	RoutesGet(ctx context.Context, request RoutesGetRequestObject) (RoutesGetResponseObject, error)
+
+	// (PUT /v1/sessions/{id})
+	RoutesUpdate(ctx context.Context, request RoutesUpdateRequestObject) (RoutesUpdateResponseObject, error)
+
+	// (PATCH /v1/sessions/{id}/pause)
+	RoutesPause(ctx context.Context, request RoutesPauseRequestObject) (RoutesPauseResponseObject, error)
+
+	// (PATCH /v1/sessions/{id}/resume)
+	RoutesResume(ctx context.Context, request RoutesResumeRequestObject) (RoutesResumeResponseObject, error)
+
+	// (POST /v1/sessions/{id}/stop)
+	RoutesStop(ctx context.Context, request RoutesStopRequestObject) (RoutesStopResponseObject, error)
 }
 
 type StrictHandlerFunc = strictgin.StrictGinHandlerFunc
@@ -817,30 +1716,270 @@ func (sh *strictHandler) RoutesSignup(ctx *gin.Context) {
 	}
 }
 
+// RoutesList operation middleware
+func (sh *strictHandler) RoutesList(ctx *gin.Context, params RoutesListParams) {
+	var request RoutesListRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesList(ctx, request.(RoutesListRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesList")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesListResponseObject); ok {
+		if err := validResponse.VisitRoutesListResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesStart operation middleware
+func (sh *strictHandler) RoutesStart(ctx *gin.Context, params RoutesStartParams) {
+	var request RoutesStartRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesStart(ctx, request.(RoutesStartRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesStart")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesStartResponseObject); ok {
+		if err := validResponse.VisitRoutesStartResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesDelete operation middleware
+func (sh *strictHandler) RoutesDelete(ctx *gin.Context, id string, params RoutesDeleteParams) {
+	var request RoutesDeleteRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesDelete(ctx, request.(RoutesDeleteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesDelete")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesDeleteResponseObject); ok {
+		if err := validResponse.VisitRoutesDeleteResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesGet operation middleware
+func (sh *strictHandler) RoutesGet(ctx *gin.Context, id string, params RoutesGetParams) {
+	var request RoutesGetRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesGet(ctx, request.(RoutesGetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesGet")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesGetResponseObject); ok {
+		if err := validResponse.VisitRoutesGetResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesUpdate operation middleware
+func (sh *strictHandler) RoutesUpdate(ctx *gin.Context, id string, params RoutesUpdateParams) {
+	var request RoutesUpdateRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body RoutesUpdateJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesUpdate(ctx, request.(RoutesUpdateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesUpdate")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesUpdateResponseObject); ok {
+		if err := validResponse.VisitRoutesUpdateResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesPause operation middleware
+func (sh *strictHandler) RoutesPause(ctx *gin.Context, id string, params RoutesPauseParams) {
+	var request RoutesPauseRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesPause(ctx, request.(RoutesPauseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesPause")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesPauseResponseObject); ok {
+		if err := validResponse.VisitRoutesPauseResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesResume operation middleware
+func (sh *strictHandler) RoutesResume(ctx *gin.Context, id string, params RoutesResumeParams) {
+	var request RoutesResumeRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesResume(ctx, request.(RoutesResumeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesResume")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesResumeResponseObject); ok {
+		if err := validResponse.VisitRoutesResumeResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RoutesStop operation middleware
+func (sh *strictHandler) RoutesStop(ctx *gin.Context, id string, params RoutesStopParams) {
+	var request RoutesStopRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RoutesStop(ctx, request.(RoutesStopRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RoutesStop")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RoutesStopResponseObject); ok {
+		if err := validResponse.VisitRoutesStopResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xYUWscNxf9K0Lf99DCZHfd9sHdt7RJaSCB4DZ9CSYoo7s7SmekiaSx65oFt9maQPzg",
-	"QkxTx3YdUkoDLmychG4hv8ir/Q9Fml17Z3bG9jp2G4e+GHlGe+bcc4+urrSIfRHFggPXCtcXsfIDiIgb",
-	"Xkx0ULF/ZkDFgiuwDykoX7JYM8FxHZvNrvltE5nNH3sPXmEPx1LEIDUDB6DF18DdYCEGXMdKS8abuOXh",
-	"RIG0L/4voYHr+H/VAxLVAYOq+/wNO7HV8rCEuwmTQHH9ZvprbwA/6w3hxe074GsL7376mZBNoa8TpeaF",
-	"pDNwNwGlx0Po/dXudZZ6u/f7j7rIbO2Y9q9mew2Z9Ydm94+xkCAiLCzS4WXv2UOz+RqZp6/N8gr2cMT4",
-	"VeBNHeD6lJdXIBdQiloayVXRZLw8gCcbe392zWb3SM5jaYgH4hS8LGQ48otSsjOg4OSq/9zuPV0pC4TD",
-	"/K1Ryrkc3LuPMrDvmVcbZnkFTZut1fezGZn2xsXYd2sOdp9cf3m7/11nwtSmqF6We6l4X7AmT+JS1frr",
-	"K+bx6l5nyWz9cMYOzZrjkORNpPKJXXVjUDByQX2/Y9afma1VZLbXei9ejonhSyAa6C3ixGwIGdkRpkTD",
-	"Bc0iwAVxly8XRouLWUwn/EhOBkaxt6/FCOUMdJE0n4ooErxyWUohy4v0XrfTe9FF5qfV3i87ZbUaLIYd",
-	"5AQUFAqDjkAp0oSjK8dw4jj/vBkcg0PC/IqEjBIb1CXQgxxl2TYYhPTN6KYQ3iG0C/hcHoqXs+fGdn/9",
-	"d9N+jvZ2l9w+6VJwXO2pi9INmYZIHbVhlsnU2g+BSEkW/tns2XmMN4T7FNOhfXeNcfo50+ji9SvYw3Mg",
-	"VarXVKVWqVl6IgZOYobr+EP3yFYIHTgBqnNTVZLooNpw2/uF0SoVi0m2moOCOCykVnwn3BWK63hGJBpU",
-	"tovAadCg9CeCLqQLhGvg7rMkjkPmO4DqHSX4QTt1rFanuF9pZYXWMgH3IF3sTpIParWJmGRddhpWaHk5",
-	"zb8MAA2EQgFRSCW+D0CBVmx6P5qQ8ESmT9diCScFcg4k8kUSUsSFRgmnIJUmnCI9wpkmgLRAjM9ZXKQW",
-	"uCbfVCxqyzuwYGj7skOMN2zMSqzl2rqzdFSmbzwDIx1JIHN4OIFNpk7bJtmdsoDRRd8HpRBTKOE2x0Ky",
-	"bx2dscyLRB+Z+rW2eXyvPPsWwpY2SSLQIBWu31zE1lE4AELdGYeTyBXuARUHgvN59EZEyK/h2fNfLN5a",
-	"F0ROiCYUdeqP2mZrB+UbVGSedPrrKyWWuAbnzA6ncIx/pw0ioSFBBeV1Ij1Sor3Oc/Ngu8QVMwOQ82WN",
-	"srufwuPxO24CBW/Sp7orkVJvjFy2nGUrUXir819vejpGOv3OVLl7pEPqzshFUom10quos/RU9rLrWGaa",
-	"ekv6U2TTQhCHeSRBiUT64CbcBuBocIODiELEvk5Cfc6PPZb7x//Kshgy8wVvhMzXCs0zHTjSfiIlcI2U",
-	"JhqQaLiHaaTpemh5OP033S6z4JdgDkIRRw7BzcIeTmRot1St43q1GgqfhIFQuj5dm67h1mzr7wAAAP//",
-	"iGBpsCwZAAA=",
+	"H4sIAAAAAAAC/+xbX28bxxH/KottH1rgQkq2H1y+uXXaBnAAQ4r7EhjG6m5O3PRu97y7J0cVCMgRbRi1",
+	"CjiAjbiKpMpN0VaFAjCOg6qAP5G4/A7F7pEi73hLkbYoSwJf7MP9mf3NzG9mZ2apNezzOOEMmJK4toal",
+	"X4eY2MsbqapXzD8LIBPOJJibAUhf0ERRznAN651D/c8dpHe+bj/9CXs4ETwBoShYAYr/EZi9WE0A17BU",
+	"grJl3PBwKkGYBz8XEOIa/lm1D6LaRVC1y98xLzYaHhZwP6UCAlz7PPva64q/6/XE86UvwFdGvP30t1ws",
+	"c3WbSPmAi2AB7qcg1bAK7f8126319usnnZeHSO8e6OY/9N4LpLee69ffD6kEMaFRmR3etPef6523SH/3",
+	"Vj/exB6OKbsFbFnVcW3eK1qgoFAm1anJLb5MmVuBV9tH/z3UO4cnYh5yQ9I1TsnDUoQDXzjBLoCEd7f6",
+	"X5vt7zZdijB4cG8QcsEHG09QTuwv9E/b+vEmuq53n/0y75Hr3rAxjtlaEHsMrvN4r/OwNaFrM6leHrvT",
+	"eIt0maWJ02qdrU397bOj1rrefTRlhubJMcJ5E1n5nVl1p5swCkp9daC39vXuM6T3XrR/fDNkDF8AURDc",
+	"I9aYIRexucIBUfCRojHgEr3d4UKD8mSWBBMuUjADDbB3bIsByDnRZab5DY9jziofC8GFO0kfHbbaPx4i",
+	"/c2z9t8OXLkajAxzUTAgD6BU6RikJMtwcubovTiMv0gGi2CEmn8gEQ2IUeomqK6P8mhDClHwfnAzEd4I",
+	"2CV4Pu4Zr0DP7b3O1r918wd09Hrd7pPWBePaPrBa2kuqIJYnbZguMzWOVSBCkNWz9t4iSEk5q3T/LzFT",
+	"81A/enmaIZyTX8IGYMGEEh2hLzOd7klFVHqigwqWWMw+MmIUEZPqqKiKYIr5qKBaDuRkWaqg9i0q1YiK",
+	"MiND+z/77VfOwrKLbfzQKHJwKCQKFjheYAx9TtRltBITQy+HOg7SxWOWluPceNjZ2DZbEUtjI1qAz0Vg",
+	"GGK26FRCkCnhG3H2rsEbgbIPQkIjGNzC+4zs4bhjiXJsN0eV04PzzaP2X1p6503nz87S9qRAdwVJYzid",
+	"mSBnIbcvZ1/hTykLfk8VunH7E+zhFRCZv/B8Za4yZ8TzBBhJKK7hq/aWMZOqW2TVlfkqSVW9Gto25KPB",
+	"airhk5TE/cKtZwNjAZvgPwlwDS/wVIHMdzs44whI9WserGYbOVPA7LIkSSLqWwHVL2RmuYxtY7Vk5X1V",
+	"I89LJVKwN7LYsCa5Mjc3EZK8q09jyypuDfizOqCuoVCdSCRT3wcIIKgY916bEPBEm3NWMzgwSRArIJDP",
+	"0yhAjCuUsgCEVIQFSA1gDlJAiiPKVoxcJFeZIl9WjNSG16dgZPrHEcTrNZAOatn2c5qMyvW3UyDSiQBy",
+	"Q453oMn8adMkX9GXILrhmySMqEQpMz7mgv7JwhnyPE/Via5/0dTfbri9b0SY1CZIDAqExLXP17BhFK4D",
+	"CewshpHY7qZdKFYILvrRGzBCMYbvXvxkcW5ZEFtDLEPZROFlU+8eoGIjjfSrVmdr00GJT+GC0eEUxo2X",
+	"miACQgGy7s4T2egLHbV+0E/3HKxY6Aq5WNRwzahLx3iXnAQS3qdOtaNbJzcGhsLTLCVKp8+z2vR0iHT6",
+	"lam08+4ReWdg4O2gVjYynyan8kP5scg0f07qU2TcQhCDB0iA5Knwwb6wBMBQd4aDiETEPE4jdcHbHoP9",
+	"Vx8kLHrIfM7CiPpKogdU1S1oPxUCmEJSEQWIh/ZmpulgPAzOtEpLtcJkbFSBdovK6Vfs3hqGL5PIHhCE",
+	"JJLgZSvcT0Gs9heIaEwNmL6gAEKSRgrXrsx5/fEkZerqlf5okjIFy1kxNt46PAwlOBYaa527U+wyR41A",
+	"L0kN0eNv1c6J3SldbzxBvQnf0229+7Urr1sxZ19Mzk/L6WeZwM81QdZo0Mh4EYEaMTb/6nu9t+1gx83s",
+	"2zPIcVZiQlS9L48G78mxa8NKf1YHAcZ8jKOu48wWJ4EFKOQCqTqVPYp4aClVdhvJNJUoJqtoCVAqIUyj",
+	"Cjp3JDBwrn5AOCEXSzQIgHWxXPugtTNhprYJab6qgeA4xCuZhFFlgN54qJuHo8uA34G6qBEyd66ycGUW",
+	"UJcioJJ0RF29/7yzsd49cWy2csePjvjKjjMvUIidfoM88mT3jI9yZpE+i3RwVpxV+wsG25cQ5ddH/Frj",
+	"relL9l7of6074v62lTTbWU8v3i7mLHOWKS5npjCtdDxOqtg9OGptu4880niWJWZZYpYlLmeWkIqPOLnq",
+	"pYi/P3Kfii4aCbMEMUsQswRx0ROE/VsA80UWw3l5N2EFIp7E9hTQvoU9nIrIxLlSSa1ajbhPojqXqnZ9",
+	"7vocbtxt/D8AAP//WiuX15g5AAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -39,7 +39,7 @@ phases/
 | 1.5 | [API 스펙 공통화](./phase-1.5-api-spec.md) | ✅ 완료 | 5 steps |
 | 2 | [인증 시스템](./phase-2-auth.md) | ✅ 완료 | 6 steps |
 | 2.1 | [Google OAuth](./phase-2.1-oauth.md) | ⬜ 대기 | 1 step |
-| 3 | [세션 관리 API](./phase-3-sessions.md) | ⬜ 대기 | 3 steps |
+| 3 | [세션 관리 API](./phase-3-sessions.md) | ✅ 완료 | 3 steps |
 | 4 | [이벤트 수집 API](./phase-4-events.md) | ⬜ 대기 | 3 steps |
 | 5 | [모니터링 및 인프라 (기초)](./phase-5-infra.md) | ⬜ 대기 | 3 steps |
 | 6 | [Worker 및 Job Queue](./phase-6-worker.md) | ⬜ 대기 | 3 steps |

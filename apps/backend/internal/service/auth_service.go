@@ -1,3 +1,4 @@
+// Package service provides business logic for the application.
 package service
 
 import (
@@ -15,6 +16,7 @@ import (
 	"github.com/mindhit/api/ent/user"
 )
 
+// Auth service errors
 var (
 	ErrUserNotFound       = errors.New("user not found")
 	ErrInvalidCredentials = errors.New("invalid credentials")
@@ -25,10 +27,12 @@ var (
 	ErrTokenInvalid       = errors.New("invalid token")
 )
 
+// AuthService handles user authentication operations.
 type AuthService struct {
 	client *ent.Client
 }
 
+// NewAuthService creates a new AuthService instance.
 func NewAuthService(client *ent.Client) *AuthService {
 	return &AuthService{client: client}
 }
@@ -38,6 +42,7 @@ func (s *AuthService) activeUsers() *ent.UserQuery {
 	return s.client.User.Query().Where(user.StatusEQ(user.StatusActive))
 }
 
+// Signup creates a new user account with the given email and password.
 func (s *AuthService) Signup(ctx context.Context, email, password string) (*ent.User, error) {
 	// Check email duplication (active users only)
 	exists, err := s.activeUsers().
@@ -64,6 +69,7 @@ func (s *AuthService) Signup(ctx context.Context, email, password string) (*ent.
 		Save(ctx)
 }
 
+// Login authenticates a user with email and password.
 func (s *AuthService) Login(ctx context.Context, email, password string) (*ent.User, error) {
 	// Query active users only
 	u, err := s.activeUsers().
@@ -84,6 +90,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*ent.U
 	return u, nil
 }
 
+// GetUserByID retrieves a user by their ID.
 func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*ent.User, error) {
 	// Query active users only
 	u, err := s.activeUsers().
@@ -98,6 +105,7 @@ func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*ent.User,
 	return u, nil
 }
 
+// GetUserByEmail retrieves a user by their email address.
 func (s *AuthService) GetUserByEmail(ctx context.Context, email string) (*ent.User, error) {
 	// Query active users only
 	u, err := s.activeUsers().
@@ -215,7 +223,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 		SetPasswordHash(string(hashedPassword)).
 		Save(ctx)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 
@@ -225,7 +233,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 		SetUsed(true).
 		Save(ctx)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 

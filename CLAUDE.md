@@ -122,7 +122,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 1.5 | ✅ Done | API Spec Standardization |
 | Phase 2 | ✅ Done | Authentication System |
 | Phase 2.1 | ⬜ Pending | Google OAuth (after Phase 6, before Phase 7) |
-| Phase 3 | ⬜ Pending | Session Management API |
+| Phase 3 | ✅ Done | Session Management API |
 | Phase 4 | ⬜ Pending | Event Collection API |
 | Phase 5 | ⬜ Pending | Monitoring & Infra (Basic) |
 | Phase 6 | ⬜ Pending | Worker & Job Queue |
@@ -144,6 +144,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-26] Phase 3 completed: Session Management API (start, pause, resume, stop, list, get, update, delete)
 - [2025-12-26] Phase 2 completed: JWT authentication (signup, login, refresh, password reset, logout, me)
 - [2025-12-26] Google OAuth split to Phase 2.1 (to be implemented after Phase 6, before Phase 7)
 - [2025-12-25] Phase 1.5 completed: TypeSpec → OpenAPI → Go/TypeScript code generation pipeline
@@ -207,7 +208,11 @@ moonx backend:test        # Run tests
 moonx backend:generate    # Generate Ent + OpenAPI
 moonx backend:migrate     # Apply migrations
 moonx backend:migrate-diff # Generate migration
-moonx backend:seed-test-user # Create test user
+moonx backend:seed        # Run all seeds (test user, etc.)
+
+# Direct seed commands (from apps/backend/)
+go run ./scripts/seed.go test-user  # Create/update test user only
+go run ./scripts/seed.go all        # Run all seeds
 ```
 
 ### Frontend (apps/web)
@@ -234,6 +239,62 @@ moonx :test            # Run all tests
 moonx :lint            # Lint all projects
 moonx :build           # Build all projects
 ```
+
+---
+
+## Code Quality
+
+### Linting Rules
+
+**Always run lint before committing changes:**
+
+```bash
+# Backend (Go)
+cd apps/backend && golangci-lint run ./...
+
+# All projects via moon
+moonx :lint
+```
+
+### Backend Lint Guidelines
+
+The backend uses `golangci-lint` with strict rules. Key requirements:
+
+| Rule               | Description                            | How to Fix                                       |
+| ------------------ | -------------------------------------- | ------------------------------------------------ |
+| `exported`         | Exported types/functions need comments | Add `// TypeName does...` comment                |
+| `package-comments` | Packages need comments                 | Add `// Package name provides...` at top         |
+| `unused-parameter` | Unused function parameters             | **Use the parameter** (don't just rename to `_`) |
+| `errcheck`         | Error return values must be checked    | Handle or explicitly ignore with `_ =`           |
+
+#### Unused Parameters
+
+When a parameter is currently unused but may be used later:
+
+- ❌ Don't rename to `_` (e.g., `func(ctx context.Context)` → `func(_ context.Context)`)
+- ✅ Do use the parameter meaningfully (e.g., `slog.InfoContext(ctx, "...")`)
+- ✅ For test helpers, use `t.Helper()` to mark the function
+
+```go
+// ❌ Bad - loses future usability
+setupState: func(_ *testing.T, _ *service.SessionService, ...) {
+    // no-op
+}
+
+// ✅ Good - parameter is used
+setupState: func(t *testing.T, _ *service.SessionService, ...) {
+    t.Helper() // Already in correct state - no setup needed
+}
+```
+
+### Excluded from Lint
+
+These paths are excluded from `revive` rules in `.golangci.yml`:
+
+- `ent/schema/` - Ent ORM schema files (follow Ent conventions)
+- `internal/generated/` - Auto-generated code from oapi-codegen
+
+---
 
 ### Code Generation
 

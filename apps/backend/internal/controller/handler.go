@@ -1,0 +1,103 @@
+package controller
+
+import (
+	"context"
+
+	"github.com/mindhit/api/internal/generated"
+)
+
+// Handler combines all controllers to implement StrictServerInterface
+type Handler struct {
+	*AuthController
+	*SessionController
+}
+
+// NewHandler creates a new Handler with all controllers
+func NewHandler(auth *AuthController, session *SessionController) *Handler {
+	return &Handler{
+		AuthController:    auth,
+		SessionController: session,
+	}
+}
+
+// Ensure Handler implements StrictServerInterface at compile time
+var _ generated.StrictServerInterface = (*Handler)(nil)
+
+// Auth handlers are embedded from AuthController
+
+// Session handlers are embedded from SessionController
+
+// RoutesForgotPassword delegates to AuthController
+func (h *Handler) RoutesForgotPassword(ctx context.Context, request generated.RoutesForgotPasswordRequestObject) (generated.RoutesForgotPasswordResponseObject, error) {
+	return h.AuthController.RoutesForgotPassword(ctx, request)
+}
+
+// RoutesLogin delegates to AuthController
+func (h *Handler) RoutesLogin(ctx context.Context, request generated.RoutesLoginRequestObject) (generated.RoutesLoginResponseObject, error) {
+	return h.AuthController.RoutesLogin(ctx, request)
+}
+
+// RoutesLogout delegates to AuthController
+func (h *Handler) RoutesLogout(ctx context.Context, request generated.RoutesLogoutRequestObject) (generated.RoutesLogoutResponseObject, error) {
+	return h.AuthController.RoutesLogout(ctx, request)
+}
+
+// RoutesMe delegates to AuthController
+func (h *Handler) RoutesMe(ctx context.Context, request generated.RoutesMeRequestObject) (generated.RoutesMeResponseObject, error) {
+	return h.AuthController.RoutesMe(ctx, request)
+}
+
+// RoutesRefresh delegates to AuthController
+func (h *Handler) RoutesRefresh(ctx context.Context, request generated.RoutesRefreshRequestObject) (generated.RoutesRefreshResponseObject, error) {
+	return h.AuthController.RoutesRefresh(ctx, request)
+}
+
+// RoutesResetPassword delegates to AuthController
+func (h *Handler) RoutesResetPassword(ctx context.Context, request generated.RoutesResetPasswordRequestObject) (generated.RoutesResetPasswordResponseObject, error) {
+	return h.AuthController.RoutesResetPassword(ctx, request)
+}
+
+// RoutesSignup delegates to AuthController
+func (h *Handler) RoutesSignup(ctx context.Context, request generated.RoutesSignupRequestObject) (generated.RoutesSignupResponseObject, error) {
+	return h.AuthController.RoutesSignup(ctx, request)
+}
+
+// RoutesList delegates to SessionController
+func (h *Handler) RoutesList(ctx context.Context, request generated.RoutesListRequestObject) (generated.RoutesListResponseObject, error) {
+	return h.SessionController.RoutesList(ctx, request)
+}
+
+// RoutesStart delegates to SessionController
+func (h *Handler) RoutesStart(ctx context.Context, request generated.RoutesStartRequestObject) (generated.RoutesStartResponseObject, error) {
+	return h.SessionController.RoutesStart(ctx, request)
+}
+
+// RoutesDelete delegates to SessionController
+func (h *Handler) RoutesDelete(ctx context.Context, request generated.RoutesDeleteRequestObject) (generated.RoutesDeleteResponseObject, error) {
+	return h.SessionController.RoutesDelete(ctx, request)
+}
+
+// RoutesGet delegates to SessionController
+func (h *Handler) RoutesGet(ctx context.Context, request generated.RoutesGetRequestObject) (generated.RoutesGetResponseObject, error) {
+	return h.SessionController.RoutesGet(ctx, request)
+}
+
+// RoutesUpdate delegates to SessionController
+func (h *Handler) RoutesUpdate(ctx context.Context, request generated.RoutesUpdateRequestObject) (generated.RoutesUpdateResponseObject, error) {
+	return h.SessionController.RoutesUpdate(ctx, request)
+}
+
+// RoutesPause delegates to SessionController
+func (h *Handler) RoutesPause(ctx context.Context, request generated.RoutesPauseRequestObject) (generated.RoutesPauseResponseObject, error) {
+	return h.SessionController.RoutesPause(ctx, request)
+}
+
+// RoutesResume delegates to SessionController
+func (h *Handler) RoutesResume(ctx context.Context, request generated.RoutesResumeRequestObject) (generated.RoutesResumeResponseObject, error) {
+	return h.SessionController.RoutesResume(ctx, request)
+}
+
+// RoutesStop delegates to SessionController
+func (h *Handler) RoutesStop(ctx context.Context, request generated.RoutesStopRequestObject) (generated.RoutesStopResponseObject, error) {
+	return h.SessionController.RoutesStop(ctx, request)
+}

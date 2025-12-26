@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { RoutesForgotPasswordData, RoutesForgotPasswordErrors, RoutesForgotPasswordResponses, RoutesLoginData, RoutesLoginErrors, RoutesLoginResponses, RoutesLogoutData, RoutesLogoutErrors, RoutesLogoutResponses, RoutesMeData, RoutesMeErrors, RoutesMeResponses, RoutesRefreshData, RoutesRefreshErrors, RoutesRefreshResponses, RoutesResetPasswordData, RoutesResetPasswordErrors, RoutesResetPasswordResponses, RoutesSignupData, RoutesSignupErrors, RoutesSignupResponses } from './types.gen';
+import type { RoutesDeleteData, RoutesDeleteErrors, RoutesDeleteResponses, RoutesForgotPasswordData, RoutesForgotPasswordErrors, RoutesForgotPasswordResponses, RoutesGetData, RoutesGetErrors, RoutesGetResponses, RoutesListData, RoutesListErrors, RoutesListResponses, RoutesLoginData, RoutesLoginErrors, RoutesLoginResponses, RoutesLogoutData, RoutesLogoutErrors, RoutesLogoutResponses, RoutesMeData, RoutesMeErrors, RoutesMeResponses, RoutesPauseData, RoutesPauseErrors, RoutesPauseResponses, RoutesRefreshData, RoutesRefreshErrors, RoutesRefreshResponses, RoutesResetPasswordData, RoutesResetPasswordErrors, RoutesResetPasswordResponses, RoutesResumeData, RoutesResumeErrors, RoutesResumeResponses, RoutesSignupData, RoutesSignupErrors, RoutesSignupResponses, RoutesStartData, RoutesStartErrors, RoutesStartResponses, RoutesStopData, RoutesStopErrors, RoutesStopResponses, RoutesUpdateData, RoutesUpdateErrors, RoutesUpdateResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -80,3 +80,50 @@ export const routesSignup = <ThrowOnError extends boolean = false>(options: Opti
         ...options.headers
     }
 });
+
+/**
+ * 세션 목록 조회
+ */
+export const routesList = <ThrowOnError extends boolean = false>(options: Options<RoutesListData, ThrowOnError>) => (options.client ?? client).get<RoutesListResponses, RoutesListErrors, ThrowOnError>({ url: '/v1/sessions', ...options });
+
+/**
+ * 새 세션 시작
+ */
+export const routesStart = <ThrowOnError extends boolean = false>(options: Options<RoutesStartData, ThrowOnError>) => (options.client ?? client).post<RoutesStartResponses, RoutesStartErrors, ThrowOnError>({ url: '/v1/sessions/start', ...options });
+
+/**
+ * 세션 삭제
+ */
+export const routesDelete = <ThrowOnError extends boolean = false>(options: Options<RoutesDeleteData, ThrowOnError>) => (options.client ?? client).delete<RoutesDeleteResponses, RoutesDeleteErrors, ThrowOnError>({ url: '/v1/sessions/{id}', ...options });
+
+/**
+ * 세션 상세 조회
+ */
+export const routesGet = <ThrowOnError extends boolean = false>(options: Options<RoutesGetData, ThrowOnError>) => (options.client ?? client).get<RoutesGetResponses, RoutesGetErrors, ThrowOnError>({ url: '/v1/sessions/{id}', ...options });
+
+/**
+ * 세션 메타데이터 업데이트
+ */
+export const routesUpdate = <ThrowOnError extends boolean = false>(options: Options<RoutesUpdateData, ThrowOnError>) => (options.client ?? client).put<RoutesUpdateResponses, RoutesUpdateErrors, ThrowOnError>({
+    url: '/v1/sessions/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 세션 일시정지
+ */
+export const routesPause = <ThrowOnError extends boolean = false>(options: Options<RoutesPauseData, ThrowOnError>) => (options.client ?? client).patch<RoutesPauseResponses, RoutesPauseErrors, ThrowOnError>({ url: '/v1/sessions/{id}/pause', ...options });
+
+/**
+ * 세션 재개
+ */
+export const routesResume = <ThrowOnError extends boolean = false>(options: Options<RoutesResumeData, ThrowOnError>) => (options.client ?? client).patch<RoutesResumeResponses, RoutesResumeErrors, ThrowOnError>({ url: '/v1/sessions/{id}/resume', ...options });
+
+/**
+ * 세션 종료
+ */
+export const routesStop = <ThrowOnError extends boolean = false>(options: Options<RoutesStopData, ThrowOnError>) => (options.client ?? client).post<RoutesStopResponses, RoutesStopErrors, ThrowOnError>({ url: '/v1/sessions/{id}/stop', ...options });

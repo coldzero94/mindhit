@@ -60,9 +60,9 @@ stateDiagram-v2
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 3.1 | Session 서비스 구현 | ⬜ |
-| 3.2 | Session 컨트롤러 구현 | ⬜ |
-| 3.3 | Session API 테스트 | ⬜ |
+| 3.1 | Session 서비스 구현 | ✅ |
+| 3.2 | Session 컨트롤러 구현 | ✅ |
+| 3.3 | Session API 테스트 | ✅ |
 
 ---
 
@@ -74,8 +74,8 @@ stateDiagram-v2
 
 ### 체크리스트
 
-- [ ] **Session 서비스 작성**
-  - [ ] `internal/service/session_service.go`
+- [x] **Session 서비스 작성**
+  - [x] `internal/service/session_service.go`
 
     ```go
     package service
@@ -87,8 +87,6 @@ stateDiagram-v2
 
         "github.com/google/uuid"
         "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/highlight"
-        "github.com/mindhit/api/ent/pagevisit"
         "github.com/mindhit/api/ent/session"
         "github.com/mindhit/api/ent/user"
     )
@@ -107,9 +105,12 @@ stateDiagram-v2
         return &SessionService{client: client}
     }
 
+    // Session soft delete status value (uses "inactive" from SoftDeleteMixin)
+    const sessionStatusInactive = "inactive"
+
     // activeSessions returns a query filtered to active (non-deleted) sessions only
     func (s *SessionService) activeSessions() *ent.SessionQuery {
-        return s.client.Session.Query().Where(session.StatusNEQ("deleted"))
+        return s.client.Session.Query().Where(session.StatusNEQ(session.Status(sessionStatusInactive)))
     }
 
     // Start creates a new recording session
@@ -186,11 +187,9 @@ stateDiagram-v2
             Where(session.IDEQ(sessionID)).
             WithUser().
             WithPageVisits(func(q *ent.PageVisitQuery) {
-                q.Where(pagevisit.StatusEQ("active")).WithURL()
+                q.WithURL()
             }).
-            WithHighlights(func(q *ent.HighlightQuery) {
-                q.Where(highlight.StatusEQ("active"))
-            }).
+            WithHighlights().
             WithMindmap().
             Only(ctx)
 
@@ -237,7 +236,7 @@ stateDiagram-v2
         return update.Save(ctx)
     }
 
-    // Delete soft-deletes a session (sets status to "deleted")
+    // Delete soft-deletes a session by setting status to "inactive" and deleted_at timestamp.
     func (s *SessionService) Delete(ctx context.Context, sessionID, userID uuid.UUID) error {
         sess, err := s.getOwnedSession(ctx, sessionID, userID)
         if err != nil {
@@ -247,7 +246,7 @@ stateDiagram-v2
         now := time.Now()
         _, err = s.client.Session.
             UpdateOneID(sess.ID).
-            SetStatus("deleted").
+            SetStatus(session.Status(sessionStatusInactive)).
             SetDeletedAt(now).
             Save(ctx)
         return err
@@ -292,8 +291,8 @@ go build ./...
 
 ### 체크리스트
 
-- [ ] **Session 컨트롤러 작성**
-  - [ ] `internal/api/controller/session_controller.go`
+- [x] **Session 컨트롤러 작성**
+  - [x] `internal/controller/session_controller.go`
 
     > **Note**: 에러 응답은 `internal/controller/response` 헬퍼를 사용합니다.
     > 자세한 내용은 [09-error-handling.md](../09-error-handling.md)를 참조하세요.
@@ -564,7 +563,7 @@ go build ./...
     }
     ```
 
-- [ ] **main.go에 라우트 추가**
+- [x] **main.go에 라우트 추가** (OpenAPI 코드 생성 방식으로 구현)
 
   ```go
   // Session routes (protected)
@@ -593,7 +592,7 @@ go run ./cmd/server
 # 로그인하여 토큰 획득
 TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}' | jq -r '.token')
+  -d '{"email":"test@mindhit.dev","password":"test1234!"}' | jq -r '.token')
 
 # 세션 시작
 curl -X POST http://localhost:8080/v1/sessions/start \
@@ -610,51 +609,46 @@ E2E 테스트로 전체 플로우 검증
 
 ### 체크리스트
 
-- [ ] **E2E 테스트 시나리오**
+- [x] **E2E 테스트 시나리오** (단위 테스트 및 통합 테스트로 대체)
 
   ```bash
-  # 1. 사용자 생성
-  curl -X POST http://localhost:8080/v1/auth/signup \
-    -H "Content-Type: application/json" \
-    -d '{"email":"session-test@example.com","password":"password123"}'
-
-  # 2. 로그인
+  # 1. 로그인 (seed된 테스트 유저 사용)
   TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
     -H "Content-Type: application/json" \
-    -d '{"email":"session-test@example.com","password":"password123"}' | jq -r '.token')
+    -d '{"email":"test@mindhit.dev","password":"test1234!"}' | jq -r '.token')
 
-  # 3. 세션 시작
+  # 2. 세션 시작
   SESSION_ID=$(curl -s -X POST http://localhost:8080/v1/sessions/start \
     -H "Authorization: Bearer $TOKEN" | jq -r '.session.id')
   echo "Session ID: $SESSION_ID"
 
-  # 4. 세션 목록 조회
+  # 3. 세션 목록 조회
   curl -X GET http://localhost:8080/v1/sessions \
     -H "Authorization: Bearer $TOKEN"
 
-  # 5. 세션 상세 조회
+  # 4. 세션 상세 조회
   curl -X GET http://localhost:8080/v1/sessions/$SESSION_ID \
     -H "Authorization: Bearer $TOKEN"
 
-  # 6. 세션 제목/설명 업데이트
+  # 5. 세션 제목/설명 업데이트
   curl -X PUT http://localhost:8080/v1/sessions/$SESSION_ID \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d '{"title":"My Research Session","description":"Researching AI topics"}'
 
-  # 7. 세션 일시정지
+  # 6. 세션 일시정지
   curl -X PATCH http://localhost:8080/v1/sessions/$SESSION_ID/pause \
     -H "Authorization: Bearer $TOKEN"
 
-  # 8. 세션 재개
+  # 7. 세션 재개
   curl -X PATCH http://localhost:8080/v1/sessions/$SESSION_ID/resume \
     -H "Authorization: Bearer $TOKEN"
 
-  # 9. 세션 종료
+  # 8. 세션 종료
   curl -X POST http://localhost:8080/v1/sessions/$SESSION_ID/stop \
     -H "Authorization: Bearer $TOKEN"
 
-  # 10. 종료된 세션 상태 확인
+  # 9. 종료된 세션 상태 확인
   curl -X GET http://localhost:8080/v1/sessions/$SESSION_ID \
     -H "Authorization: Bearer $TOKEN"
   # status: "processing"
@@ -683,8 +677,9 @@ E2E 테스트로 전체 플로우 검증
   # 400 Bad Request (이미 processing 상태)
   ```
 
-- [ ] **자동화 테스트 작성** (선택)
-  - [ ] `test/e2e/session_test.go`
+- [x] **자동화 테스트 작성**
+  - [x] `internal/service/session_service_test.go` (단위 테스트)
+  - [x] `internal/controller/session_controller_test.go` (통합 테스트)
 
 ### 검증
 
@@ -696,15 +691,15 @@ E2E 테스트로 전체 플로우 검증
 
 ### 전체 검증 체크리스트
 
-- [ ] `POST /v1/sessions/start` - 세션 생성
-- [ ] `GET /v1/sessions` - 세션 목록
-- [ ] `GET /v1/sessions/:id` - 세션 상세
-- [ ] `PUT /v1/sessions/:id` - 세션 업데이트 (제목/설명)
-- [ ] `PATCH /v1/sessions/:id/pause` - 일시정지
-- [ ] `PATCH /v1/sessions/:id/resume` - 재개
-- [ ] `POST /v1/sessions/:id/stop` - 종료
-- [ ] `DELETE /v1/sessions/:id` - 삭제
-- [ ] 상태 전환 규칙 적용됨
+- [x] `POST /v1/sessions/start` - 세션 생성
+- [x] `GET /v1/sessions` - 세션 목록
+- [x] `GET /v1/sessions/:id` - 세션 상세
+- [x] `PUT /v1/sessions/:id` - 세션 업데이트 (제목/설명)
+- [x] `PATCH /v1/sessions/:id/pause` - 일시정지
+- [x] `PATCH /v1/sessions/:id/resume` - 재개
+- [x] `POST /v1/sessions/:id/stop` - 종료
+- [x] `DELETE /v1/sessions/:id` - 삭제
+- [x] 상태 전환 규칙 적용됨
 
 ### 테스트 요구사항
 
@@ -726,7 +721,7 @@ moonx backend:test -- -run "TestSession"
 | 항목 | 위치 |
 | ---- | ---- |
 | Session 서비스 | `internal/service/session_service.go` |
-| Session 컨트롤러 | `internal/api/controller/session_controller.go` |
+| Session 컨트롤러 | `internal/controller/session_controller.go` |
 | 테스트 | `internal/service/session_service_test.go` |
 
 ---

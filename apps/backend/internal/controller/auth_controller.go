@@ -1,3 +1,4 @@
+// Package controller provides HTTP handlers for the API.
 package controller
 
 import (
@@ -299,7 +300,7 @@ func (c *AuthController) RoutesLogout(ctx context.Context, request generated.Rou
 
 	// For stateless JWT, we just log the logout event
 	// In production, you might want to add the token to a blacklist
-	slog.Info("user logged out", "user_id", claims.UserID)
+	slog.InfoContext(ctx, "user logged out", "user_id", claims.UserID)
 
 	return generated.RoutesLogout200JSONResponse{
 		Message: "successfully logged out",

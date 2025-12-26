@@ -3860,6 +3860,8 @@ type SessionMutation struct {
 	id                 *uuid.UUID
 	created_at         *time.Time
 	updated_at         *time.Time
+	status             *session.Status
+	deleted_at         *time.Time
 	title              *string
 	description        *string
 	session_status     *session.SessionStatus
@@ -4058,6 +4060,91 @@ func (m *SessionMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err er
 // ResetUpdatedAt resets all changes to the "updated_at" field.
 func (m *SessionMutation) ResetUpdatedAt() {
 	m.updated_at = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *SessionMutation) SetStatus(s session.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *SessionMutation) Status() (r session.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the Session entity.
+// If the Session object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SessionMutation) OldStatus(ctx context.Context) (v session.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *SessionMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *SessionMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *SessionMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the Session entity.
+// If the Session object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SessionMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *SessionMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[session.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *SessionMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[session.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *SessionMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, session.FieldDeletedAt)
 }
 
 // SetTitle sets the "title" field.
@@ -4553,12 +4640,18 @@ func (m *SessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SessionMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 9)
 	if m.created_at != nil {
 		fields = append(fields, session.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, session.FieldUpdatedAt)
+	}
+	if m.status != nil {
+		fields = append(fields, session.FieldStatus)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, session.FieldDeletedAt)
 	}
 	if m.title != nil {
 		fields = append(fields, session.FieldTitle)
@@ -4587,6 +4680,10 @@ func (m *SessionMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case session.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case session.FieldStatus:
+		return m.Status()
+	case session.FieldDeletedAt:
+		return m.DeletedAt()
 	case session.FieldTitle:
 		return m.Title()
 	case session.FieldDescription:
@@ -4610,6 +4707,10 @@ func (m *SessionMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldCreatedAt(ctx)
 	case session.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case session.FieldStatus:
+		return m.OldStatus(ctx)
+	case session.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
 	case session.FieldTitle:
 		return m.OldTitle(ctx)
 	case session.FieldDescription:
@@ -4642,6 +4743,20 @@ func (m *SessionMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUpdatedAt(v)
+		return nil
+	case session.FieldStatus:
+		v, ok := value.(session.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case session.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
 		return nil
 	case session.FieldTitle:
 		v, ok := value.(string)
@@ -4708,6 +4823,9 @@ func (m *SessionMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *SessionMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(session.FieldDeletedAt) {
+		fields = append(fields, session.FieldDeletedAt)
+	}
 	if m.FieldCleared(session.FieldTitle) {
 		fields = append(fields, session.FieldTitle)
 	}
@@ -4731,6 +4849,9 @@ func (m *SessionMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *SessionMutation) ClearField(name string) error {
 	switch name {
+	case session.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
 	case session.FieldTitle:
 		m.ClearTitle()
 		return nil
@@ -4753,6 +4874,12 @@ func (m *SessionMutation) ResetField(name string) error {
 		return nil
 	case session.FieldUpdatedAt:
 		m.ResetUpdatedAt()
+		return nil
+	case session.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case session.FieldDeletedAt:
+		m.ResetDeletedAt()
 		return nil
 	case session.FieldTitle:
 		m.ResetTitle()

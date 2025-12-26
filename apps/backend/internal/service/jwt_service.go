@@ -9,13 +9,16 @@ import (
 	"github.com/google/uuid"
 )
 
+// TokenType represents the type of JWT token.
 type TokenType string
 
+// Token type constants
 const (
 	AccessToken  TokenType = "access"
 	RefreshToken TokenType = "refresh"
 )
 
+// JWTService handles JWT token generation and validation.
 type JWTService struct {
 	secret            []byte
 	accessExpiration  time.Duration
@@ -23,18 +26,21 @@ type JWTService struct {
 	isDev             bool
 }
 
+// Claims represents the JWT token claims.
 type Claims struct {
 	UserID    uuid.UUID `json:"user_id"`
 	TokenType TokenType `json:"token_type"`
 	jwt.RegisteredClaims
 }
 
+// TokenPair contains both access and refresh tokens.
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"` // Access token expiry in seconds
 }
 
+// NewJWTService creates a new JWTService with the given secret.
 func NewJWTService(secret string) *JWTService {
 	isDev := os.Getenv("ENVIRONMENT") != "production"
 	return &JWTService{

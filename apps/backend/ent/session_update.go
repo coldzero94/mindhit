@@ -40,6 +40,40 @@ func (_u *SessionUpdate) SetUpdatedAt(v time.Time) *SessionUpdate {
 	return _u
 }
 
+// SetStatus sets the "status" field.
+func (_u *SessionUpdate) SetStatus(v session.Status) *SessionUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_u *SessionUpdate) SetNillableStatus(v *session.Status) *SessionUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
+	}
+	return _u
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_u *SessionUpdate) SetDeletedAt(v time.Time) *SessionUpdate {
+	_u.mutation.SetDeletedAt(v)
+	return _u
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_u *SessionUpdate) SetNillableDeletedAt(v *time.Time) *SessionUpdate {
+	if v != nil {
+		_u.SetDeletedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (_u *SessionUpdate) ClearDeletedAt() *SessionUpdate {
+	_u.mutation.ClearDeletedAt()
+	return _u
+}
+
 // SetTitle sets the "title" field.
 func (_u *SessionUpdate) SetTitle(v string) *SessionUpdate {
 	_u.mutation.SetTitle(v)
@@ -321,6 +355,11 @@ func (_u *SessionUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *SessionUpdate) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := session.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Session.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.SessionStatus(); ok {
 		if err := session.SessionStatusValidator(v); err != nil {
 			return &ValidationError{Name: "session_status", err: fmt.Errorf(`ent: validator failed for field "Session.session_status": %w`, err)}
@@ -346,6 +385,15 @@ func (_u *SessionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(session.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.Status(); ok {
+		_spec.SetField(session.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.DeletedAt(); ok {
+		_spec.SetField(session.FieldDeletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeletedAtCleared() {
+		_spec.ClearField(session.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(session.FieldTitle, field.TypeString, value)
@@ -587,6 +635,40 @@ type SessionUpdateOne struct {
 // SetUpdatedAt sets the "updated_at" field.
 func (_u *SessionUpdateOne) SetUpdatedAt(v time.Time) *SessionUpdateOne {
 	_u.mutation.SetUpdatedAt(v)
+	return _u
+}
+
+// SetStatus sets the "status" field.
+func (_u *SessionUpdateOne) SetStatus(v session.Status) *SessionUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_u *SessionUpdateOne) SetNillableStatus(v *session.Status) *SessionUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
+	}
+	return _u
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_u *SessionUpdateOne) SetDeletedAt(v time.Time) *SessionUpdateOne {
+	_u.mutation.SetDeletedAt(v)
+	return _u
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_u *SessionUpdateOne) SetNillableDeletedAt(v *time.Time) *SessionUpdateOne {
+	if v != nil {
+		_u.SetDeletedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (_u *SessionUpdateOne) ClearDeletedAt() *SessionUpdateOne {
+	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -884,6 +966,11 @@ func (_u *SessionUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *SessionUpdateOne) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := session.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Session.status": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.SessionStatus(); ok {
 		if err := session.SessionStatusValidator(v); err != nil {
 			return &ValidationError{Name: "session_status", err: fmt.Errorf(`ent: validator failed for field "Session.session_status": %w`, err)}
@@ -926,6 +1013,15 @@ func (_u *SessionUpdateOne) sqlSave(ctx context.Context) (_node *Session, err er
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(session.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.Status(); ok {
+		_spec.SetField(session.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.DeletedAt(); ok {
+		_spec.SetField(session.FieldDeletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeletedAtCleared() {
+		_spec.ClearField(session.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(session.FieldTitle, field.TypeString, value)

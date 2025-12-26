@@ -54,6 +54,34 @@ func (_c *SessionCreate) SetNillableUpdatedAt(v *time.Time) *SessionCreate {
 	return _c
 }
 
+// SetStatus sets the "status" field.
+func (_c *SessionCreate) SetStatus(v session.Status) *SessionCreate {
+	_c.mutation.SetStatus(v)
+	return _c
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_c *SessionCreate) SetNillableStatus(v *session.Status) *SessionCreate {
+	if v != nil {
+		_c.SetStatus(*v)
+	}
+	return _c
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_c *SessionCreate) SetDeletedAt(v time.Time) *SessionCreate {
+	_c.mutation.SetDeletedAt(v)
+	return _c
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_c *SessionCreate) SetNillableDeletedAt(v *time.Time) *SessionCreate {
+	if v != nil {
+		_c.SetDeletedAt(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *SessionCreate) SetTitle(v string) *SessionCreate {
 	_c.mutation.SetTitle(v)
@@ -256,6 +284,10 @@ func (_c *SessionCreate) defaults() {
 		v := session.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.Status(); !ok {
+		v := session.DefaultStatus
+		_c.mutation.SetStatus(v)
+	}
 	if _, ok := _c.mutation.SessionStatus(); !ok {
 		v := session.DefaultSessionStatus
 		_c.mutation.SetSessionStatus(v)
@@ -277,6 +309,14 @@ func (_c *SessionCreate) check() error {
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Session.updated_at"`)}
+	}
+	if _, ok := _c.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Session.status"`)}
+	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := session.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Session.status": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.SessionStatus(); !ok {
 		return &ValidationError{Name: "session_status", err: errors.New(`ent: missing required field "Session.session_status"`)}
@@ -334,6 +374,14 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.UpdatedAt(); ok {
 		_spec.SetField(session.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if value, ok := _c.mutation.Status(); ok {
+		_spec.SetField(session.FieldStatus, field.TypeEnum, value)
+		_node.Status = value
+	}
+	if value, ok := _c.mutation.DeletedAt(); ok {
+		_spec.SetField(session.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(session.FieldTitle, field.TypeString, value)

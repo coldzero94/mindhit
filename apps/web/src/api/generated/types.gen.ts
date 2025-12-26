@@ -93,6 +93,47 @@ export type CommonValidationError = {
     };
 };
 
+/**
+ * 세션 정보
+ */
+export type SessionSession = {
+    id: string;
+    title?: string;
+    description?: string;
+    session_status: SessionSessionStatus;
+    started_at: string;
+    ended_at?: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * 세션 목록 응답
+ */
+export type SessionSessionListResponse = {
+    sessions: Array<SessionSession>;
+};
+
+/**
+ * 세션 응답
+ */
+export type SessionSessionResponse = {
+    session: SessionSession;
+};
+
+/**
+ * 세션 상태
+ */
+export type SessionSessionStatus = 'recording' | 'paused' | 'processing' | 'completed' | 'failed';
+
+/**
+ * 세션 업데이트 요청
+ */
+export type SessionUpdateSessionRequest = {
+    title?: string;
+    description?: string;
+};
+
 export type RoutesForgotPasswordData = {
     body: AuthForgotPasswordRequest;
     path?: never;
@@ -290,3 +331,302 @@ export type RoutesSignupResponses = {
 };
 
 export type RoutesSignupResponse = RoutesSignupResponses[keyof RoutesSignupResponses];
+
+export type RoutesListData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path?: never;
+    query?: {
+        limit?: number;
+        offset?: number;
+    };
+    url: '/v1/sessions';
+};
+
+export type RoutesListErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+};
+
+export type RoutesListError = RoutesListErrors[keyof RoutesListErrors];
+
+export type RoutesListResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: SessionSessionListResponse;
+};
+
+export type RoutesListResponse = RoutesListResponses[keyof RoutesListResponses];
+
+export type RoutesStartData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/sessions/start';
+};
+
+export type RoutesStartErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+};
+
+export type RoutesStartError = RoutesStartErrors[keyof RoutesStartErrors];
+
+export type RoutesStartResponses = {
+    /**
+     * The request has succeeded and a new resource has been created as a result.
+     */
+    201: SessionSessionResponse;
+};
+
+export type RoutesStartResponse = RoutesStartResponses[keyof RoutesStartResponses];
+
+export type RoutesDeleteData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}';
+};
+
+export type RoutesDeleteErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesDeleteError = RoutesDeleteErrors[keyof RoutesDeleteErrors];
+
+export type RoutesDeleteResponses = {
+    /**
+     * There is no content to send for this request, but the headers may be useful.
+     */
+    204: void;
+};
+
+export type RoutesDeleteResponse = RoutesDeleteResponses[keyof RoutesDeleteResponses];
+
+export type RoutesGetData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}';
+};
+
+export type RoutesGetErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesGetError = RoutesGetErrors[keyof RoutesGetErrors];
+
+export type RoutesGetResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: SessionSessionResponse;
+};
+
+export type RoutesGetResponse = RoutesGetResponses[keyof RoutesGetResponses];
+
+export type RoutesUpdateData = {
+    body: SessionUpdateSessionRequest;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}';
+};
+
+export type RoutesUpdateErrors = {
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesUpdateError = RoutesUpdateErrors[keyof RoutesUpdateErrors];
+
+export type RoutesUpdateResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: SessionSessionResponse;
+};
+
+export type RoutesUpdateResponse = RoutesUpdateResponses[keyof RoutesUpdateResponses];
+
+export type RoutesPauseData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}/pause';
+};
+
+export type RoutesPauseErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: CommonErrorResponse;
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesPauseError = RoutesPauseErrors[keyof RoutesPauseErrors];
+
+export type RoutesPauseResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: SessionSessionResponse;
+};
+
+export type RoutesPauseResponse = RoutesPauseResponses[keyof RoutesPauseResponses];
+
+export type RoutesResumeData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}/resume';
+};
+
+export type RoutesResumeErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: CommonErrorResponse;
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesResumeError = RoutesResumeErrors[keyof RoutesResumeErrors];
+
+export type RoutesResumeResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: SessionSessionResponse;
+};
+
+export type RoutesResumeResponse = RoutesResumeResponses[keyof RoutesResumeResponses];
+
+export type RoutesStopData = {
+    body?: never;
+    headers: {
+        authorization: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/v1/sessions/{id}/stop';
+};
+
+export type RoutesStopErrors = {
+    /**
+     * The server could not understand the request due to invalid syntax.
+     */
+    400: CommonErrorResponse;
+    /**
+     * Access is unauthorized.
+     */
+    401: CommonErrorResponse;
+    /**
+     * Access is forbidden.
+     */
+    403: CommonErrorResponse;
+    /**
+     * The server cannot find the requested resource.
+     */
+    404: CommonErrorResponse;
+};
+
+export type RoutesStopError = RoutesStopErrors[keyof RoutesStopErrors];
+
+export type RoutesStopResponses = {
+    /**
+     * The request has succeeded.
+     */
+    200: SessionSessionResponse;
+};
+
+export type RoutesStopResponse = RoutesStopResponses[keyof RoutesStopResponses];

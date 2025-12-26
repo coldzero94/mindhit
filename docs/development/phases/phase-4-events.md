@@ -622,7 +622,7 @@ go run ./cmd/server
 # 로그인
 TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}' | jq -r '.token')
+  -d '{"email":"test@mindhit.dev","password":"test1234!"}' | jq -r '.token')
 
 # 세션 시작
 SESSION_ID=$(curl -s -X POST http://localhost:8080/v1/sessions/start \

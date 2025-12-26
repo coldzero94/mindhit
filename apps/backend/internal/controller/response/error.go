@@ -1,3 +1,4 @@
+// Package response provides standardized HTTP error response helpers.
 package response
 
 import (
@@ -47,7 +48,7 @@ type ValidationErrorResponse struct {
 }
 
 // BadRequest sends a 400 Bad Request response
-func BadRequest(c *gin.Context, message string, details interface{}) {
+func BadRequest(c *gin.Context, message string, _ interface{}) {
 	c.JSON(http.StatusBadRequest, ErrorResponse{
 		Error: ErrorBody{
 			Code:    CodeBadRequest,

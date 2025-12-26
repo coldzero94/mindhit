@@ -23,3 +23,10 @@ linters-settings:
 
 issues:
   exclude-use-default: false
+  exclude-rules:
+    - path: ent/schema/
+      linters:
+        - revive
+    - path: internal/generated/
+      linters:
+        - revive

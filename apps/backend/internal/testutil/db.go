@@ -1,3 +1,4 @@
+// Package testutil provides testing utilities for database operations.
 package testutil
 
 import (
@@ -6,7 +7,7 @@ import (
 	"testing"
 
 	"entgo.io/ent/dialect"
-	_ "github.com/lib/pq"
+	_ "github.com/lib/pq" // PostgreSQL driver
 
 	"github.com/mindhit/api/ent"
 )
