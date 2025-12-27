@@ -41,14 +41,14 @@ apps/backend/
 ├── cmd/
 │   ├── api/main.go       # API 서버 엔트리포인트
 │   └── worker/main.go    # Worker 서버 엔트리포인트
-├── internal/
-│   ├── api/              # API 전용 코드 (controller, middleware, router)
-│   └── worker/           # Worker 전용 코드 (handler)
-├── pkg/                  # 공유 코드
-│   ├── config/           # 설정
-│   ├── ent/              # Ent ORM 스키마
+├── internal/             # 비공개 코드
+│   ├── controller/       # HTTP 컨트롤러
 │   ├── service/          # 비즈니스 로직
-│   └── infra/            # 인프라 (queue, ai, etc.)
+│   ├── infrastructure/   # 인프라 (config, logger, queue)
+│   ├── worker/           # Worker 핸들러
+│   ├── testutil/         # 테스트 유틸리티 (fixture 등)
+│   └── generated/        # oapi-codegen 생성 코드
+├── ent/                  # Ent ORM 스키마 & 생성 코드
 ├── Dockerfile.api
 ├── Dockerfile.worker
 └── go.mod

@@ -757,31 +757,25 @@ mindhit/
 │   │   │   ├── api/main.go     # API 서버 엔트리포인트
 │   │   │   └── worker/main.go  # Worker 엔트리포인트
 │   │   ├── internal/
-│   │   │   ├── api/            # API 전용 코드
-│   │   │   │   ├── controller/
-│   │   │   │   ├── middleware/
-│   │   │   │   └── router/
-│   │   │   └── worker/         # Worker 전용 코드
-│   │   │       └── handler/
-│   │   │           ├── ai_processing.go
-│   │   │           ├── tag_extraction.go
-│   │   │           └── email_report.go
-│   │   ├── pkg/                # 공유 코드 (API + Worker 공통)
-│   │   │   ├── ent/            # Ent ORM 스키마 & 생성 코드
-│   │   │   │   ├── schema/
-│   │   │   │   └── migrate/
+│   │   │   ├── controller/     # HTTP 컨트롤러
 │   │   │   ├── service/        # 비즈니스 로직
 │   │   │   │   ├── auth.go
 │   │   │   │   ├── session.go
+│   │   │   │   ├── event.go
 │   │   │   │   ├── url.go
-│   │   │   │   ├── ai.go
-│   │   │   │   └── mindmap.go
-│   │   │   └── infra/          # 인프라 레이어
-│   │   │       ├── config/
-│   │   │       ├── database/
-│   │   │       ├── redis/
-│   │   │       ├── queue/      # Asynq 클라이언트
-│   │   │       └── ai/         # AI Provider
+│   │   │   │   └── jwt.go
+│   │   │   ├── infrastructure/ # 인프라 레이어
+│   │   │   │   ├── config/
+│   │   │   │   ├── logger/
+│   │   │   │   ├── middleware/
+│   │   │   │   └── queue/      # Asynq 클라이언트
+│   │   │   ├── worker/         # Worker 전용 코드
+│   │   │   │   └── handler/
+│   │   │   ├── testutil/       # 테스트 유틸리티 (fixture 등)
+│   │   │   └── generated/      # oapi-codegen 생성 코드
+│   │   ├── ent/                # Ent ORM 스키마 & 생성 코드
+│   │   │   ├── schema/
+│   │   │   └── migrate/
 │   │   ├── Dockerfile.api
 │   │   ├── Dockerfile.worker
 │   │   ├── go.mod
@@ -842,16 +836,13 @@ apps/backend/
 │   ├── api/main.go
 │   └── worker/main.go
 ├── internal/                   # 비공개 코드 (외부 import 불가)
-│   ├── api/                    # API 서버 전용
-│   │   ├── controller/
-│   │   ├── middleware/
-│   │   └── router/
-│   └── worker/                 # Worker 전용
-│       └── handler/
-├── pkg/                        # 공개 코드 (내부 공유)
-│   ├── ent/                    # ORM
+│   ├── controller/             # HTTP 컨트롤러
 │   ├── service/                # 비즈니스 로직
-│   └── infra/                  # 인프라
+│   ├── infrastructure/         # 인프라 (config, logger, queue)
+│   ├── worker/                 # Worker 핸들러
+│   ├── testutil/               # 테스트 유틸리티 (fixture 등)
+│   └── generated/              # oapi-codegen 생성 코드
+├── ent/                        # Ent ORM 스키마 & 생성 코드
 ├── Dockerfile.api
 ├── Dockerfile.worker
 └── go.mod                      # 단일 Go 모듈
@@ -866,6 +857,8 @@ apps/backend/
 | `internal/controller/` | HTTP 핸들러 | API만 |
 | `internal/service/` | 비즈니스 로직 | 공유 |
 | `internal/infrastructure/` | DB, Redis, Queue, AI 클라이언트, 미들웨어 | 공유 |
+| `internal/worker/` | Worker 핸들러 | Worker만 |
+| `internal/testutil/` | 테스트 유틸리티 (fixture 등) | 테스트 |
 | `ent/` | Ent ORM 스키마 & 생성 코드 | 공유 |
 
 ---

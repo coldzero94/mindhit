@@ -296,16 +296,18 @@ apps/backend/
 │   ├── api/              # 소문자, 하이픈 없음
 │   └── worker/
 ├── internal/
-│   ├── api/
-│   │   ├── controller/   # 소문자, 단수형
-│   │   ├── middleware/
-│   │   └── router/
-│   └── worker/
-│       └── handler/
-└── pkg/
-    ├── service/          # 소문자, 단수형
-    └── infra/
-        └── ai/
+│   ├── controller/       # 소문자, 단수형
+│   ├── service/          # 소문자, 단수형
+│   ├── infrastructure/
+│   │   ├── config/
+│   │   ├── logger/
+│   │   └── queue/
+│   ├── worker/
+│   │   └── handler/
+│   ├── testutil/         # 테스트 유틸리티
+│   └── generated/
+└── ent/
+    └── schema/
 ```
 
 ### TypeScript

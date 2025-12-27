@@ -780,7 +780,7 @@ go build ./...
   ```
 
 - [ ] **Config 업데이트**
-  - [ ] `pkg/config/config.go`에 AI 설정 추가
+  - [ ] `internal/infrastructure/config/config.go`에 AI 설정 추가
 
     ```go
     type Config struct {
