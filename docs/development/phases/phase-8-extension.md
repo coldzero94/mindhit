@@ -46,11 +46,11 @@ flowchart TB
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 8.1 | Extension 프로젝트 설정 | ⬜ |
-| 8.2 | Side Panel UI | ⬜ |
-| 8.3 | 인증 연동 | ⬜ |
-| 8.4 | 이벤트 수집 | ⬜ |
-| 8.5 | 배치 전송 | ⬜ |
+| 8.1 | Extension 프로젝트 설정 | ✅ |
+| 8.2 | Side Panel UI | ✅ |
+| 8.3 | 인증 연동 | ✅ |
+| 8.4 | 이벤트 수집 | ✅ |
+| 8.5 | 배치 전송 | ✅ |
 
 ---
 
@@ -58,7 +58,7 @@ flowchart TB
 
 ### 체크리스트
 
-- [ ] **프로젝트 생성**
+- [x] **프로젝트 생성**
 
   ```bash
   cd apps
@@ -67,15 +67,22 @@ flowchart TB
   pnpm init
   ```
 
-- [ ] **의존성 설치**
+- [x] **의존성 설치**
 
   ```bash
+  # 개발 의존성
   pnpm add -D typescript vite @crxjs/vite-plugin@beta
-  pnpm add -D @types/chrome
-  pnpm add zustand
+  pnpm add -D @vitejs/plugin-react
+  pnpm add -D @types/chrome @types/react @types/react-dom
+  pnpm add -D @tailwindcss/vite @tailwindcss/postcss
+  pnpm add -D vitest happy-dom @testing-library/react @testing-library/dom
+
+  # 런타임 의존성
+  pnpm add react react-dom zustand
+  pnpm add tailwindcss postcss autoprefixer
   ```
 
-- [ ] **프로젝트 구조**
+- [x] **프로젝트 구조**
 
   ```
   apps/extension/
@@ -112,7 +119,7 @@ flowchart TB
   └── package.json
   ```
 
-- [ ] **manifest.json**
+- [x] **manifest.json**
 
   ```json
   {
@@ -155,28 +162,34 @@ flowchart TB
   }
   ```
 
-- [ ] **vite.config.ts**
+- [x] **vite.config.ts**
 
   ```typescript
-  import { defineConfig } from 'vite';
-  import { crx } from '@crxjs/vite-plugin';
-  import manifest from './manifest.json';
+  import { defineConfig } from "vite";
+  import { crx } from "@crxjs/vite-plugin";
+  import react from "@vitejs/plugin-react";
+  import tailwindcss from "@tailwindcss/vite";
+  import { resolve } from "path";
+  import manifest from "./manifest.json";
 
   export default defineConfig({
-    plugins: [
-      crx({ manifest }),
-    ],
+    plugins: [react(), tailwindcss(), crx({ manifest })],
+    resolve: {
+      alias: {
+        "@": resolve(__dirname, "src"),
+      },
+    },
     build: {
       rollupOptions: {
         input: {
-          sidepanel: 'src/sidepanel/index.html',
+          sidepanel: "src/sidepanel/index.html",
         },
       },
     },
   });
   ```
 
-- [ ] **tsconfig.json**
+- [x] **tsconfig.json**
 
   ```json
   {
@@ -186,7 +199,7 @@ flowchart TB
       "lib": ["ES2020", "DOM", "DOM.Iterable"],
       "module": "ESNext",
       "skipLibCheck": true,
-      "moduleResolution": "bundler",
+      "moduleResolution": "Bundler",
       "allowImportingTsExtensions": true,
       "resolveJsonModule": true,
       "isolatedModules": true,
@@ -196,13 +209,36 @@ flowchart TB
       "noUnusedLocals": true,
       "noUnusedParameters": true,
       "noFallthroughCasesInSwitch": true,
-      "types": ["chrome"]
+      "types": ["chrome", "vite/client"],
+      "paths": {
+        "@/*": ["./src/*"]
+      }
     },
     "include": ["src"]
   }
   ```
 
-- [ ] **moon.yml**
+- [x] **vitest.config.ts** (테스트 설정)
+
+  ```typescript
+  import { defineConfig } from "vitest/config";
+  import { resolve } from "path";
+
+  export default defineConfig({
+    test: {
+      environment: "happy-dom",
+      globals: true,
+      setupFiles: ["./src/test/setup.ts"],
+    },
+    resolve: {
+      alias: {
+        "@": resolve(__dirname, "src"),
+      },
+    },
+  });
+  ```
+
+- [x] **moon.yml**
 
   ```yaml
   language: typescript
@@ -210,11 +246,11 @@ flowchart TB
 
   tasks:
     dev:
-      command: vite
+      command: pnpm dev
       local: true
 
     build:
-      command: vite build
+      command: pnpm build
       inputs:
         - "src/**/*"
         - "manifest.json"
@@ -223,8 +259,24 @@ flowchart TB
         - "dist"
 
     watch:
-      command: vite build --watch
+      command: pnpm watch
       local: true
+
+    test:
+      command: pnpm test
+      inputs:
+        - "src/**/*"
+
+    typecheck:
+      command: pnpm typecheck
+      inputs:
+        - "src/**/*"
+        - "tsconfig.json"
+
+    lint:
+      command: pnpm lint
+      inputs:
+        - "src/**/*"
   ```
 
 ### 검증
@@ -247,7 +299,7 @@ pnpm build
 
 ### 체크리스트
 
-- [ ] **Side Panel HTML**
+- [x] **Side Panel HTML**
   - [ ] `src/sidepanel/index.html`
 
     ```html
@@ -277,7 +329,7 @@ pnpm build
     </html>
     ```
 
-- [ ] **Side Panel Entry**
+- [x] **Side Panel Entry**
   - [ ] `src/sidepanel/index.tsx`
 
     ```tsx
@@ -291,17 +343,27 @@ pnpm build
     }
     ```
 
-- [ ] **스타일**
-  - [ ] `src/sidepanel/styles.css`
+- [x] **스타일**
+  - [x] `src/sidepanel/styles.css`
 
     ```css
-    @tailwind base;
-    @tailwind components;
-    @tailwind utilities;
+    /* Tailwind v4 문법 */
+    @import "tailwindcss";
 
-    /* 또는 기본 스타일 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      min-height: 100vh;
+    }
+
     .btn {
-      @apply px-4 py-2 rounded-lg font-medium transition-colors;
+      @apply px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
     }
     .btn-primary {
       @apply bg-blue-600 text-white hover:bg-blue-700;
@@ -312,18 +374,27 @@ pnpm build
     .btn-danger {
       @apply bg-red-600 text-white hover:bg-red-700;
     }
+    .input {
+      @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none;
+    }
     ```
 
-- [ ] **Session Store**
-  - [ ] `src/stores/session-store.ts`
+- [x] **Session Store**
+  - [x] `src/stores/session-store.ts`
 
     ```typescript
-    import { create } from 'zustand';
-    import { persist } from 'zustand/middleware';
+    import { create } from "zustand";
+    import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
 
     // Extension 로컬 상태 (idle: 세션 없음, recording: 기록 중, paused: 일시정지)
     // Backend 상태: recording, paused, processing, completed, failed
-    export type SessionStatus = 'idle' | 'recording' | 'paused' | 'processing' | 'completed' | 'failed';
+    export type SessionStatus =
+      | "idle"
+      | "recording"
+      | "paused"
+      | "processing"
+      | "completed"
+      | "failed";
 
     interface SessionState {
       sessionId: string | null;
@@ -343,11 +414,26 @@ pnpm build
       reset: () => void;
     }
 
+    // Chrome storage adapter for Zustand persist
+    const chromeStorage: StateStorage = {
+      getItem: async (name: string): Promise<string | null> => {
+        const result = await chrome.storage.local.get(name);
+        const value = result[name];
+        return typeof value === "string" ? value : null;
+      },
+      setItem: async (name: string, value: string): Promise<void> => {
+        await chrome.storage.local.set({ [name]: value });
+      },
+      removeItem: async (name: string): Promise<void> => {
+        await chrome.storage.local.remove(name);
+      },
+    };
+
     export const useSessionStore = create<SessionState>()(
       persist(
         (set, get) => ({
           sessionId: null,
-          status: 'idle',
+          status: "idle",
           startedAt: null,
           pageCount: 0,
           highlightCount: 0,
@@ -356,21 +442,21 @@ pnpm build
           startSession: (sessionId) =>
             set({
               sessionId,
-              status: 'recording',
+              status: "recording",
               startedAt: Date.now(),
               pageCount: 0,
               highlightCount: 0,
               elapsedSeconds: 0,
             }),
 
-          pauseSession: () => set({ status: 'paused' }),
+          pauseSession: () => set({ status: "paused" }),
 
-          resumeSession: () => set({ status: 'recording' }),
+          resumeSession: () => set({ status: "recording" }),
 
           stopSession: () =>
             set({
               sessionId: null,
-              status: 'idle',
+              status: "idle",
               startedAt: null,
             }),
 
@@ -382,7 +468,7 @@ pnpm build
 
           updateElapsedTime: () => {
             const { startedAt, status } = get();
-            if (startedAt && status === 'recording') {
+            if (startedAt && status === "recording") {
               set({ elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000) });
             }
           },
@@ -390,7 +476,7 @@ pnpm build
           reset: () =>
             set({
               sessionId: null,
-              status: 'idle',
+              status: "idle",
               startedAt: null,
               pageCount: 0,
               highlightCount: 0,
@@ -398,13 +484,14 @@ pnpm build
             }),
         }),
         {
-          name: 'mindhit-session',
+          name: "mindhit-session",
+          storage: createJSONStorage(() => chromeStorage),
         }
       )
     );
     ```
 
-- [ ] **Main App Component**
+- [x] **Main App Component**
   - [ ] `src/sidepanel/App.tsx`
 
     ```tsx
@@ -449,7 +536,7 @@ pnpm build
     }
     ```
 
-- [ ] **Session Control Component**
+- [x] **Session Control Component**
   - [ ] `src/sidepanel/components/SessionControl.tsx`
 
     ```tsx
@@ -591,7 +678,7 @@ pnpm build
     }
     ```
 
-- [ ] **Session Stats Component**
+- [x] **Session Stats Component**
   - [ ] `src/sidepanel/components/SessionStats.tsx`
 
     ```tsx
@@ -632,7 +719,7 @@ pnpm build
     }
     ```
 
-- [ ] **Login Prompt Component**
+- [x] **Login Prompt Component**
   - [ ] `src/sidepanel/components/LoginPrompt.tsx`
 
     ```tsx
@@ -750,17 +837,13 @@ pnpm build
 
 ### 체크리스트
 
-- [ ] **Auth Store**
-  - [ ] `src/stores/auth-store.ts`
+- [x] **Auth Store**
+  - [x] `src/stores/auth-store.ts`
 
     ```typescript
-    import { create } from 'zustand';
-    import { persist } from 'zustand/middleware';
-
-    interface User {
-      id: string;
-      email: string;
-    }
+    import { create } from "zustand";
+    import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
+    import type { User } from "@/types";
 
     interface AuthState {
       user: User | null;
@@ -770,41 +853,44 @@ pnpm build
       logout: () => void;
     }
 
+    // Chrome storage adapter for Zustand persist
+    const chromeStorage: StateStorage = {
+      getItem: async (name: string): Promise<string | null> => {
+        const result = await chrome.storage.local.get(name);
+        const value = result[name];
+        return typeof value === "string" ? value : null;
+      },
+      setItem: async (name: string, value: string): Promise<void> => {
+        await chrome.storage.local.set({ [name]: value });
+      },
+      removeItem: async (name: string): Promise<void> => {
+        await chrome.storage.local.remove(name);
+      },
+    };
+
     export const useAuthStore = create<AuthState>()(
       persist(
         (set) => ({
           user: null,
           token: null,
           isAuthenticated: false,
-          setAuth: (user, token) =>
-            set({ user, token, isAuthenticated: true }),
-          logout: () =>
-            set({ user: null, token: null, isAuthenticated: false }),
+          setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
+          logout: () => set({ user: null, token: null, isAuthenticated: false }),
         }),
         {
-          name: 'mindhit-auth',
-          storage: {
-            getItem: async (name) => {
-              const result = await chrome.storage.local.get(name);
-              return result[name] || null;
-            },
-            setItem: async (name, value) => {
-              await chrome.storage.local.set({ [name]: value });
-            },
-            removeItem: async (name) => {
-              await chrome.storage.local.remove(name);
-            },
-          },
+          name: "mindhit-auth",
+          storage: createJSONStorage(() => chromeStorage),
         }
       )
     );
     ```
 
-- [ ] **API Client**
-  - [ ] `src/lib/api.ts`
+- [x] **API Client**
+  - [x] `src/lib/api.ts`
 
     ```typescript
-    const API_BASE_URL = 'http://localhost:8080/v1';
+    // 환경변수로 API URL 설정 (빌드 시 주입)
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000/v1';
 
     interface AuthResponse {
       user: {
@@ -907,7 +993,7 @@ pnpm build
 
 ### 체크리스트
 
-- [ ] **이벤트 타입 정의**
+- [x] **이벤트 타입 정의**
   - [ ] `src/types/index.ts`
 
     ```typescript
@@ -961,7 +1047,7 @@ pnpm build
       | ClickEvent;
     ```
 
-- [ ] **Background Service Worker**
+- [x] **Background Service Worker**
   - [ ] `src/background/index.ts`
 
     ```typescript
@@ -1056,7 +1142,7 @@ pnpm build
         const { 'mindhit-auth': authData } = await chrome.storage.local.get('mindhit-auth');
         if (!authData?.state?.token) return;
 
-        const response = await fetch('http://localhost:8080/v1/events/batch', {
+        const response = await fetch('http://localhost:9000/v1/events/batch', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1088,7 +1174,7 @@ pnpm build
     }
     ```
 
-- [ ] **Content Script**
+- [x] **Content Script**
   - [ ] `src/content/index.ts`
 
     ```typescript
@@ -1278,20 +1364,21 @@ pnpm build
 
 ### 체크리스트
 
-- [ ] **이벤트 큐 개선**
-  - [ ] `src/lib/events.ts`
+- [x] **이벤트 큐 개선**
+  - [x] `src/lib/events.ts`
 
     ```typescript
-    import { BrowsingEvent } from '../types';
+    import type { BrowsingEvent } from "@/types";
 
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:9000/v1";
     const BATCH_SIZE = 10;
-    const FLUSH_INTERVAL = 30000; // 30초
+    const FLUSH_INTERVAL = 30000; // 30 seconds
     const MAX_RETRY = 3;
 
     interface EventQueue {
       events: BrowsingEvent[];
       sessionId: string | null;
-      flushTimer: number | null;
+      flushTimer: ReturnType<typeof setInterval> | null;
       retryCount: number;
     }
 
@@ -1302,14 +1389,14 @@ pnpm build
       retryCount: 0,
     };
 
-    export function initEventQueue(sessionId: string) {
+    export function initEventQueue(sessionId: string): void {
       queue.sessionId = sessionId;
       queue.events = [];
       queue.retryCount = 0;
       startFlushTimer();
     }
 
-    export function addEvent(event: BrowsingEvent) {
+    export function addEvent(event: BrowsingEvent): void {
       if (!queue.sessionId) return;
 
       queue.events.push(event);
@@ -1319,23 +1406,23 @@ pnpm build
       }
     }
 
-    export function stopEventQueue() {
+    export function stopEventQueue(): void {
       if (queue.flushTimer) {
         clearInterval(queue.flushTimer);
         queue.flushTimer = null;
       }
-      flush(); // 남은 이벤트 전송
+      flush(); // Send remaining events
       queue.sessionId = null;
     }
 
-    function startFlushTimer() {
+    function startFlushTimer(): void {
       if (queue.flushTimer) {
         clearInterval(queue.flushTimer);
       }
-      queue.flushTimer = setInterval(flush, FLUSH_INTERVAL) as unknown as number;
+      queue.flushTimer = setInterval(flush, FLUSH_INTERVAL);
     }
 
-    async function flush() {
+    async function flush(): Promise<void> {
       if (queue.events.length === 0 || !queue.sessionId) return;
 
       const eventsToSend = [...queue.events];
@@ -1350,33 +1437,40 @@ pnpm build
           handleFailure(eventsToSend);
         }
       } catch (error) {
-        console.error('Failed to send events:', error);
+        console.error("Failed to send events:", error);
         handleFailure(eventsToSend);
       }
     }
 
-    function handleFailure(events: BrowsingEvent[]) {
+    function handleFailure(events: BrowsingEvent[]): void {
       queue.retryCount++;
 
       if (queue.retryCount < MAX_RETRY) {
-        // 실패한 이벤트를 다시 큐에 추가
+        // Add failed events back to queue
         queue.events = [...events, ...queue.events];
       } else {
-        // 최대 재시도 초과 시 로컬에 저장
+        // Save to local storage on max retry exceeded
         saveToLocal(events);
         queue.retryCount = 0;
       }
     }
 
-    async function sendEvents(sessionId: string, events: BrowsingEvent[]): Promise<boolean> {
-      const { 'mindhit-auth': authData } = await chrome.storage.local.get('mindhit-auth');
-      if (!authData?.state?.token) return false;
+    async function sendEvents(
+      sessionId: string,
+      events: BrowsingEvent[]
+    ): Promise<boolean> {
+      const authData = await chrome.storage.local.get("mindhit-auth");
+      const rawValue = authData["mindhit-auth"];
+      const parsed = typeof rawValue === "string" ? JSON.parse(rawValue) : null;
+      const token = parsed?.state?.token;
 
-      const response = await fetch('http://localhost:8080/v1/events/batch', {
-        method: 'POST',
+      if (!token) return false;
+
+      const response = await fetch(`${API_BASE_URL}/events/batch`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authData.state.token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           session_id: sessionId,
@@ -1387,20 +1481,22 @@ pnpm build
       return response.ok;
     }
 
-    async function saveToLocal(events: BrowsingEvent[]) {
+    async function saveToLocal(events: BrowsingEvent[]): Promise<void> {
       const key = `mindhit-pending-events-${Date.now()}`;
       await chrome.storage.local.set({ [key]: events });
     }
 
-    // 저장된 이벤트 재전송 시도 (앱 시작 시)
-    export async function retryPendingEvents() {
+    // Retry pending events (on app start)
+    export async function retryPendingEvents(sessionId: string): Promise<void> {
       const storage = await chrome.storage.local.get(null);
-      const pendingKeys = Object.keys(storage).filter(k => k.startsWith('mindhit-pending-events-'));
+      const pendingKeys = Object.keys(storage).filter((k) =>
+        k.startsWith("mindhit-pending-events-")
+      );
 
       for (const key of pendingKeys) {
         const events = storage[key] as BrowsingEvent[];
-        if (events.length > 0 && queue.sessionId) {
-          const success = await sendEvents(queue.sessionId, events);
+        if (events.length > 0) {
+          const success = await sendEvents(sessionId, events);
           if (success) {
             await chrome.storage.local.remove(key);
           }
@@ -1409,7 +1505,7 @@ pnpm build
     }
     ```
 
-- [ ] **오프라인 지원**
+- [x] **오프라인 지원**
   - [ ] `src/lib/storage.ts`
 
     ```typescript
@@ -1460,7 +1556,7 @@ pnpm build
     }
     ```
 
-- [ ] **Background에서 오프라인 처리**
+- [x] **Background에서 오프라인 처리**
   - Background Service Worker 업데이트
 
     ```typescript
@@ -1484,7 +1580,7 @@ pnpm build
             const { 'mindhit-auth': authData } = await chrome.storage.local.get('mindhit-auth');
             if (!authData?.state?.token) continue;
 
-            const response = await fetch('http://localhost:8080/v1/events/batch', {
+            const response = await fetch('http://localhost:9000/v1/events/batch', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

@@ -2,7 +2,71 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-27 (Phase 7 Frontend 테스트 추가)
+> **Last Updated**: 2025-12-28 (Phase 8 Extension 테스트 추가)
+
+---
+
+## Extension Coverage Summary (Phase 8)
+
+### Test Files
+
+| 파일 | 테스트 수 | 설명 |
+| ---- | --------- | ---- |
+| `auth-store.test.ts` | 3 | Auth Zustand store |
+| `session-store.test.ts` | 10 | Session Zustand store |
+| `events.test.ts` | 6 | Event queue logic |
+| `api.test.ts` | 12 | API 클라이언트 (MSW 통합) |
+| **Total** | **31** | - |
+
+### Test Coverage Details
+
+#### Stores
+
+| Store | 테스트 항목 |
+| ----- | ----------- |
+| `useAuthStore` | 초기 상태, setAuth, logout |
+| `useSessionStore` | 초기 상태, startSession, pauseSession, resumeSession, stopSession, incrementPageCount, incrementHighlightCount, updateElapsedTime, reset |
+
+#### API Client (Integration Tests with MSW)
+
+| Endpoint | 테스트 항목 |
+| -------- | ----------- |
+| `login` | 성공, 잘못된 자격 증명 |
+| `startSession` | 성공, 인증 없음 |
+| `pauseSession` | 성공, 세션 없음 |
+| `resumeSession` | 성공, 세션 없음 |
+| `stopSession` | 성공, 세션 없음 |
+| `sendEvents` | 성공, 인증 없음 |
+
+#### Event Queue Logic
+
+| 테스트 항목 |
+| ----------- |
+| 이벤트 배치 처리 (10개 단위) |
+| 빈 이벤트 리스트 처리 |
+| page_visit 이벤트 생성 |
+| page_leave 이벤트 생성 |
+| highlight 이벤트 생성 |
+| scroll 이벤트 생성 |
+
+### Test Infrastructure
+
+| 파일 | 설명 |
+| ---- | ---- |
+| `vitest.config.ts` | Vitest 설정 (happy-dom, 경로 alias) |
+| `src/test/setup.ts` | 테스트 셋업 (MSW, Chrome API mock) |
+| `src/test/mocks/handlers.ts` | MSW API 핸들러 (auth, sessions, events) |
+| `src/test/mocks/server.ts` | MSW 서버 설정 |
+
+### Test Commands
+
+```bash
+# 테스트 실행
+moonx extension:test
+
+# Watch 모드
+pnpm test:watch
+```
 
 ---
 
@@ -458,6 +522,7 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-28 | Phase 8 | Extension 테스트 추가: API 통합 테스트 (MSW), stores, events (31개 테스트) |
 | 2025-12-27 | Phase 7 | Frontend 테스트 확장: stores, hooks, API 테스트 추가 (57개 테스트) |
 | 2025-12-26 | - | 테스트 커버리지 개선: Service 76.0%, Controller 76.6% |
 | 2025-12-26 | Phase 6 | Queue 81.4%, Handler 80.0% 달성 |

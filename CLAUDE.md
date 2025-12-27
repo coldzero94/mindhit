@@ -25,7 +25,7 @@ mindhit/
 │   │   └── pkg/          # Shared code (services, infra)
 │   ├── web/              # Next.js 16.1 Web App
 │   │   └── src/api/generated/  # @hey-api/openapi-ts generated (committed)
-│   └── extension/        # Chrome Extension (Plasmo)
+│   └── extension/        # Chrome Extension (Vite + CRXJS)
 ├── packages/
 │   ├── protocol/         # TypeSpec API definitions (Single Source of Truth)
 │   │   ├── src/          # *.tsp files
@@ -44,7 +44,7 @@ mindhit/
 |-----------|-------|----------|
 | Backend API | Go + Gin + Ent + PostgreSQL | `apps/backend/` |
 | Web App | Next.js 16.1 + TypeScript + TailwindCSS | `apps/web/` |
-| Chrome Extension | TypeScript + Plasmo | `apps/extension/` |
+| Chrome Extension | React + Vite + CRXJS + Zustand | `apps/extension/` |
 | Worker | Go + Asynq | `apps/backend/` (same codebase) |
 | API Protocol | TypeSpec → OpenAPI | `packages/protocol/` |
 | Shared | TypeScript types, utilities | `packages/shared/` |
@@ -107,7 +107,7 @@ Each app **MUST** have its own `CLAUDE.md` with app-specific context:
 |------|--------|-------------|
 | `apps/backend/CLAUDE.md` | ✅ Exists | Go API server, Ent ORM, oapi-codegen |
 | `apps/web/CLAUDE.md` | ✅ Exists | Next.js, @hey-api/openapi-ts, Zod |
-| `apps/extension/CLAUDE.md` | ⬜ TODO | Chrome extension (Phase 8) |
+| `apps/extension/CLAUDE.md` | ✅ Exists | Chrome Extension (Vite + CRXJS) |
 | `packages/protocol/CLAUDE.md` | ✅ Exists | TypeSpec API definitions |
 | `packages/shared/CLAUDE.md` | ⬜ TODO | Shared utilities (when created) |
 
@@ -152,7 +152,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 5 | ✅ Done | Monitoring & Infra (Basic) |
 | Phase 6 | ✅ Done | Worker & Job Queue |
 | Phase 7 | ✅ Done | Next.js Web App |
-| Phase 8 | ⬜ Pending | Chrome Extension |
+| Phase 8 | ✅ Done | Chrome Extension |
 | Phase 9 | ⬜ Pending | Plan & Usage System |
 | Phase 10 | ⬜ Pending | AI Mindmap Generation |
 | Phase 11 | ⬜ Pending | Web App Dashboard |
@@ -169,6 +169,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-28] Phase 8 completed: Chrome Extension - Side Panel UI, Session control, Event collection (page_visit, scroll, highlight), Batch sending with offline support
 - [2025-12-27] Phase 7 completed: Next.js Web App - Auth UI (login/signup), Sessions list/detail pages, Zustand + React Query, zod v4
 - [2025-12-26] Phase 6 completed: Worker & Job Queue - Asynq queue, session processing handler, cleanup scheduler, cmd/api and cmd/worker separation
 - [2025-12-26] Phase 5 completed: Monitoring & Infra - Prometheus metrics, slog logger, Request ID, HTTP logging middleware
@@ -256,9 +257,11 @@ moonx web:lint         # Lint code
 ### Extension (apps/extension)
 
 ```bash
-moonx extension:dev    # Run dev mode
-moonx extension:build  # Production build
-moonx extension:test   # Run tests
+moonx extension:dev        # Run dev mode
+moonx extension:build      # Production build
+moonx extension:test       # Run tests
+moonx extension:typecheck  # TypeScript check
+moonx extension:watch      # Build with watch mode
 ```
 
 ### All Projects

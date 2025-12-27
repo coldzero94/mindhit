@@ -1,0 +1,36 @@
+language: typescript
+type: application
+
+tasks:
+  dev:
+    command: pnpm dev
+    local: true
+
+  build:
+    command: pnpm build
+    inputs:
+      - "src/**/*"
+      - "manifest.json"
+      - "vite.config.ts"
+    outputs:
+      - "dist"
+
+  watch:
+    command: pnpm watch
+    local: true
+
+  test:
+    command: pnpm test
+    inputs:
+      - "src/**/*"
+
+  typecheck:
+    command: pnpm typecheck
+    inputs:
+      - "src/**/*"
+      - "tsconfig.json"
+
+  lint:
+    command: pnpm lint
+    inputs:
+      - "src/**/*"

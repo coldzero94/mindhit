@@ -44,7 +44,7 @@ phases/
 | 5 | [모니터링 및 인프라 (기초)](./phase-5-infra.md) | ✅ 완료 | 3 steps |
 | 6 | [Worker 및 Job Queue](./phase-6-worker.md) | ✅ 완료 | 3 steps |
 | 7 | [Next.js 웹앱](./phase-7-webapp.md) | ✅ 완료 | 4 steps |
-| 8 | [Chrome Extension](./phase-8-extension.md) | ⬜ 대기 | 5 steps |
+| 8 | [Chrome Extension](./phase-8-extension.md) | ✅ 완료 | 5 steps |
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ⬜ 대기 | 5 steps |
 | 10 | [AI 마인드맵](./phase-10-ai.md) | ⬜ 대기 | 6 steps |
 | 11 | [웹앱 대시보드](./phase-11-dashboard.md) | ⬜ 대기 | 4 steps |
