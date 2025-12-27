@@ -64,31 +64,31 @@ flowchart TB
 
 ### 체크리스트
 
-- [ ] **프로젝트 생성**
+- [x] **프로젝트 생성**
 
   ```bash
   cd apps
   pnpm create next-app@latest web --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"
   ```
 
-- [ ] **추가 의존성 설치**
+- [x] **추가 의존성 설치**
 
   ```bash
   cd apps/web
-  pnpm add @tanstack/react-query axios zustand
-  pnpm add -D @tanstack/eslint-plugin-query
+  pnpm add @tanstack/react-query axios zustand zod@4 date-fns lucide-react sonner dotenv
+  pnpm add -D @tanstack/react-query-devtools @hey-api/openapi-ts
   ```
 
-- [ ] **shadcn/ui 설정**
+- [x] **shadcn/ui 설정**
 
   ```bash
   pnpm dlx shadcn@latest init
 
-  # 필요한 컴포넌트 설치
-  pnpm dlx shadcn@latest add button input label card form toast
+  # 설치된 컴포넌트
+  pnpm dlx shadcn@latest add button input label card form skeleton badge alert-dialog sonner
   ```
 
-- [ ] **프로젝트 구조 생성**
+- [x] **프로젝트 구조 생성**
 
   ```
   apps/web/
@@ -164,7 +164,7 @@ flowchart TB
   export default nextConfig;
   ```
 
-- [ ] **moon.yml 설정**
+- [x] **moon.yml 설정**
 
   ```yaml
   language: typescript
@@ -172,33 +172,27 @@ flowchart TB
 
   tasks:
     dev:
-      command: next dev
+      command: pnpm
+      args: [dev]
       local: true
 
     build:
-      command: next build
+      command: pnpm
+      args: [run, build]
       inputs:
         - "src/**/*"
         - "public/**/*"
-        - "next.config.js"
-        - "tailwind.config.ts"
+        - "next.config.ts"
       outputs:
         - ".next"
 
-    start:
-      command: next start
-      local: true
-
     lint:
-      command: next lint
-      inputs:
-        - "src/**/*"
+      command: pnpm
+      args: [run, lint]
 
     typecheck:
-      command: tsc --noEmit
-      inputs:
-        - "src/**/*"
-        - "tsconfig.json"
+      command: pnpm
+      args: [run, typecheck]
   ```
 
 ### 검증
@@ -215,8 +209,8 @@ pnpm dev
 
 ### 체크리스트
 
-- [ ] **Auth Store (Zustand)**
-  - [ ] `src/stores/auth-store.ts`
+- [x] **Auth Store (Zustand)**
+  - [x] `src/stores/auth-store.ts`
 
     ```typescript
     import { create } from 'zustand';
@@ -253,8 +247,8 @@ pnpm dev
     );
     ```
 
-- [ ] **로그인 폼 컴포넌트**
-  - [ ] `src/components/auth/login-form.tsx`
+- [x] **로그인 폼 컴포넌트**
+  - [x] `src/components/auth/login-form.tsx`
 
     ```tsx
     'use client';
@@ -357,8 +351,8 @@ pnpm dev
     }
     ```
 
-- [ ] **회원가입 폼 컴포넌트**
-  - [ ] `src/components/auth/signup-form.tsx`
+- [x] **회원가입 폼 컴포넌트**
+  - [x] `src/components/auth/signup-form.tsx`
 
     ```tsx
     'use client';
@@ -479,8 +473,8 @@ pnpm dev
     }
     ```
 
-- [ ] **로그인 페이지**
-  - [ ] `src/app/(auth)/login/page.tsx`
+- [x] **로그인 페이지**
+  - [x] `src/app/(auth)/login/page.tsx`
 
     ```tsx
     import Link from 'next/link';
@@ -503,8 +497,8 @@ pnpm dev
     }
     ```
 
-- [ ] **회원가입 페이지**
-  - [ ] `src/app/(auth)/signup/page.tsx`
+- [x] **회원가입 페이지**
+  - [x] `src/app/(auth)/signup/page.tsx`
 
     ```tsx
     import Link from 'next/link';
@@ -527,8 +521,8 @@ pnpm dev
     }
     ```
 
-- [ ] **Auth Layout**
-  - [ ] `src/app/(auth)/layout.tsx`
+- [x] **Auth Layout**
+  - [x] `src/app/(auth)/layout.tsx`
 
     ```tsx
     export default function AuthLayout({
@@ -566,20 +560,18 @@ open http://localhost:3000/signup
 
 ### 체크리스트
 
-- [ ] **OpenAPI 타입 생성 설정**
+- [x] **OpenAPI 타입 생성 설정**
+  - `@hey-api/openapi-ts` 사용
+  - 생성된 코드: `src/api/generated/` (types, sdk, zod schemas)
 
   ```bash
-  # packages/protocol에서 타입 생성
-  cd packages/protocol
-  pnpm generate:client
-
-  # 또는 apps/web에서 직접 사용
+  # apps/web에서 타입 생성
   cd apps/web
-  pnpm add @mindhit/protocol
+  pnpm run generate:api
   ```
 
-- [ ] **Axios 클라이언트**
-  - [ ] `src/lib/api/client.ts`
+- [x] **Axios 클라이언트**
+  - [x] `src/lib/api/client.ts`
 
     ```typescript
     import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
@@ -629,8 +621,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **Auth API**
-  - [ ] `src/lib/api/auth.ts`
+- [x] **Auth API**
+  - [x] `src/lib/api/auth.ts`
 
     ```typescript
     import { apiClient } from './client';
@@ -671,8 +663,8 @@ open http://localhost:3000/signup
     };
     ```
 
-- [ ] **Sessions API**
-  - [ ] `src/lib/api/sessions.ts`
+- [x] **Sessions API**
+  - [x] `src/lib/api/sessions.ts`
 
     ```typescript
     import { apiClient } from './client';
@@ -766,8 +758,8 @@ open http://localhost:3000/signup
     };
     ```
 
-- [ ] **React Query 설정**
-  - [ ] `src/lib/hooks/use-sessions.ts`
+- [x] **React Query 설정**
+  - [x] `src/lib/hooks/use-sessions.ts`
 
     ```typescript
     import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -808,8 +800,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **Providers 설정**
-  - [ ] `src/app/providers.tsx`
+- [x] **Providers 설정**
+  - [x] `src/app/providers.tsx`
 
     ```tsx
     'use client';
@@ -842,8 +834,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **Root Layout 업데이트**
-  - [ ] `src/app/layout.tsx`
+- [x] **Root Layout 업데이트**
+  - [x] `src/app/layout.tsx`
 
     ```tsx
     import type { Metadata } from 'next';
@@ -888,8 +880,8 @@ open http://localhost:3000/signup
 
 ### 체크리스트
 
-- [ ] **Dashboard Layout**
-  - [ ] `src/app/(dashboard)/layout.tsx`
+- [x] **Dashboard Layout**
+  - [x] `src/app/(dashboard)/layout.tsx`
 
     ```tsx
     'use client';
@@ -951,8 +943,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **세션 카드 컴포넌트**
-  - [ ] `src/components/sessions/session-card.tsx`
+- [x] **세션 카드 컴포넌트**
+  - [x] `src/components/sessions/session-card.tsx`
 
     ```tsx
     import Link from 'next/link';
@@ -1001,8 +993,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **세션 목록 컴포넌트**
-  - [ ] `src/components/sessions/session-list.tsx`
+- [x] **세션 목록 컴포넌트**
+  - [x] `src/components/sessions/session-list.tsx`
 
     ```tsx
     'use client';
@@ -1084,8 +1076,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **세션 목록 페이지**
-  - [ ] `src/app/(dashboard)/sessions/page.tsx`
+- [x] **세션 목록 페이지**
+  - [x] `src/app/(dashboard)/sessions/page.tsx`
 
     ```tsx
     'use client';
@@ -1107,8 +1099,8 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **세션 상세 페이지 (기본)**
-  - [ ] `src/app/(dashboard)/sessions/[id]/page.tsx`
+- [x] **세션 상세 페이지 (기본)**
+  - [x] `src/app/(dashboard)/sessions/[id]/page.tsx`
 
     ```tsx
     'use client';
@@ -1313,7 +1305,7 @@ open http://localhost:3000/signup
     }
     ```
 
-- [ ] **추가 의존성 설치**
+- [x] **추가 의존성 설치**
 
   ```bash
   pnpm add date-fns lucide-react
@@ -1339,13 +1331,13 @@ open http://localhost:3000/sessions
 
 ### 전체 검증 체크리스트
 
-- [ ] 회원가입 동작
-- [ ] 로그인/로그아웃 동작
-- [ ] 인증 상태 유지 (새로고침 후)
-- [ ] 세션 목록 조회
-- [ ] 세션 상세 조회
-- [ ] 세션 삭제
-- [ ] 페이지네이션 동작
+- [x] 회원가입 동작
+- [x] 로그인/로그아웃 동작
+- [x] 인증 상태 유지 (새로고침 후)
+- [x] 세션 목록 조회
+- [x] 세션 상세 조회
+- [x] 세션 삭제
+- [x] 페이지네이션 동작
 
 ### 테스트 요구사항
 

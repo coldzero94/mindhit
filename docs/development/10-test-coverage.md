@@ -2,7 +2,87 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-26 (테스트 커버리지 개선 후)
+> **Last Updated**: 2025-12-27 (Phase 7 Frontend 테스트 추가)
+
+---
+
+## Frontend Coverage Summary (Phase 7)
+
+### Test Files
+
+| 파일 | 테스트 수 | 설명 |
+| ---- | --------- | ---- |
+| `auth-store.test.ts` | 7 | Auth Zustand store |
+| `use-sessions.test.ts` | 11 | Session hooks (React Query) |
+| `auth.test.ts` | 6 | Auth API 클라이언트 |
+| `sessions.test.ts` | 6 | Sessions API 클라이언트 |
+| `login-form.test.tsx` | 5 | 로그인 폼 컴포넌트 |
+| `signup-form.test.tsx` | 5 | 회원가입 폼 컴포넌트 |
+| `session-card.test.tsx` | 11 | 세션 카드 컴포넌트 |
+| `session-list.test.tsx` | 6 | 세션 목록 컴포넌트 |
+| **Total** | **57** | - |
+
+### Test Coverage Details
+
+#### Stores
+
+| Store | 테스트 항목 |
+| ----- | ----------- |
+| `useAuthStore` | 초기 상태, setAuth, setTokens, logout |
+
+#### Hooks
+
+| Hook | 테스트 항목 |
+| ---- | ----------- |
+| `sessionKeys` | 쿼리 키 생성 (all, lists, list, detail, events, stats) |
+| `useSessions` | 세션 목록 fetch, 페이지네이션 |
+| `useSession` | 단일 세션 fetch, empty id 처리 |
+
+#### API Clients
+
+| Client | 테스트 항목 |
+| ------ | ----------- |
+| `authApi` | login 성공/실패, signup 성공/실패, me, logout |
+| `sessionsApi` | list, get 성공/실패, delete 성공/실패 |
+
+#### Auth Components
+
+| 컴포넌트 | 테스트 항목 |
+| -------- | ----------- |
+| `LoginForm` | 렌더링, 빈 필드 검증, 짧은 비밀번호 검증, 성공 제출, 에러 클리어 |
+| `SignupForm` | 렌더링, 짧은 비밀번호 검증, 비밀번호 불일치 검증, 성공 제출, 에러 클리어 |
+
+#### Session Components
+
+| 컴포넌트 | 테스트 항목 |
+| -------- | ----------- |
+| `SessionCard` | 렌더링, 상태별 배지(active/paused/completed), 날짜 포맷, 설명 표시/숨김, 링크 생성, 이벤트 수 표시 |
+| `SessionList` | 로딩 상태, 세션 카드 렌더링, 빈 상태, 페이지네이션, 이전 버튼 클릭, 첫 페이지 비활성화 |
+
+### Test Infrastructure
+
+| 파일 | 설명 |
+| ---- | ---- |
+| `vitest.config.ts` | Vitest 설정 (jsdom, 경로 alias) |
+| `src/test/setup.ts` | 테스트 셋업 (MSW, Next.js mocks) |
+| `src/test/mocks/handlers.ts` | MSW API 핸들러 (auth, sessions) |
+| `src/test/mocks/server.ts` | MSW 서버 설정 |
+| `src/test/utils.tsx` | 커스텀 render (QueryClientProvider) + 헬퍼 re-export |
+| `src/test/helpers/auth.ts` | 인증 상태 preset 헬퍼 |
+| `src/test/helpers/router.ts` | Next.js 라우터 mock 헬퍼 |
+
+### Test Commands
+
+```bash
+# 테스트 실행
+pnpm test
+
+# Watch 모드
+pnpm test:watch
+
+# 커버리지 리포트
+pnpm test:coverage
+```
 
 ---
 
@@ -163,7 +243,7 @@
 
 ---
 
-## Test Files
+## Backend Test Files
 
 | 위치 | 설명 | Phase |
 | ---- | ---- | ----- |
@@ -378,6 +458,7 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-27 | Phase 7 | Frontend 테스트 확장: stores, hooks, API 테스트 추가 (57개 테스트) |
 | 2025-12-26 | - | 테스트 커버리지 개선: Service 76.0%, Controller 76.6% |
 | 2025-12-26 | Phase 6 | Queue 81.4%, Handler 80.0% 달성 |
 | 2025-12-26 | Phase 2-4 | 상세 함수별 커버리지 문서화 |
