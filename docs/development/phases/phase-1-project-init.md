@@ -392,15 +392,21 @@ apps/backend/
   - Docker Compose 파일 위치: `infra/docker/docker-compose.yml`
 
 - [x] **환경 변수 파일 생성**
-  - [x] `apps/backend/.env.local`
+  - 프로젝트 루트 `/.env` (앱별 `.env` 파일 사용하지 않음)
 
     ```
+    # Backend
     ENVIRONMENT=local
-    API_PORT=8081
-    DATABASE_URL=postgres://postgres:password@localhost:5432/mindhit?sslmode=disable
-    REDIS_URL=redis://localhost:6379
+    API_PORT=9000
+    DATABASE_URL=postgres://postgres:password@localhost:5433/mindhit?sslmode=disable
+    REDIS_URL=redis://localhost:6380
     JWT_SECRET=your-secret-key-change-in-production
     WORKER_CONCURRENCY=10
+
+    # Docker Services
+    POSTGRES_USER=postgres
+    POSTGRES_PASSWORD=password
+    POSTGRES_DB=mindhit
     ```
 
 ### 검증
@@ -420,11 +426,11 @@ docker exec -it mindhit-redis redis-cli ping
 
 ```
 mindhit/
-├── infra/
-│   └── docker/
-│       └── docker-compose.yml  # Phase 0에서 생성
-└── apps/backend/
-    └── .env.local
+├── .env                # 환경 변수 (gitignore)
+├── .env.example        # 환경 변수 템플릿 (committed)
+└── infra/
+    └── docker/
+        └── docker-compose.yml  # Phase 0에서 생성
 ```
 
 ---

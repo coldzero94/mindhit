@@ -68,8 +68,18 @@ All environment variables are managed in the **project root**:
 **IMPORTANT**:
 
 - Backend loads env from `../../.env` (relative to `apps/backend/`)
+- Frontend (Next.js) loads env from `../../.env` via `next.config.ts` (dotenv)
 - Docker services (Grafana, PostgreSQL, etc.) settings are in `docker-compose.yml`
-- Do NOT create `.env` files in subdirectories (e.g., `apps/backend/.env`)
+- Do NOT create `.env` files in subdirectories (e.g., `apps/backend/.env`, `apps/web/.env.local`)
+
+**Environment Variable Sections**:
+
+| Section | Prefix | Used By |
+|---------|--------|---------|
+| Backend | `API_PORT`, `DATABASE_URL`, etc. | Go API/Worker |
+| Frontend | `NEXT_PUBLIC_*` | Next.js (client-side exposed) |
+| Extension | `EXTENSION_*` | Chrome Extension (Phase 8+) |
+| Docker | `POSTGRES_*`, `GF_*` | docker-compose services |
 
 ---
 

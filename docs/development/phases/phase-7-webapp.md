@@ -130,30 +130,38 @@ flowchart TB
   └── tsconfig.json
   ```
 
-- [ ] **환경 변수 설정**
-  - [ ] `.env.local`
+- [x] **환경 변수 설정**
+  - 루트 `/.env`에 추가 (앱별 `.env` 파일 사용하지 않음):
 
     ```env
-    NEXT_PUBLIC_API_URL=http://localhost:8080
+    # Frontend (Next.js)
+    NEXT_PUBLIC_API_URL=http://localhost:9000
     ```
 
-- [ ] **next.config.js 설정**
+- [x] **next.config.ts 설정**
+  - dotenv로 루트 `.env` 로드:
 
-  ```javascript
-  /** @type {import('next').NextConfig} */
-  const nextConfig = {
+  ```typescript
+  import type { NextConfig } from "next";
+  import { config } from "dotenv";
+  import { resolve } from "path";
+
+  // Load environment variables from root .env
+  config({ path: resolve(__dirname, "../../.env") });
+
+  const nextConfig: NextConfig = {
     reactStrictMode: true,
     async rewrites() {
       return [
         {
-          source: '/api/:path*',
+          source: "/api/:path*",
           destination: `${process.env.NEXT_PUBLIC_API_URL}/v1/:path*`,
         },
       ];
     },
   };
 
-  module.exports = nextConfig;
+  export default nextConfig;
   ```
 
 - [ ] **moon.yml 설정**
