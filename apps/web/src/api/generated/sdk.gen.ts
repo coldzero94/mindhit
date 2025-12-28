@@ -18,6 +18,9 @@ import type {
   RoutesGetEventStatsErrors,
   RoutesGetEventStatsResponses,
   RoutesGetResponses,
+  RoutesGoogleAuthData,
+  RoutesGoogleAuthErrors,
+  RoutesGoogleAuthResponses,
   RoutesListData,
   RoutesListErrors,
   RoutesListEventsData,
@@ -100,6 +103,25 @@ export const routesForgotPassword = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: "/v1/auth/forgot-password",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Google OAuth 로그인
+ */
+export const routesGoogleAuth = <ThrowOnError extends boolean = false>(
+  options: Options<RoutesGoogleAuthData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    RoutesGoogleAuthResponses,
+    RoutesGoogleAuthErrors,
+    ThrowOnError
+  >({
+    url: "/v1/auth/google",
     ...options,
     headers: {
       "Content-Type": "application/json",

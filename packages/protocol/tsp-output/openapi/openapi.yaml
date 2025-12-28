@@ -33,6 +33,36 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Auth.ForgotPasswordRequest'
+  /v1/auth/google:
+    post:
+      operationId: Routes_googleAuth
+      description: Google OAuth 로그인
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ValidationError'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.GoogleAuthRequest'
   /v1/auth/login:
     post:
       operationId: Routes_login
@@ -796,6 +826,15 @@ components:
           minLength: 1
           description: 이메일 주소
       description: 비밀번호 재설정 요청
+    Auth.GoogleAuthRequest:
+      type: object
+      required:
+        - credential
+      properties:
+        credential:
+          type: string
+          description: Google Identity Services에서 받은 ID Token (credential)
+      description: Google OAuth 로그인 요청
     Auth.LoginRequest:
       type: object
       required:

@@ -82,8 +82,13 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*ent.U
 		return nil, err
 	}
 
+	// Check if user has a password (Google OAuth users don't)
+	if u.PasswordHash == nil {
+		return nil, ErrInvalidCredentials
+	}
+
 	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
 

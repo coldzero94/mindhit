@@ -75,3 +75,43 @@ func CleanupTestDB(t *testing.T, _ *ent.Client) {
 	t.Helper()
 	// No-op: using shared connection pool
 }
+
+// EnsureFreePlan ensures the free plan exists in the database for testing.
+// Uses upsert to avoid conflicts when called multiple times.
+func EnsureFreePlan(t *testing.T, client *ent.Client) (*ent.Plan, error) {
+	t.Helper()
+
+	ctx := context.Background()
+	const freePlanID = "free"
+
+	// Try to get existing plan first
+	plan, err := client.Plan.Get(ctx, freePlanID)
+	if err == nil {
+		return plan, nil
+	}
+
+	// Create if not exists
+	if ent.IsNotFound(err) {
+		tokenLimit := 10000
+		retentionDays := 7
+		maxSessions := 3
+
+		return client.Plan.
+			Create().
+			SetID(freePlanID).
+			SetName("Free").
+			SetPriceCents(0).
+			SetBillingPeriod("monthly").
+			SetTokenLimit(tokenLimit).
+			SetSessionRetentionDays(retentionDays).
+			SetMaxConcurrentSessions(maxSessions).
+			SetFeatures(map[string]bool{
+				"ai_mindmap":   true,
+				"export_pdf":   false,
+				"team_sharing": false,
+			}).
+			Save(ctx)
+	}
+
+	return nil, err
+}

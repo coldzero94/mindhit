@@ -53,6 +53,12 @@ model ResetPasswordRequest {
   newPassword: string;
 }
 
+@doc("Google OAuth 로그인 요청")
+model GoogleAuthRequest {
+  @doc("Google Identity Services에서 받은 ID Token (credential)")
+  credential: string;
+}
+
 @doc("인증 응답")
 model AuthResponse {
   user: User;
@@ -154,6 +160,22 @@ namespace Routes {
     @body body: { message: string };
   } | {
     @statusCode statusCode: 400;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/google")
+  @doc("Google OAuth 로그인")
+  op googleAuth(
+    @body body: GoogleAuthRequest
+  ): {
+    @statusCode statusCode: 200;
+    @body body: AuthResponse;
+  } | {
+    @statusCode statusCode: 400;
+    @body body: Common.ValidationError;
+  } | {
+    @statusCode statusCode: 401;
     @body body: Common.ErrorResponse;
   };
 }

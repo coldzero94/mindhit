@@ -7,10 +7,12 @@ import (
 	"entgo.io/ent/schema/index"
 )
 
+// User holds the schema definition for the User entity.
 type User struct {
 	ent.Schema
 }
 
+// Mixin returns the mixins for User.
 func (User) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		BaseMixin{},
@@ -18,6 +20,7 @@ func (User) Mixin() []ent.Mixin {
 	}
 }
 
+// Fields returns the fields for User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("email").
@@ -25,8 +28,25 @@ func (User) Fields() []ent.Field {
 			NotEmpty().
 			Comment("User email address"),
 		field.String("password_hash").
+			Optional().
+			Nillable().
 			Sensitive().
-			Comment("Hashed password"),
+			Comment("Hashed password - nil for Google OAuth users"),
+
+		// OAuth fields
+		field.String("google_id").
+			Optional().
+			Unique().
+			Nillable().
+			Comment("Google user ID from OAuth"),
+		field.String("avatar_url").
+			Optional().
+			Nillable().
+			Comment("Profile picture URL"),
+		field.Enum("auth_provider").
+			Values("email", "google").
+			Default("email").
+			Comment("Authentication provider used for signup"),
 	}
 }
 
@@ -41,9 +61,12 @@ func (User) Edges() []ent.Edge {
 	}
 }
 
+// Indexes returns the indexes for User.
 func (User) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("email"),
 		index.Fields("status"),
+		index.Fields("google_id"),
+		index.Fields("auth_provider"),
 	}
 }

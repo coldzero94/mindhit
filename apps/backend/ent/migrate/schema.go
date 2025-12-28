@@ -360,7 +360,10 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive"}, Default: "active"},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "email", Type: field.TypeString, Unique: true},
-		{Name: "password_hash", Type: field.TypeString},
+		{Name: "password_hash", Type: field.TypeString, Nullable: true},
+		{Name: "google_id", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "avatar_url", Type: field.TypeString, Nullable: true},
+		{Name: "auth_provider", Type: field.TypeEnum, Enums: []string{"email", "google"}, Default: "email"},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{
@@ -377,6 +380,16 @@ var (
 				Name:    "user_status",
 				Unique:  false,
 				Columns: []*schema.Column{UsersColumns[3]},
+			},
+			{
+				Name:    "user_google_id",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[7]},
+			},
+			{
+				Name:    "user_auth_provider",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[9]},
 			},
 		},
 	}

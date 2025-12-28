@@ -23,6 +23,16 @@ export type AuthForgotPasswordRequest = {
 };
 
 /**
+ * Google OAuth 로그인 요청
+ */
+export type AuthGoogleAuthRequest = {
+  /**
+   * Google Identity Services에서 받은 ID Token (credential)
+   */
+  credential: string;
+};
+
+/**
  * 로그인 요청
  */
 export type AuthLoginRequest = {
@@ -352,6 +362,37 @@ export type RoutesForgotPasswordResponses = {
 
 export type RoutesForgotPasswordResponse =
   RoutesForgotPasswordResponses[keyof RoutesForgotPasswordResponses];
+
+export type RoutesGoogleAuthData = {
+  body: AuthGoogleAuthRequest;
+  path?: never;
+  query?: never;
+  url: "/v1/auth/google";
+};
+
+export type RoutesGoogleAuthErrors = {
+  /**
+   * The server could not understand the request due to invalid syntax.
+   */
+  400: CommonValidationError;
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+};
+
+export type RoutesGoogleAuthError =
+  RoutesGoogleAuthErrors[keyof RoutesGoogleAuthErrors];
+
+export type RoutesGoogleAuthResponses = {
+  /**
+   * The request has succeeded.
+   */
+  200: AuthAuthResponse;
+};
+
+export type RoutesGoogleAuthResponse =
+  RoutesGoogleAuthResponses[keyof RoutesGoogleAuthResponses];
 
 export type RoutesLoginData = {
   body: AuthLoginRequest;

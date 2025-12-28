@@ -18,6 +18,7 @@ import {
 
 import { useAuthStore } from "@/stores/auth-store";
 import { authApi } from "@/lib/api/auth";
+import { GoogleSignInButton } from "./google-sign-in-button";
 
 const loginSchema = z.object({
   email: z.string().email("유효한 이메일을 입력하세요"),
@@ -116,6 +117,17 @@ export function LoginForm() {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "로그인 중..." : "로그인"}
           </Button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-gray-500">또는</span>
+            </div>
+          </div>
+
+          <GoogleSignInButton />
         </form>
       </CardContent>
     </Card>

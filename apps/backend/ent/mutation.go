@@ -8809,6 +8809,9 @@ type UserMutation struct {
 	deleted_at                   *time.Time
 	email                        *string
 	password_hash                *string
+	google_id                    *string
+	avatar_url                   *string
+	auth_provider                *user.AuthProvider
 	clearedFields                map[string]struct{}
 	settings                     *uuid.UUID
 	clearedsettings              bool
@@ -9143,7 +9146,7 @@ func (m *UserMutation) PasswordHash() (r string, exists bool) {
 // OldPasswordHash returns the old "password_hash" field's value of the User entity.
 // If the User object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *UserMutation) OldPasswordHash(ctx context.Context) (v string, err error) {
+func (m *UserMutation) OldPasswordHash(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldPasswordHash is only allowed on UpdateOne operations")
 	}
@@ -9157,9 +9160,156 @@ func (m *UserMutation) OldPasswordHash(ctx context.Context) (v string, err error
 	return oldValue.PasswordHash, nil
 }
 
+// ClearPasswordHash clears the value of the "password_hash" field.
+func (m *UserMutation) ClearPasswordHash() {
+	m.password_hash = nil
+	m.clearedFields[user.FieldPasswordHash] = struct{}{}
+}
+
+// PasswordHashCleared returns if the "password_hash" field was cleared in this mutation.
+func (m *UserMutation) PasswordHashCleared() bool {
+	_, ok := m.clearedFields[user.FieldPasswordHash]
+	return ok
+}
+
 // ResetPasswordHash resets all changes to the "password_hash" field.
 func (m *UserMutation) ResetPasswordHash() {
 	m.password_hash = nil
+	delete(m.clearedFields, user.FieldPasswordHash)
+}
+
+// SetGoogleID sets the "google_id" field.
+func (m *UserMutation) SetGoogleID(s string) {
+	m.google_id = &s
+}
+
+// GoogleID returns the value of the "google_id" field in the mutation.
+func (m *UserMutation) GoogleID() (r string, exists bool) {
+	v := m.google_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGoogleID returns the old "google_id" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldGoogleID(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGoogleID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGoogleID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGoogleID: %w", err)
+	}
+	return oldValue.GoogleID, nil
+}
+
+// ClearGoogleID clears the value of the "google_id" field.
+func (m *UserMutation) ClearGoogleID() {
+	m.google_id = nil
+	m.clearedFields[user.FieldGoogleID] = struct{}{}
+}
+
+// GoogleIDCleared returns if the "google_id" field was cleared in this mutation.
+func (m *UserMutation) GoogleIDCleared() bool {
+	_, ok := m.clearedFields[user.FieldGoogleID]
+	return ok
+}
+
+// ResetGoogleID resets all changes to the "google_id" field.
+func (m *UserMutation) ResetGoogleID() {
+	m.google_id = nil
+	delete(m.clearedFields, user.FieldGoogleID)
+}
+
+// SetAvatarURL sets the "avatar_url" field.
+func (m *UserMutation) SetAvatarURL(s string) {
+	m.avatar_url = &s
+}
+
+// AvatarURL returns the value of the "avatar_url" field in the mutation.
+func (m *UserMutation) AvatarURL() (r string, exists bool) {
+	v := m.avatar_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvatarURL returns the old "avatar_url" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldAvatarURL(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvatarURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvatarURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvatarURL: %w", err)
+	}
+	return oldValue.AvatarURL, nil
+}
+
+// ClearAvatarURL clears the value of the "avatar_url" field.
+func (m *UserMutation) ClearAvatarURL() {
+	m.avatar_url = nil
+	m.clearedFields[user.FieldAvatarURL] = struct{}{}
+}
+
+// AvatarURLCleared returns if the "avatar_url" field was cleared in this mutation.
+func (m *UserMutation) AvatarURLCleared() bool {
+	_, ok := m.clearedFields[user.FieldAvatarURL]
+	return ok
+}
+
+// ResetAvatarURL resets all changes to the "avatar_url" field.
+func (m *UserMutation) ResetAvatarURL() {
+	m.avatar_url = nil
+	delete(m.clearedFields, user.FieldAvatarURL)
+}
+
+// SetAuthProvider sets the "auth_provider" field.
+func (m *UserMutation) SetAuthProvider(up user.AuthProvider) {
+	m.auth_provider = &up
+}
+
+// AuthProvider returns the value of the "auth_provider" field in the mutation.
+func (m *UserMutation) AuthProvider() (r user.AuthProvider, exists bool) {
+	v := m.auth_provider
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthProvider returns the old "auth_provider" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldAuthProvider(ctx context.Context) (v user.AuthProvider, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthProvider is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthProvider requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthProvider: %w", err)
+	}
+	return oldValue.AuthProvider, nil
+}
+
+// ResetAuthProvider resets all changes to the "auth_provider" field.
+func (m *UserMutation) ResetAuthProvider() {
+	m.auth_provider = nil
 }
 
 // SetSettingsID sets the "settings" edge to the UserSettings entity by id.
@@ -9451,7 +9601,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 9)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -9469,6 +9619,15 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.password_hash != nil {
 		fields = append(fields, user.FieldPasswordHash)
+	}
+	if m.google_id != nil {
+		fields = append(fields, user.FieldGoogleID)
+	}
+	if m.avatar_url != nil {
+		fields = append(fields, user.FieldAvatarURL)
+	}
+	if m.auth_provider != nil {
+		fields = append(fields, user.FieldAuthProvider)
 	}
 	return fields
 }
@@ -9490,6 +9649,12 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Email()
 	case user.FieldPasswordHash:
 		return m.PasswordHash()
+	case user.FieldGoogleID:
+		return m.GoogleID()
+	case user.FieldAvatarURL:
+		return m.AvatarURL()
+	case user.FieldAuthProvider:
+		return m.AuthProvider()
 	}
 	return nil, false
 }
@@ -9511,6 +9676,12 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldEmail(ctx)
 	case user.FieldPasswordHash:
 		return m.OldPasswordHash(ctx)
+	case user.FieldGoogleID:
+		return m.OldGoogleID(ctx)
+	case user.FieldAvatarURL:
+		return m.OldAvatarURL(ctx)
+	case user.FieldAuthProvider:
+		return m.OldAuthProvider(ctx)
 	}
 	return nil, fmt.Errorf("unknown User field %s", name)
 }
@@ -9562,6 +9733,27 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetPasswordHash(v)
 		return nil
+	case user.FieldGoogleID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGoogleID(v)
+		return nil
+	case user.FieldAvatarURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvatarURL(v)
+		return nil
+	case user.FieldAuthProvider:
+		v, ok := value.(user.AuthProvider)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthProvider(v)
+		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)
 }
@@ -9595,6 +9787,15 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldDeletedAt) {
 		fields = append(fields, user.FieldDeletedAt)
 	}
+	if m.FieldCleared(user.FieldPasswordHash) {
+		fields = append(fields, user.FieldPasswordHash)
+	}
+	if m.FieldCleared(user.FieldGoogleID) {
+		fields = append(fields, user.FieldGoogleID)
+	}
+	if m.FieldCleared(user.FieldAvatarURL) {
+		fields = append(fields, user.FieldAvatarURL)
+	}
 	return fields
 }
 
@@ -9611,6 +9812,15 @@ func (m *UserMutation) ClearField(name string) error {
 	switch name {
 	case user.FieldDeletedAt:
 		m.ClearDeletedAt()
+		return nil
+	case user.FieldPasswordHash:
+		m.ClearPasswordHash()
+		return nil
+	case user.FieldGoogleID:
+		m.ClearGoogleID()
+		return nil
+	case user.FieldAvatarURL:
+		m.ClearAvatarURL()
 		return nil
 	}
 	return fmt.Errorf("unknown User nullable field %s", name)
@@ -9637,6 +9847,15 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldPasswordHash:
 		m.ResetPasswordHash()
+		return nil
+	case user.FieldGoogleID:
+		m.ResetGoogleID()
+		return nil
+	case user.FieldAvatarURL:
+		m.ResetAvatarURL()
+		return nil
+	case user.FieldAuthProvider:
+		m.ResetAuthProvider()
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)

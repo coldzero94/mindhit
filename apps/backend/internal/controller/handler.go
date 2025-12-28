@@ -13,16 +13,25 @@ type Handler struct {
 	*EventController
 	*SubscriptionController
 	*UsageController
+	*OAuthController
 }
 
 // NewHandler creates a new Handler with all controllers
-func NewHandler(auth *AuthController, session *SessionController, event *EventController, subscription *SubscriptionController, usage *UsageController) *Handler {
+func NewHandler(
+	auth *AuthController,
+	session *SessionController,
+	event *EventController,
+	subscription *SubscriptionController,
+	usage *UsageController,
+	oauth *OAuthController,
+) *Handler {
 	return &Handler{
 		AuthController:         auth,
 		SessionController:      session,
 		EventController:        event,
 		SubscriptionController: subscription,
 		UsageController:        usage,
+		OAuthController:        oauth,
 	}
 }
 
@@ -141,4 +150,9 @@ func (h *Handler) UsageRoutesGetUsage(ctx context.Context, request generated.Usa
 // UsageRoutesGetUsageHistory delegates to UsageController
 func (h *Handler) UsageRoutesGetUsageHistory(ctx context.Context, request generated.UsageRoutesGetUsageHistoryRequestObject) (generated.UsageRoutesGetUsageHistoryResponseObject, error) {
 	return h.UsageController.UsageRoutesGetUsageHistory(ctx, request)
+}
+
+// RoutesGoogleAuth delegates to OAuthController
+func (h *Handler) RoutesGoogleAuth(ctx context.Context, request generated.RoutesGoogleAuthRequestObject) (generated.RoutesGoogleAuthResponseObject, error) {
+	return h.OAuthController.RoutesGoogleAuth(ctx, request)
 }

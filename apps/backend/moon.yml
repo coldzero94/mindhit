@@ -141,6 +141,8 @@ tasks:
     args:
       - migrate
       - diff
+      - --env
+      - local
     local: true
 
   migrate-status:
@@ -148,6 +150,8 @@ tasks:
     args:
       - migrate
       - status
+      - --env
+      - local
     local: true
 
   # OpenAPI 코드 생성

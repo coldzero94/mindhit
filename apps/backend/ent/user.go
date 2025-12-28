@@ -30,8 +30,14 @@ type User struct {
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// User email address
 	Email string `json:"email,omitempty"`
-	// Hashed password
-	PasswordHash string `json:"-"`
+	// Hashed password - nil for Google OAuth users
+	PasswordHash *string `json:"-"`
+	// Google user ID from OAuth
+	GoogleID *string `json:"google_id,omitempty"`
+	// Profile picture URL
+	AvatarURL *string `json:"avatar_url,omitempty"`
+	// Authentication provider used for signup
+	AuthProvider user.AuthProvider `json:"auth_provider,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges        UserEdges `json:"edges"`
@@ -107,7 +113,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldStatus, user.FieldEmail, user.FieldPasswordHash:
+		case user.FieldStatus, user.FieldEmail, user.FieldPasswordHash, user.FieldGoogleID, user.FieldAvatarURL, user.FieldAuthProvider:
 			values[i] = new(sql.NullString)
 		case user.FieldCreatedAt, user.FieldUpdatedAt, user.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -169,7 +175,28 @@ func (_m *User) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field password_hash", values[i])
 			} else if value.Valid {
-				_m.PasswordHash = value.String
+				_m.PasswordHash = new(string)
+				*_m.PasswordHash = value.String
+			}
+		case user.FieldGoogleID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field google_id", values[i])
+			} else if value.Valid {
+				_m.GoogleID = new(string)
+				*_m.GoogleID = value.String
+			}
+		case user.FieldAvatarURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field avatar_url", values[i])
+			} else if value.Valid {
+				_m.AvatarURL = new(string)
+				*_m.AvatarURL = value.String
+			}
+		case user.FieldAuthProvider:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field auth_provider", values[i])
+			} else if value.Valid {
+				_m.AuthProvider = user.AuthProvider(value.String)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -250,6 +277,19 @@ func (_m *User) String() string {
 	builder.WriteString(_m.Email)
 	builder.WriteString(", ")
 	builder.WriteString("password_hash=<sensitive>")
+	builder.WriteString(", ")
+	if v := _m.GoogleID; v != nil {
+		builder.WriteString("google_id=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	if v := _m.AvatarURL; v != nil {
+		builder.WriteString("avatar_url=")
+		builder.WriteString(*v)
+	}
+	builder.WriteString(", ")
+	builder.WriteString("auth_provider=")
+	builder.WriteString(fmt.Sprintf("%v", _m.AuthProvider))
 	builder.WriteByte(')')
 	return builder.String()
 }

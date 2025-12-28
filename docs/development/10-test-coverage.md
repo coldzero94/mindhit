@@ -2,7 +2,7 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-28 (Phase 9 Plan & Usage 추가, url_service 버그 수정)
+> **Last Updated**: 2025-12-28 (Phase 2.1 Google OAuth 테스트 추가)
 
 ---
 
@@ -205,6 +205,37 @@ pnpm test:coverage
 | | `RoutesForgotPassword` | 87.5% |
 | | `RoutesResetPassword` | 58.3% |
 
+### Phase 2.1: Google OAuth
+
+| 파일 | 함수 | 커버리지 |
+| ---- | ---- | -------- |
+| `service/oauth_service.go` | `NewOAuthService` | 100.0% |
+| | `ValidateGoogleIDToken` | 100.0% |
+| | `FindOrCreateGoogleUser` | 100.0% |
+| `controller/oauth_controller.go` | `NewOAuthController` | 100.0% |
+| | `RoutesGoogleAuth` | 100.0% |
+
+#### OAuth Service Tests (`oauth_service_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestOAuthService_FindOrCreateGoogleUser_NewUser` | 새 Google 사용자 생성 |
+| `TestOAuthService_FindOrCreateGoogleUser_ExistingGoogleUser` | 기존 Google 사용자 재로그인 |
+| `TestOAuthService_FindOrCreateGoogleUser_LinkToExistingEmailUser` | 이메일 사용자에 Google 연결 |
+| `TestOAuthService_FindOrCreateGoogleUser_UpdatesAvatarOnRelogin` | 재로그인 시 아바타 업데이트 |
+| `TestOAuthService_FindOrCreateGoogleUser_DifferentGoogleIDSameEmail_CreatesNewIfNoExisting` | 동일 이메일 다른 Google ID 처리 |
+| `TestOAuthService_ValidateGoogleIDToken_InvalidToken` | 잘못된 토큰 검증 |
+| `TestOAuthService_ValidateGoogleIDToken_EmptyToken` | 빈 토큰 검증 |
+
+#### OAuth Controller Tests (`oauth_controller_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestOAuthController_RoutesGoogleAuth_InvalidToken` | 잘못된/빈 토큰 401 응답 |
+| `TestOAuthController_FindOrCreateGoogleUser_Integration` | 새 사용자 구독 생성, 중복 방지 |
+| `TestOAuthController_GoogleUserProperties` | auth_provider, avatar_url 검증 |
+| `TestOAuthController_LinkEmailAccount` | 이메일 계정에 Google 연결, 기존 비밀번호 유지 |
+
 ### Phase 3: Sessions
 
 | 파일 | 함수 | 커버리지 |
@@ -349,11 +380,13 @@ pnpm test:coverage
 | 위치 | 설명 | Phase |
 | ---- | ---- | ----- |
 | `internal/controller/auth_controller_test.go` | Auth API 테스트 | Phase 2 |
+| `internal/controller/oauth_controller_test.go` | Google OAuth API 테스트 | Phase 2.1 |
 | `internal/controller/session_controller_test.go` | Session API 테스트 | Phase 3 |
 | `internal/controller/event_controller_test.go` | Event API 테스트 | Phase 4 |
 | `internal/controller/subscription_controller_test.go` | Subscription API 테스트 | Phase 9 (TODO) |
 | `internal/controller/usage_controller_test.go` | Usage API 테스트 | Phase 9 (TODO) |
 | `internal/service/auth_service_test.go` | Auth 서비스 테스트 | Phase 2 |
+| `internal/service/oauth_service_test.go` | Google OAuth 서비스 테스트 | Phase 2.1 |
 | `internal/service/session_service_test.go` | Session 서비스 테스트 | Phase 3 |
 | `internal/service/event_service_test.go` | Event 서비스 테스트 | Phase 4 |
 | `internal/service/url_service_test.go` | URL 서비스 테스트 | Phase 4 |
@@ -563,6 +596,7 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-28 | Phase 2.1 | Google OAuth 테스트 추가 (oauth_service_test.go 7개, oauth_controller_test.go 8개) |
 | 2025-12-28 | Phase 9 | Plan & Usage 서비스/컨트롤러 추가 (테스트 미작성, 향후 작성 예정) |
 | 2025-12-28 | - | url_service.go 버그 수정: GetURLsWithoutSummary에 빈 content 제외 조건 추가 |
 | 2025-12-28 | Phase 8 | Extension 테스트 추가: API 통합 테스트 (MSW), stores, events (31개 테스트) |

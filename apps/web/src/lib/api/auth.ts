@@ -4,6 +4,7 @@ import type {
   AuthSignupRequest,
   AuthAuthResponse,
   AuthUser,
+  AuthGoogleAuthRequest,
 } from "@/api/generated/types.gen";
 
 export const authApi = {
@@ -18,6 +19,16 @@ export const authApi = {
   signup: async (data: AuthSignupRequest): Promise<AuthAuthResponse> => {
     const response = await apiClient.post<AuthAuthResponse>(
       "/auth/signup",
+      data
+    );
+    return response.data;
+  },
+
+  googleAuth: async (
+    data: AuthGoogleAuthRequest
+  ): Promise<AuthAuthResponse> => {
+    const response = await apiClient.post<AuthAuthResponse>(
+      "/auth/google",
       data
     );
     return response.data;

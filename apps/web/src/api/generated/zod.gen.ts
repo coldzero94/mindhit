@@ -10,6 +10,13 @@ export const zAuthForgotPasswordRequest = z.object({
 });
 
 /**
+ * Google OAuth 로그인 요청
+ */
+export const zAuthGoogleAuthRequest = z.object({
+  credential: z.string(),
+});
+
+/**
  * 로그인 요청
  */
 export const zAuthLoginRequest = z.object({
@@ -285,6 +292,17 @@ export const zRoutesForgotPasswordData = z.object({
 export const zRoutesForgotPasswordResponse = z.object({
   message: z.string(),
 });
+
+export const zRoutesGoogleAuthData = z.object({
+  body: zAuthGoogleAuthRequest,
+  path: z.optional(z.never()),
+  query: z.optional(z.never()),
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesGoogleAuthResponse = zAuthAuthResponse;
 
 export const zRoutesLoginData = z.object({
   body: zAuthLoginRequest,

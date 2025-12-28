@@ -28,6 +28,12 @@ const (
 	FieldEmail = "email"
 	// FieldPasswordHash holds the string denoting the password_hash field in the database.
 	FieldPasswordHash = "password_hash"
+	// FieldGoogleID holds the string denoting the google_id field in the database.
+	FieldGoogleID = "google_id"
+	// FieldAvatarURL holds the string denoting the avatar_url field in the database.
+	FieldAvatarURL = "avatar_url"
+	// FieldAuthProvider holds the string denoting the auth_provider field in the database.
+	FieldAuthProvider = "auth_provider"
 	// EdgeSettings holds the string denoting the settings edge name in mutations.
 	EdgeSettings = "settings"
 	// EdgeSessions holds the string denoting the sessions edge name in mutations.
@@ -86,6 +92,9 @@ var Columns = []string{
 	FieldDeletedAt,
 	FieldEmail,
 	FieldPasswordHash,
+	FieldGoogleID,
+	FieldAvatarURL,
+	FieldAuthProvider,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -137,6 +146,32 @@ func StatusValidator(s Status) error {
 	}
 }
 
+// AuthProvider defines the type for the "auth_provider" enum field.
+type AuthProvider string
+
+// AuthProviderEmail is the default value of the AuthProvider enum.
+const DefaultAuthProvider = AuthProviderEmail
+
+// AuthProvider values.
+const (
+	AuthProviderEmail  AuthProvider = "email"
+	AuthProviderGoogle AuthProvider = "google"
+)
+
+func (ap AuthProvider) String() string {
+	return string(ap)
+}
+
+// AuthProviderValidator is a validator for the "auth_provider" field enum values. It is called by the builders before save.
+func AuthProviderValidator(ap AuthProvider) error {
+	switch ap {
+	case AuthProviderEmail, AuthProviderGoogle:
+		return nil
+	default:
+		return fmt.Errorf("user: invalid enum value for auth_provider field: %q", ap)
+	}
+}
+
 // OrderOption defines the ordering options for the User queries.
 type OrderOption func(*sql.Selector)
 
@@ -173,6 +208,21 @@ func ByEmail(opts ...sql.OrderTermOption) OrderOption {
 // ByPasswordHash orders the results by the password_hash field.
 func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPasswordHash, opts...).ToFunc()
+}
+
+// ByGoogleID orders the results by the google_id field.
+func ByGoogleID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGoogleID, opts...).ToFunc()
+}
+
+// ByAvatarURL orders the results by the avatar_url field.
+func ByAvatarURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAvatarURL, opts...).ToFunc()
+}
+
+// ByAuthProvider orders the results by the auth_provider field.
+func ByAuthProvider(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAuthProvider, opts...).ToFunc()
 }
 
 // BySettingsField orders the results by settings field.

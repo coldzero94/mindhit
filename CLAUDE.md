@@ -146,7 +146,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 1 | ✅ Done | Project Initialization |
 | Phase 1.5 | ✅ Done | API Spec Standardization |
 | Phase 2 | ✅ Done | Authentication System |
-| Phase 2.1 | ⬜ Pending | Google OAuth (after Phase 6, before Phase 7) |
+| Phase 2.1 | ✅ Done | Google OAuth (GIS-based) |
 | Phase 3 | ✅ Done | Session Management API |
 | Phase 4 | ✅ Done | Event Collection API |
 | Phase 5 | ✅ Done | Monitoring & Infra (Basic) |
@@ -169,6 +169,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-28] Phase 2.1 completed: Google OAuth - Google Identity Services (GIS) integration, OAuthService, OAuthController, Google Sign-In button on login/signup pages
 - [2025-12-28] Phase 9 completed: Plan & Usage System - Plan/Subscription/TokenUsage schemas, UsageService, SubscriptionService, Subscription and Usage API endpoints
 - [2025-12-28] Phase 8 completed: Chrome Extension - Side Panel UI, Session control, Event collection (page_visit, scroll, highlight), Batch sending with offline support
 - [2025-12-27] Phase 7 completed: Next.js Web App - Auth UI (login/signup), Sessions list/detail pages, Zustand + React Query, zod v4

@@ -1,6 +1,7 @@
 env "local" {
   src = "ent://ent/schema"
-  dev = "postgres://postgres:password@localhost:5433/mindhit_dev?sslmode=disable"
+  dev = "docker://postgres/16/dev?search_path=public"
+  url = "postgres://postgres:password@localhost:5433/mindhit?sslmode=disable"
   migration {
     dir = "file://ent/migrate/migrations"
   }

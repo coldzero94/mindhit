@@ -94,6 +94,56 @@ func (_c *UserCreate) SetPasswordHash(v string) *UserCreate {
 	return _c
 }
 
+// SetNillablePasswordHash sets the "password_hash" field if the given value is not nil.
+func (_c *UserCreate) SetNillablePasswordHash(v *string) *UserCreate {
+	if v != nil {
+		_c.SetPasswordHash(*v)
+	}
+	return _c
+}
+
+// SetGoogleID sets the "google_id" field.
+func (_c *UserCreate) SetGoogleID(v string) *UserCreate {
+	_c.mutation.SetGoogleID(v)
+	return _c
+}
+
+// SetNillableGoogleID sets the "google_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableGoogleID(v *string) *UserCreate {
+	if v != nil {
+		_c.SetGoogleID(*v)
+	}
+	return _c
+}
+
+// SetAvatarURL sets the "avatar_url" field.
+func (_c *UserCreate) SetAvatarURL(v string) *UserCreate {
+	_c.mutation.SetAvatarURL(v)
+	return _c
+}
+
+// SetNillableAvatarURL sets the "avatar_url" field if the given value is not nil.
+func (_c *UserCreate) SetNillableAvatarURL(v *string) *UserCreate {
+	if v != nil {
+		_c.SetAvatarURL(*v)
+	}
+	return _c
+}
+
+// SetAuthProvider sets the "auth_provider" field.
+func (_c *UserCreate) SetAuthProvider(v user.AuthProvider) *UserCreate {
+	_c.mutation.SetAuthProvider(v)
+	return _c
+}
+
+// SetNillableAuthProvider sets the "auth_provider" field if the given value is not nil.
+func (_c *UserCreate) SetNillableAuthProvider(v *user.AuthProvider) *UserCreate {
+	if v != nil {
+		_c.SetAuthProvider(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *UserCreate) SetID(v uuid.UUID) *UserCreate {
 	_c.mutation.SetID(v)
@@ -234,6 +284,10 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.AuthProvider(); !ok {
+		v := user.DefaultAuthProvider
+		_c.mutation.SetAuthProvider(v)
+	}
 	if _, ok := _c.mutation.ID(); !ok {
 		v := user.DefaultID()
 		_c.mutation.SetID(v)
@@ -264,8 +318,13 @@ func (_c *UserCreate) check() error {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "User.email": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.PasswordHash(); !ok {
-		return &ValidationError{Name: "password_hash", err: errors.New(`ent: missing required field "User.password_hash"`)}
+	if _, ok := _c.mutation.AuthProvider(); !ok {
+		return &ValidationError{Name: "auth_provider", err: errors.New(`ent: missing required field "User.auth_provider"`)}
+	}
+	if v, ok := _c.mutation.AuthProvider(); ok {
+		if err := user.AuthProviderValidator(v); err != nil {
+			return &ValidationError{Name: "auth_provider", err: fmt.Errorf(`ent: validator failed for field "User.auth_provider": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -324,7 +383,19 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
-		_node.PasswordHash = value
+		_node.PasswordHash = &value
+	}
+	if value, ok := _c.mutation.GoogleID(); ok {
+		_spec.SetField(user.FieldGoogleID, field.TypeString, value)
+		_node.GoogleID = &value
+	}
+	if value, ok := _c.mutation.AvatarURL(); ok {
+		_spec.SetField(user.FieldAvatarURL, field.TypeString, value)
+		_node.AvatarURL = &value
+	}
+	if value, ok := _c.mutation.AuthProvider(); ok {
+		_spec.SetField(user.FieldAuthProvider, field.TypeEnum, value)
+		_node.AuthProvider = value
 	}
 	if nodes := _c.mutation.SettingsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

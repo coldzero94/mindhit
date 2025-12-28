@@ -89,6 +89,7 @@ func run() error {
 	eventService := service.NewEventService(client, urlService)
 	subscriptionService := service.NewSubscriptionService(client)
 	usageService := service.NewUsageService(client)
+	oauthService := service.NewOAuthService(client)
 
 	// Controllers
 	authController := controller.NewAuthController(authService, jwtService)
@@ -96,9 +97,10 @@ func run() error {
 	eventController := controller.NewEventController(eventService, sessionService, jwtService)
 	subscriptionController := controller.NewSubscriptionController(subscriptionService, jwtService)
 	usageController := controller.NewUsageController(usageService, jwtService)
+	oauthController := controller.NewOAuthController(oauthService, jwtService, subscriptionService)
 
 	// Combined handler implementing StrictServerInterface
-	handler := controller.NewHandler(authController, sessionController, eventController, subscriptionController, usageController)
+	handler := controller.NewHandler(authController, sessionController, eventController, subscriptionController, usageController, oauthController)
 
 	// Router
 	r := gin.New()
@@ -121,6 +123,7 @@ func run() error {
 	r.POST("/v1/auth/signup", authRateLimiter)
 	r.POST("/v1/auth/login", authRateLimiter)
 	r.POST("/v1/auth/forgot-password", authRateLimiter)
+	r.POST("/v1/auth/google", authRateLimiter)
 
 	// Register API handlers using generated code
 	strictHandler := generated.NewStrictHandler(handler, nil)

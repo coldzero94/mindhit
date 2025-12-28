@@ -102,6 +102,66 @@ func (_u *UserUpdate) SetNillablePasswordHash(v *string) *UserUpdate {
 	return _u
 }
 
+// ClearPasswordHash clears the value of the "password_hash" field.
+func (_u *UserUpdate) ClearPasswordHash() *UserUpdate {
+	_u.mutation.ClearPasswordHash()
+	return _u
+}
+
+// SetGoogleID sets the "google_id" field.
+func (_u *UserUpdate) SetGoogleID(v string) *UserUpdate {
+	_u.mutation.SetGoogleID(v)
+	return _u
+}
+
+// SetNillableGoogleID sets the "google_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableGoogleID(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetGoogleID(*v)
+	}
+	return _u
+}
+
+// ClearGoogleID clears the value of the "google_id" field.
+func (_u *UserUpdate) ClearGoogleID() *UserUpdate {
+	_u.mutation.ClearGoogleID()
+	return _u
+}
+
+// SetAvatarURL sets the "avatar_url" field.
+func (_u *UserUpdate) SetAvatarURL(v string) *UserUpdate {
+	_u.mutation.SetAvatarURL(v)
+	return _u
+}
+
+// SetNillableAvatarURL sets the "avatar_url" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableAvatarURL(v *string) *UserUpdate {
+	if v != nil {
+		_u.SetAvatarURL(*v)
+	}
+	return _u
+}
+
+// ClearAvatarURL clears the value of the "avatar_url" field.
+func (_u *UserUpdate) ClearAvatarURL() *UserUpdate {
+	_u.mutation.ClearAvatarURL()
+	return _u
+}
+
+// SetAuthProvider sets the "auth_provider" field.
+func (_u *UserUpdate) SetAuthProvider(v user.AuthProvider) *UserUpdate {
+	_u.mutation.SetAuthProvider(v)
+	return _u
+}
+
+// SetNillableAuthProvider sets the "auth_provider" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableAuthProvider(v *user.AuthProvider) *UserUpdate {
+	if v != nil {
+		_u.SetAuthProvider(*v)
+	}
+	return _u
+}
+
 // SetSettingsID sets the "settings" edge to the UserSettings entity by ID.
 func (_u *UserUpdate) SetSettingsID(id uuid.UUID) *UserUpdate {
 	_u.mutation.SetSettingsID(id)
@@ -324,6 +384,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "User.email": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthProvider(); ok {
+		if err := user.AuthProviderValidator(v); err != nil {
+			return &ValidationError{Name: "auth_provider", err: fmt.Errorf(`ent: validator failed for field "User.auth_provider": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -356,6 +421,24 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
+	}
+	if _u.mutation.PasswordHashCleared() {
+		_spec.ClearField(user.FieldPasswordHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.GoogleID(); ok {
+		_spec.SetField(user.FieldGoogleID, field.TypeString, value)
+	}
+	if _u.mutation.GoogleIDCleared() {
+		_spec.ClearField(user.FieldGoogleID, field.TypeString)
+	}
+	if value, ok := _u.mutation.AvatarURL(); ok {
+		_spec.SetField(user.FieldAvatarURL, field.TypeString, value)
+	}
+	if _u.mutation.AvatarURLCleared() {
+		_spec.ClearField(user.FieldAvatarURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.AuthProvider(); ok {
+		_spec.SetField(user.FieldAuthProvider, field.TypeEnum, value)
 	}
 	if _u.mutation.SettingsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -654,6 +737,66 @@ func (_u *UserUpdateOne) SetNillablePasswordHash(v *string) *UserUpdateOne {
 	return _u
 }
 
+// ClearPasswordHash clears the value of the "password_hash" field.
+func (_u *UserUpdateOne) ClearPasswordHash() *UserUpdateOne {
+	_u.mutation.ClearPasswordHash()
+	return _u
+}
+
+// SetGoogleID sets the "google_id" field.
+func (_u *UserUpdateOne) SetGoogleID(v string) *UserUpdateOne {
+	_u.mutation.SetGoogleID(v)
+	return _u
+}
+
+// SetNillableGoogleID sets the "google_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableGoogleID(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetGoogleID(*v)
+	}
+	return _u
+}
+
+// ClearGoogleID clears the value of the "google_id" field.
+func (_u *UserUpdateOne) ClearGoogleID() *UserUpdateOne {
+	_u.mutation.ClearGoogleID()
+	return _u
+}
+
+// SetAvatarURL sets the "avatar_url" field.
+func (_u *UserUpdateOne) SetAvatarURL(v string) *UserUpdateOne {
+	_u.mutation.SetAvatarURL(v)
+	return _u
+}
+
+// SetNillableAvatarURL sets the "avatar_url" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableAvatarURL(v *string) *UserUpdateOne {
+	if v != nil {
+		_u.SetAvatarURL(*v)
+	}
+	return _u
+}
+
+// ClearAvatarURL clears the value of the "avatar_url" field.
+func (_u *UserUpdateOne) ClearAvatarURL() *UserUpdateOne {
+	_u.mutation.ClearAvatarURL()
+	return _u
+}
+
+// SetAuthProvider sets the "auth_provider" field.
+func (_u *UserUpdateOne) SetAuthProvider(v user.AuthProvider) *UserUpdateOne {
+	_u.mutation.SetAuthProvider(v)
+	return _u
+}
+
+// SetNillableAuthProvider sets the "auth_provider" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableAuthProvider(v *user.AuthProvider) *UserUpdateOne {
+	if v != nil {
+		_u.SetAuthProvider(*v)
+	}
+	return _u
+}
+
 // SetSettingsID sets the "settings" edge to the UserSettings entity by ID.
 func (_u *UserUpdateOne) SetSettingsID(id uuid.UUID) *UserUpdateOne {
 	_u.mutation.SetSettingsID(id)
@@ -889,6 +1032,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "email", err: fmt.Errorf(`ent: validator failed for field "User.email": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.AuthProvider(); ok {
+		if err := user.AuthProviderValidator(v); err != nil {
+			return &ValidationError{Name: "auth_provider", err: fmt.Errorf(`ent: validator failed for field "User.auth_provider": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -938,6 +1086,24 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
+	}
+	if _u.mutation.PasswordHashCleared() {
+		_spec.ClearField(user.FieldPasswordHash, field.TypeString)
+	}
+	if value, ok := _u.mutation.GoogleID(); ok {
+		_spec.SetField(user.FieldGoogleID, field.TypeString, value)
+	}
+	if _u.mutation.GoogleIDCleared() {
+		_spec.ClearField(user.FieldGoogleID, field.TypeString)
+	}
+	if value, ok := _u.mutation.AvatarURL(); ok {
+		_spec.SetField(user.FieldAvatarURL, field.TypeString, value)
+	}
+	if _u.mutation.AvatarURLCleared() {
+		_spec.ClearField(user.FieldAvatarURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.AuthProvider(); ok {
+		_spec.SetField(user.FieldAuthProvider, field.TypeEnum, value)
 	}
 	if _u.mutation.SettingsCleared() {
 		edge := &sqlgraph.EdgeSpec{
