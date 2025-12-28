@@ -54,6 +54,7 @@ export interface User {
 
 export interface Session {
   id: string;
-  status: string;
+  session_status: string;
   started_at: string;
+  ended_at?: string;
 }

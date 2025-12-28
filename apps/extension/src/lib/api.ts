@@ -1,7 +1,5 @@
 import type { User, Session, BrowsingEvent } from "@/types";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:9000/v1";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface AuthResponse {
   user: User;

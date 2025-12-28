@@ -2,6 +2,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -33,6 +34,16 @@ func Load() *Config {
 		RedisAddr:         getEnv("REDIS_ADDR", "localhost:6380"),
 		WorkerConcurrency: getEnvInt("WORKER_CONCURRENCY", 10),
 	}
+}
+
+// Validate checks if critical configuration values are properly set for production.
+func (c *Config) Validate() error {
+	if c.Environment == "production" {
+		if c.JWTSecret == "your-secret-key" || len(c.JWTSecret) < 32 {
+			return fmt.Errorf("JWT_SECRET must be set to a secure value (at least 32 characters) in production")
+		}
+	}
+	return nil
 }
 
 func getEnv(key, defaultValue string) string {

@@ -1,5 +1,7 @@
 import { create } from "zustand";
-import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { chromeStorage } from "@/lib/chrome-storage";
+import { STORAGE_KEYS } from "@/lib/constants";
 
 // Extension local state (idle: no session, recording: recording, paused: paused)
 // Backend state: recording, paused, processing, completed, failed
@@ -28,21 +30,6 @@ interface SessionState {
   updateElapsedTime: () => void;
   reset: () => void;
 }
-
-// Chrome storage adapter for Zustand persist
-const chromeStorage: StateStorage = {
-  getItem: async (name: string): Promise<string | null> => {
-    const result = await chrome.storage.local.get(name);
-    const value = result[name];
-    return typeof value === "string" ? value : null;
-  },
-  setItem: async (name: string, value: string): Promise<void> => {
-    await chrome.storage.local.set({ [name]: value });
-  },
-  removeItem: async (name: string): Promise<void> => {
-    await chrome.storage.local.remove(name);
-  },
-};
 
 export const useSessionStore = create<SessionState>()(
   persist(
@@ -99,7 +86,7 @@ export const useSessionStore = create<SessionState>()(
         }),
     }),
     {
-      name: "mindhit-session",
+      name: STORAGE_KEYS.SESSION,
       storage: createJSONStorage(() => chromeStorage),
     }
   )

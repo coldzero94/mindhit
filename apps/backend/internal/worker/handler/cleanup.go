@@ -24,30 +24,18 @@ func (h *handlers) HandleSessionCleanup(ctx context.Context, t *asynq.Task) erro
 
 	threshold := time.Now().Add(-time.Duration(payload.MaxAgeHours) * time.Hour)
 
-	// Find stale sessions
-	staleSessions, err := h.client.Session.Query().
+	// Batch update stale sessions to failed status
+	count, err := h.client.Session.Update().
 		Where(
 			session.SessionStatusIn(session.SessionStatusRecording, session.SessionStatusPaused),
 			session.UpdatedAtLT(threshold),
 		).
-		All(ctx)
+		SetSessionStatus(session.SessionStatusFailed).
+		Save(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to query stale sessions: %w", err)
+		return fmt.Errorf("failed to update stale sessions: %w", err)
 	}
 
-	// Update each to failed status
-	for _, sess := range staleSessions {
-		_, err := h.client.Session.UpdateOne(sess).
-			SetSessionStatus(session.SessionStatusFailed).
-			Save(ctx)
-		if err != nil {
-			slog.Error("failed to update stale session",
-				"session_id", sess.ID,
-				"error", err,
-			)
-		}
-	}
-
-	slog.Info("session cleanup completed", "cleaned_count", len(staleSessions))
+	slog.Info("session cleanup completed", "cleaned_count", count)
 	return nil
 }

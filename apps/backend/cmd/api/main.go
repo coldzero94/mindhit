@@ -3,12 +3,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -33,6 +36,11 @@ func main() {
 func run() error {
 	cfg := config.Load()
 
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("configuration error: %w", err)
+	}
+
 	// Initialize logger based on environment
 	logger.Init(cfg.Environment)
 
@@ -40,11 +48,18 @@ func run() error {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Database connection
-	client, err := ent.Open(dialect.Postgres, cfg.DatabaseURL)
+	// Database connection with connection pool settings
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
+	// Connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(time.Hour)
+
+	drv := entsql.OpenDB(dialect.Postgres, db)
+	client := ent.NewClient(ent.Driver(drv))
 	defer func() {
 		if err := client.Close(); err != nil {
 			slog.Error("failed to close database connection", "error", err)
@@ -96,6 +111,12 @@ func run() error {
 
 	// Metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Rate limiting for auth endpoints (10 requests per minute per IP)
+	authRateLimiter := middleware.AuthRateLimit()
+	r.POST("/v1/auth/signup", authRateLimiter)
+	r.POST("/v1/auth/login", authRateLimiter)
+	r.POST("/v1/auth/forgot-password", authRateLimiter)
 
 	// Register API handlers using generated code
 	strictHandler := generated.NewStrictHandler(handler, nil)

@@ -1,7 +1,10 @@
 import type { BrowsingEvent } from "@/types";
+import { getAuthToken } from "@/lib/auth-utils";
+import { API_BASE_URL } from "@/lib/constants";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8080/v1";
+const BATCH_SIZE = 10;
+const FLUSH_INTERVAL = 30000; // 30 seconds
+const REQUEST_TIMEOUT = 30000; // 30 seconds
 
 interface SessionState {
   isRecording: boolean;
@@ -15,32 +18,60 @@ const state: SessionState = {
   events: [],
 };
 
+let flushIntervalId: ReturnType<typeof setInterval> | null = null;
+
 // Open Side Panel when Extension icon is clicked
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-// Message listener
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+// Valid message types from extension
+const VALID_MESSAGE_TYPES = [
+  "SESSION_STARTED",
+  "SESSION_PAUSED",
+  "SESSION_RESUMED",
+  "SESSION_STOPPED",
+  "EVENT",
+  "GET_STATE",
+  "INCREMENT_PAGE_COUNT",
+  "INCREMENT_HIGHLIGHT_COUNT",
+] as const;
+
+// Message listener with sender verification
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Verify sender is from our extension
+  if (sender.id !== chrome.runtime.id) {
+    return false;
+  }
+
+  // Validate message type
+  if (!VALID_MESSAGE_TYPES.includes(message.type)) {
+    return false;
+  }
+
   switch (message.type) {
     case "SESSION_STARTED":
       state.isRecording = true;
       state.sessionId = message.sessionId;
       state.events = [];
+      startFlushInterval();
       notifyContentScripts("START_RECORDING");
       break;
 
     case "SESSION_PAUSED":
       state.isRecording = false;
+      stopFlushInterval();
       notifyContentScripts("PAUSE_RECORDING");
       break;
 
     case "SESSION_RESUMED":
       state.isRecording = true;
+      startFlushInterval();
       notifyContentScripts("RESUME_RECORDING");
       break;
 
     case "SESSION_STOPPED":
       state.isRecording = false;
       state.sessionId = null;
+      stopFlushInterval();
       flushEvents();
       notifyContentScripts("STOP_RECORDING");
       break;
@@ -49,8 +80,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (state.isRecording && state.sessionId) {
         state.events.push(message.event);
 
-        // Send events every 10 events or every 30 seconds
-        if (state.events.length >= 10) {
+        // Send events every BATCH_SIZE events
+        if (state.events.length >= BATCH_SIZE) {
           flushEvents();
         }
       }
@@ -82,17 +113,48 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-// Periodic event flush (30 seconds)
-setInterval(() => {
-  if (state.isRecording && state.events.length > 0) {
-    flushEvents();
+// Start flush interval only when recording
+function startFlushInterval(): void {
+  if (flushIntervalId) return;
+  flushIntervalId = setInterval(() => {
+    if (state.isRecording && state.events.length > 0) {
+      flushEvents();
+    }
+  }, FLUSH_INTERVAL);
+}
+
+// Stop flush interval when not recording
+function stopFlushInterval(): void {
+  if (flushIntervalId) {
+    clearInterval(flushIntervalId);
+    flushIntervalId = null;
   }
-}, 30000);
+}
 
 // Network recovery: retry pending events
 self.addEventListener("online", () => {
   retryPendingEvents();
 });
+
+// Fetch with timeout
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeout: number = REQUEST_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 async function flushEvents(): Promise<void> {
   if (state.events.length === 0 || !state.sessionId) return;
@@ -101,15 +163,10 @@ async function flushEvents(): Promise<void> {
   state.events = [];
 
   try {
-    const authData = await chrome.storage.local.get("mindhit-auth");
-    const rawValue = authData["mindhit-auth"];
-    const parsed =
-      typeof rawValue === "string" ? JSON.parse(rawValue) : null;
-    const token = parsed?.state?.token;
-
+    const token = await getAuthToken();
     if (!token) return;
 
-    const response = await fetch(`${API_BASE_URL}/events/batch`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/events/batch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -152,15 +209,10 @@ async function retryPendingEvents(): Promise<void> {
     const events = storage[key] as BrowsingEvent[];
     if (events && state.sessionId) {
       try {
-        const authData = await chrome.storage.local.get("mindhit-auth");
-        const rawValue = authData["mindhit-auth"];
-        const parsed =
-          typeof rawValue === "string" ? JSON.parse(rawValue) : null;
-        const token = parsed?.state?.token;
-
+        const token = await getAuthToken();
         if (!token) continue;
 
-        const response = await fetch(`${API_BASE_URL}/events/batch`, {
+        const response = await fetchWithTimeout(`${API_BASE_URL}/events/batch`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -3,12 +3,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
 	_ "github.com/lib/pq"
 
 	"github.com/mindhit/api/ent"
@@ -39,11 +42,18 @@ func run() error {
 
 	slog.Info("starting worker", "env", cfg.Environment, "redis", cfg.RedisAddr)
 
-	// Connect to database
-	client, err := ent.Open(dialect.Postgres, cfg.DatabaseURL)
+	// Connect to database with connection pool settings
+	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
+	// Connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(time.Hour)
+
+	drv := entsql.OpenDB(dialect.Postgres, db)
+	client := ent.NewClient(ent.Driver(drv))
 	defer func() {
 		if err := client.Close(); err != nil {
 			slog.Error("failed to close database connection", "error", err)

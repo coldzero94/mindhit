@@ -3,6 +3,11 @@ import { useSessionStore } from "@/stores/session-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { api } from "@/lib/api";
 
+interface ErrorState {
+  message: string;
+  action: string;
+}
+
 export function SessionControl() {
   const {
     status,
@@ -14,10 +19,14 @@ export function SessionControl() {
   } = useSessionStore();
   const { token } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<ErrorState | null>(null);
+
+  const clearError = () => setError(null);
 
   const handleStart = async () => {
     if (!token) return;
     setIsLoading(true);
+    clearError();
     try {
       const response = await api.startSession(token);
       startSession(response.session.id);
@@ -27,8 +36,9 @@ export function SessionControl() {
         type: "SESSION_STARTED",
         sessionId: response.session.id,
       });
-    } catch (error) {
-      console.error("Failed to start session:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to start session";
+      setError({ message, action: "start" });
     } finally {
       setIsLoading(false);
     }
@@ -37,12 +47,14 @@ export function SessionControl() {
   const handlePause = async () => {
     if (!token || !sessionId) return;
     setIsLoading(true);
+    clearError();
     try {
       await api.pauseSession(token, sessionId);
       pauseSession();
       chrome.runtime.sendMessage({ type: "SESSION_PAUSED" });
-    } catch (error) {
-      console.error("Failed to pause session:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to pause session";
+      setError({ message, action: "pause" });
     } finally {
       setIsLoading(false);
     }
@@ -51,12 +63,14 @@ export function SessionControl() {
   const handleResume = async () => {
     if (!token || !sessionId) return;
     setIsLoading(true);
+    clearError();
     try {
       await api.resumeSession(token, sessionId);
       resumeSession();
       chrome.runtime.sendMessage({ type: "SESSION_RESUMED" });
-    } catch (error) {
-      console.error("Failed to resume session:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to resume session";
+      setError({ message, action: "resume" });
     } finally {
       setIsLoading(false);
     }
@@ -65,12 +79,14 @@ export function SessionControl() {
   const handleStop = async () => {
     if (!token || !sessionId) return;
     setIsLoading(true);
+    clearError();
     try {
       await api.stopSession(token, sessionId);
       stopSession();
       chrome.runtime.sendMessage({ type: "SESSION_STOPPED" });
-    } catch (error) {
-      console.error("Failed to stop session:", error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to stop session";
+      setError({ message, action: "stop" });
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +130,24 @@ export function SessionControl() {
           >
             {isLoading ? "Starting..." : "Start Recording"}
           </button>
+          {error && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <p className="text-sm text-red-700">{error.message}</p>
+                  <button
+                    onClick={clearError}
+                    className="text-xs text-red-600 underline mt-1"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -135,6 +169,25 @@ export function SessionControl() {
           </span>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-red-700">{error.message}</p>
+              <button
+                onClick={clearError}
+                className="text-xs text-red-600 underline mt-1"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2">
         {status === "recording" ? (
