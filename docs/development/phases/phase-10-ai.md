@@ -1,15 +1,112 @@
-# Phase 10: AI 마인드맵 생성
+# Phase 10: AI Provider 인프라
 
 ## 개요
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | 다중 AI 프로바이더(OpenAI, Google Gemini, Anthropic Claude)를 지원하는 태그 추출 및 마인드맵 생성 |
-| **선행 조건** | Phase 9 완료 (플랜 및 사용량 시스템) |
-| **예상 소요** | 5 Steps |
-| **결과물** | 페이지 방문 시 태그 추출, 세션 종료 시 관계도 JSON 생성 |
+| **목표** | 다중 AI 프로바이더(OpenAI, Google Gemini, Anthropic Claude) 통합 인프라 구축 |
+| **선행 조건** | Phase 6 완료 (Worker 및 Job Queue) |
+| **예상 소요** | 4 Steps |
+| **결과물** | 통합 AI 인터페이스, Provider 구현체, ai_logs 테이블 |
 
-> **Note**: 이 Phase에서는 Phase 9의 UsageService를 연동하여 AI 호출 시 토큰 사용량을 추적합니다.
+> **Note**: 이 Phase는 AI Provider 인프라만 구축합니다. 실제 마인드맵 생성은 [Phase 10.1](./phase-10.1-mindmap.md)에서 구현합니다.
+
+---
+
+## 통합 AI 아키텍처 설계 원칙
+
+### 핵심 요구사항
+
+1. **공통 인터페이스**: 모든 프로바이더가 동일한 Request/Response 구조 사용
+2. **확장 용이성**: 새 프로바이더 추가 시 `Provider` 인터페이스만 구현
+3. **응답 통합 관리**: thinking/content 분리, 토큰 사용량, 지연시간 등 일관된 구조
+4. **로그 저장**: 모든 AI 호출을 `ai_logs` 테이블에 기록 (디버깅, 비용 추적)
+
+### 아키텍처 다이어그램
+
+```mermaid
+flowchart TB
+    subgraph Application
+        Handler[Worker Handler]
+        Service[AI Service]
+    end
+
+    subgraph AI_Layer["AI Layer (internal/infrastructure/ai)"]
+        Manager[ProviderManager]
+
+        subgraph Providers["Provider Implementations"]
+            OpenAI[OpenAIProvider<br/>go-openai SDK]
+            Claude[ClaudeProvider<br/>anthropic-sdk-go]
+            Gemini[GeminiProvider<br/>genai SDK]
+        end
+
+        subgraph Types["Unified Types"]
+            Request[ChatRequest]
+            Response[ChatResponse]
+            Stream[StreamHandler]
+        end
+    end
+
+    subgraph Storage
+        AILog[(ai_logs)]
+        Usage[(token_usages)]
+    end
+
+    Handler --> Service
+    Service --> Manager
+    Manager --> OpenAI
+    Manager --> Claude
+    Manager --> Gemini
+
+    OpenAI --> Response
+    Claude --> Response
+    Gemini --> Response
+
+    Response --> AILog
+    Response --> Usage
+```
+
+### 통합 타입 구조
+
+```go
+// ChatRequest - 모든 프로바이더에서 동일하게 사용
+type ChatRequest struct {
+    SystemPrompt string            // 시스템 프롬프트
+    UserPrompt   string            // 사용자 프롬프트
+    Messages     []Message         // 멀티턴 대화 (선택)
+    Options      ChatOptions       // 온도, 토큰 제한 등
+    Metadata     map[string]string // 추적용 메타데이터 (session_id, task 등)
+}
+
+// ChatResponse - 모든 프로바이더가 이 형식으로 반환
+type ChatResponse struct {
+    // 응답 분리 (thinking vs content)
+    Thinking string // 추론 과정 (Claude extended thinking, OpenAI reasoning)
+    Content  string // 최종 응답
+
+    // 정확한 토큰 측정 (프로바이더 API 응답에서 추출)
+    InputTokens    int // 입력 토큰
+    OutputTokens   int // 출력 토큰
+    ThinkingTokens int // thinking 토큰 (해당되는 경우)
+    TotalTokens    int // 총 토큰 (과금 기준)
+
+    // 메타데이터
+    Provider  string        // "openai", "claude", "gemini"
+    Model     string        // "gpt-4o", "claude-sonnet-4", "gemini-2.0-flash"
+    LatencyMs int64         // 응답 지연시간 (ms)
+    RequestID string        // 프로바이더 요청 ID (디버깅용)
+}
+```
+
+### 프로바이더별 Thinking 지원
+
+| 프로바이더 | Thinking 지원 | 활성화 방법 | 응답 분리 |
+|-----------|--------------|------------|----------|
+| **OpenAI** (o1, GPT-5) | ✅ | `reasoning_effort: "medium"` | `reasoning_summary` 이벤트 |
+| **Claude** | ✅ | `thinking.budget_tokens: 10000` | `thinking` content block |
+| **Gemini** | ✅ | `thinking_config.thinking_budget` | `thinking` 필드 |
+
+> **중요**: Claude의 OpenAI SDK 호환 모드에서는 thinking이 반환되지 않음 → **네이티브 SDK 필수**
 
 ---
 
@@ -152,16 +249,16 @@ flowchart TB
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 10.1 | AI Provider 인터페이스 정의 | ⬜ |
-| 10.2 | 개별 Provider 구현 (OpenAI, Gemini, Claude) | ⬜ |
-| 10.3 | Provider Manager 및 Config | ⬜ |
-| 10.4 | 태그 추출 Worker Handler | ⬜ |
-| 10.5 | 마인드맵 생성 Worker Handler | ⬜ |
-| 10.6 | UsageService 연동 (토큰 측정) | ⬜ |
+| 10.1 | 통합 타입 및 AI Provider 인터페이스 정의 | ⬜ |
+| 10.2 | ai_logs 테이블 스키마 및 AILogService | ⬜ |
+| 10.3 | 개별 Provider 구현 (OpenAI, Gemini, Claude) | ⬜ |
+| 10.4 | Provider Manager 및 Config | ⬜ |
+
+> **다음 단계**: [Phase 10.1: 마인드맵 생성](./phase-10.1-mindmap.md)에서 태그 추출 및 마인드맵 생성 Worker Handler를 구현합니다.
 
 ---
 
-## Step 10.1: AI Provider 인터페이스 정의
+## Step 10.1: 통합 타입 및 AI Provider 인터페이스 정의
 
 > **에러 처리 가이드**: AI 에러 처리 패턴은
 > [09-error-handling.md#12](../09-error-handling.md#12-ai-에러-처리)를 참조하세요.
@@ -172,19 +269,31 @@ flowchart TB
 
 ### 체크리스트
 
-- [ ] **공통 타입 정의**
+- [ ] **통합 타입 정의**
   - [ ] `internal/infrastructure/ai/types.go`
 
     ```go
     package ai
 
-    import "context"
+    import "time"
 
-    // Message represents a chat message
-    type Message struct {
-        Role    Role   `json:"role"`
-        Content string `json:"content"`
-    }
+    // ProviderType identifies the AI provider
+    type ProviderType string
+
+    const (
+        ProviderOpenAI ProviderType = "openai"
+        ProviderGemini ProviderType = "gemini"
+        ProviderClaude ProviderType = "claude"
+    )
+
+    // TaskType identifies the AI task for provider selection
+    type TaskType string
+
+    const (
+        TaskTagExtraction TaskType = "tag_extraction"
+        TaskMindmap       TaskType = "mindmap"
+        TaskGeneral       TaskType = "general"
+    )
 
     // Role defines message roles
     type Role string
@@ -195,13 +304,21 @@ flowchart TB
         RoleAssistant Role = "assistant"
     )
 
+    // Message represents a chat message
+    type Message struct {
+        Role    Role   `json:"role"`
+        Content string `json:"content"`
+    }
+
     // ChatOptions contains optional parameters for chat completion
     type ChatOptions struct {
-        Temperature   float64  `json:"temperature,omitempty"`
-        MaxTokens     int      `json:"max_tokens,omitempty"`
-        TopP          float64  `json:"top_p,omitempty"`
-        StopSequences []string `json:"stop_sequences,omitempty"`
-        JSONMode      bool     `json:"json_mode,omitempty"` // Force JSON output
+        Temperature    float64  `json:"temperature,omitempty"`
+        MaxTokens      int      `json:"max_tokens,omitempty"`
+        TopP           float64  `json:"top_p,omitempty"`
+        StopSequences  []string `json:"stop_sequences,omitempty"`
+        JSONMode       bool     `json:"json_mode,omitempty"`       // Force JSON output
+        EnableThinking bool     `json:"enable_thinking,omitempty"` // Enable extended thinking
+        ThinkingBudget int      `json:"thinking_budget,omitempty"` // Max thinking tokens
     }
 
     // DefaultChatOptions returns sensible defaults
@@ -213,31 +330,57 @@ flowchart TB
         }
     }
 
-    // ChatResponse contains the AI response
-    type ChatResponse struct {
-        Content      string `json:"content"`
-        Model        string `json:"model"`
-        Provider     string `json:"provider"`
-        InputTokens  int    `json:"input_tokens,omitempty"`
-        OutputTokens int    `json:"output_tokens,omitempty"`
+    // ChatRequest - 통합 요청 구조체
+    type ChatRequest struct {
+        SystemPrompt string            `json:"system_prompt"`        // 시스템 프롬프트
+        UserPrompt   string            `json:"user_prompt"`          // 사용자 프롬프트
+        Messages     []Message         `json:"messages,omitempty"`   // 멀티턴 대화 (선택)
+        Options      ChatOptions       `json:"options"`              // 옵션
+        Metadata     map[string]string `json:"metadata,omitempty"`   // 추적용 메타데이터
     }
 
-    // ProviderType identifies the AI provider
-    type ProviderType string
+    // ChatResponse - 통합 응답 구조체 (모든 프로바이더가 이 형식으로 반환)
+    type ChatResponse struct {
+        // 응답 분리 (thinking vs content)
+        Thinking string `json:"thinking,omitempty"` // 추론 과정 (Claude/OpenAI/Gemini thinking)
+        Content  string `json:"content"`            // 최종 응답
 
-    const (
-        ProviderOpenAI    ProviderType = "openai"
-        ProviderGemini    ProviderType = "gemini"
-        ProviderClaude    ProviderType = "claude"
-    )
+        // 정확한 토큰 측정 (프로바이더 API 응답에서 추출)
+        InputTokens    int `json:"input_tokens"`              // 입력 토큰
+        OutputTokens   int `json:"output_tokens"`             // 출력 토큰
+        ThinkingTokens int `json:"thinking_tokens,omitempty"` // thinking 토큰
+        TotalTokens    int `json:"total_tokens"`              // 총 토큰 (과금 기준)
+
+        // 메타데이터
+        Provider  ProviderType  `json:"provider"`            // "openai", "claude", "gemini"
+        Model     string        `json:"model"`               // 실제 사용된 모델
+        LatencyMs int64         `json:"latency_ms"`          // 응답 지연시간 (ms)
+        RequestID string        `json:"request_id,omitempty"`// 프로바이더 요청 ID
+        CreatedAt time.Time     `json:"created_at"`          // 응답 생성 시간
+    }
+
+    // StreamDelta - 스트리밍 응답 청크
+    type StreamDelta struct {
+        Type    string `json:"type"`    // "thinking" or "content"
+        Content string `json:"content"` // 청크 내용
+    }
+
+    // StreamHandler - 스트리밍 콜백 핸들러
+    type StreamHandler struct {
+        OnThinking func(delta string)          // thinking 청크 수신 시
+        OnContent  func(delta string)          // content 청크 수신 시
+        OnError    func(err error)             // 에러 발생 시
+        OnDone     func(response *ChatResponse)// 완료 시 최종 응답
+    }
 
     // ProviderConfig holds configuration for a single provider
     type ProviderConfig struct {
-        Type     ProviderType `json:"type"`
-        APIKey   string       `json:"api_key"`
-        Model    string       `json:"model"`
-        Enabled  bool         `json:"enabled"`
-        Priority int          `json:"priority"` // Lower = higher priority for fallback
+        Type           ProviderType `json:"type"`
+        APIKey         string       `json:"api_key"`
+        Model          string       `json:"model"`
+        Enabled        bool         `json:"enabled"`
+        Priority       int          `json:"priority"`        // Lower = higher priority
+        ThinkingBudget int          `json:"thinking_budget"` // Default thinking budget
     }
     ```
 
@@ -256,20 +399,19 @@ flowchart TB
         ErrProviderNotConfigured = errors.New("ai provider not configured")
         ErrNoResponse            = errors.New("no response from ai provider")
         ErrRateLimited           = errors.New("rate limited by ai provider")
+        ErrTokenLimitExceeded    = errors.New("token limit exceeded")
         ErrInvalidAPIKey         = errors.New("invalid api key")
         ErrContextCanceled       = errors.New("context canceled")
+        ErrInvalidJSON           = errors.New("invalid json response")
     )
 
     // AIProvider defines the interface that all AI providers must implement
     type AIProvider interface {
-        // Chat sends messages and returns a response
-        Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error)
+        // Chat sends a request and returns a unified response
+        Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error)
 
-        // ChatWithJSON is a convenience method that forces JSON output
-        ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error)
-
-        // Name returns the provider name for logging/metrics
-        Name() string
+        // ChatStream sends a request and streams the response
+        ChatStream(ctx context.Context, req ChatRequest, handler StreamHandler) error
 
         // Type returns the provider type
         Type() ProviderType
@@ -279,12 +421,16 @@ flowchart TB
 
         // IsHealthy checks if the provider is available
         IsHealthy(ctx context.Context) bool
+
+        // Close releases any resources
+        Close() error
     }
 
     // BaseProvider contains common functionality for all providers
     type BaseProvider struct {
-        providerType ProviderType
-        model        string
+        providerType   ProviderType
+        model          string
+        thinkingBudget int
     }
 
     func (b *BaseProvider) Type() ProviderType {
@@ -295,8 +441,34 @@ flowchart TB
         return b.model
     }
 
-    func (b *BaseProvider) Name() string {
-        return string(b.providerType)
+    func (b *BaseProvider) Close() error {
+        return nil // Default no-op, override if needed
+    }
+
+    // buildMessages converts ChatRequest to []Message for providers
+    func buildMessages(req ChatRequest) []Message {
+        var messages []Message
+
+        // Add system prompt if present
+        if req.SystemPrompt != "" {
+            messages = append(messages, Message{
+                Role:    RoleSystem,
+                Content: req.SystemPrompt,
+            })
+        }
+
+        // Add existing messages
+        messages = append(messages, req.Messages...)
+
+        // Add user prompt if present
+        if req.UserPrompt != "" {
+            messages = append(messages, Message{
+                Role:    RoleUser,
+                Content: req.UserPrompt,
+            })
+        }
+
+        return messages
     }
     ```
 
@@ -310,7 +482,284 @@ go build ./...
 
 ---
 
-## Step 10.2: 개별 Provider 구현
+## Step 10.2: ai_logs 테이블 스키마 및 AILogService
+
+### 목표
+
+모든 AI 호출을 `ai_logs` 테이블에 기록하여 디버깅, 비용 추적, 분석에 활용합니다.
+
+### 체크리스트
+
+- [ ] **Ent 스키마 정의**
+  - [ ] `ent/schema/ailog.go`
+
+    ```go
+    package schema
+
+    import (
+        "time"
+
+        "entgo.io/ent"
+        "entgo.io/ent/schema/field"
+        "entgo.io/ent/schema/index"
+    )
+
+    // AILog holds the schema definition for the AILog entity.
+    type AILog struct {
+        ent.Schema
+    }
+
+    func (AILog) Fields() []ent.Field {
+        return []ent.Field{
+            field.UUID("id", uuid.UUID{}).
+                Default(uuid.New),
+
+            // 관계
+            field.UUID("user_id", uuid.UUID{}).
+                Optional().
+                Nillable(),
+            field.UUID("session_id", uuid.UUID{}).
+                Optional().
+                Nillable(),
+
+            // 요청 정보
+            field.String("task_type").
+                NotEmpty().
+                Comment("tag_extraction, mindmap, general"),
+            field.String("provider").
+                NotEmpty().
+                Comment("openai, claude, gemini"),
+            field.String("model").
+                NotEmpty(),
+            field.Text("system_prompt").
+                Optional(),
+            field.Text("user_prompt").
+                Optional(),
+            field.JSON("messages", []map[string]string{}).
+                Optional().
+                Comment("Full conversation history"),
+
+            // 응답 정보
+            field.Text("thinking").
+                Optional().
+                Comment("AI reasoning/thinking process"),
+            field.Text("content").
+                Optional().
+                Comment("AI response content (empty on error)"),
+
+            // 토큰 사용량 (정확한 값)
+            field.Int("input_tokens").
+                Default(0),
+            field.Int("output_tokens").
+                Default(0),
+            field.Int("thinking_tokens").
+                Default(0),
+            field.Int("total_tokens").
+                Default(0),
+
+            // 성능 메트릭
+            field.Int64("latency_ms").
+                Default(0).
+                Comment("Response latency in milliseconds"),
+            field.String("request_id").
+                Optional().
+                Comment("Provider request ID for debugging"),
+
+            // 상태
+            field.Enum("status").
+                Values("success", "error", "timeout").
+                Default("success"),
+            field.Text("error_message").
+                Optional(),
+
+            // 비용 추적 (cents 단위)
+            field.Int("estimated_cost_cents").
+                Default(0).
+                Comment("Estimated cost in cents"),
+
+            // 추가 메타데이터 (URL, event_id 등 추적용)
+            field.JSON("metadata", map[string]interface{}{}).
+                Optional().
+                Comment("Additional tracking metadata"),
+
+            field.Time("created_at").
+                Default(time.Now).
+                Immutable(),
+        }
+    }
+
+    func (AILog) Indexes() []ent.Index {
+        return []ent.Index{
+            index.Fields("user_id", "created_at"),
+            index.Fields("session_id"),
+            index.Fields("task_type", "created_at"),
+            index.Fields("provider", "model", "created_at"),
+            index.Fields("status", "created_at"),
+        }
+    }
+
+    func (AILog) Edges() []ent.Edge {
+        return []ent.Edge{
+            edge.From("user", User.Type).
+                Ref("ai_logs").
+                Field("user_id").
+                Unique(),
+            edge.From("session", Session.Type).
+                Ref("ai_logs").
+                Field("session_id").
+                Unique(),
+        }
+    }
+    ```
+
+- [ ] **AILogService 구현**
+  - [ ] `internal/service/ailog_service.go`
+
+    ```go
+    package service
+
+    import (
+        "context"
+
+        "github.com/google/uuid"
+        "github.com/mindhit/api/ent"
+        "github.com/mindhit/api/internal/infrastructure/ai"
+    )
+
+    type AILogService struct {
+        client *ent.Client
+    }
+
+    func NewAILogService(client *ent.Client) *AILogService {
+        return &AILogService{client: client}
+    }
+
+    // LogRequest represents the data needed to create an AI log entry
+    type AILogRequest struct {
+        UserID       *uuid.UUID
+        SessionID    *uuid.UUID
+        TaskType     ai.TaskType
+        Request      ai.ChatRequest
+        Response     *ai.ChatResponse
+        ErrorMessage string
+    }
+
+    // Log creates an AI log entry from request and response
+    func (s *AILogService) Log(ctx context.Context, req AILogRequest) (*ent.AILog, error) {
+        status := "success"
+        if req.ErrorMessage != "" {
+            status = "error"
+        }
+
+        builder := s.client.AILog.Create().
+            SetTaskType(string(req.TaskType)).
+            SetProvider(string(req.Response.Provider)).
+            SetModel(req.Response.Model).
+            SetContent(req.Response.Content).
+            SetInputTokens(req.Response.InputTokens).
+            SetOutputTokens(req.Response.OutputTokens).
+            SetThinkingTokens(req.Response.ThinkingTokens).
+            SetTotalTokens(req.Response.TotalTokens).
+            SetLatencyMs(req.Response.LatencyMs).
+            SetStatus(status)
+
+        if req.UserID != nil {
+            builder.SetUserID(*req.UserID)
+        }
+        if req.SessionID != nil {
+            builder.SetSessionID(*req.SessionID)
+        }
+        if req.Request.SystemPrompt != "" {
+            builder.SetSystemPrompt(req.Request.SystemPrompt)
+        }
+        if req.Request.UserPrompt != "" {
+            builder.SetUserPrompt(req.Request.UserPrompt)
+        }
+        if req.Response.Thinking != "" {
+            builder.SetThinking(req.Response.Thinking)
+        }
+        if req.Response.RequestID != "" {
+            builder.SetRequestID(req.Response.RequestID)
+        }
+        if req.ErrorMessage != "" {
+            builder.SetErrorMessage(req.ErrorMessage)
+        }
+
+        // Calculate estimated cost
+        cost := s.estimateCost(req.Response)
+        builder.SetEstimatedCostCents(cost)
+
+        return builder.Save(ctx)
+    }
+
+    // estimateCost calculates cost in cents based on provider and tokens
+    func (s *AILogService) estimateCost(resp *ai.ChatResponse) int {
+        // Pricing per 1M tokens (approximate, in cents)
+        // These should be configurable in production
+        pricing := map[ai.ProviderType]struct{ input, output int }{
+            ai.ProviderOpenAI: {input: 250, output: 1000},  // GPT-4o
+            ai.ProviderClaude: {input: 300, output: 1500},  // Claude 3.5 Sonnet
+            ai.ProviderGemini: {input: 35, output: 105},    // Gemini 1.5 Flash
+        }
+
+        p, ok := pricing[resp.Provider]
+        if !ok {
+            return 0
+        }
+
+        inputCost := (resp.InputTokens * p.input) / 1000000
+        outputCost := (resp.OutputTokens * p.output) / 1000000
+
+        return inputCost + outputCost
+    }
+
+    // GetBySession retrieves all AI logs for a session
+    func (s *AILogService) GetBySession(ctx context.Context, sessionID uuid.UUID) ([]*ent.AILog, error) {
+        return s.client.AILog.Query().
+            Where(ailog.SessionIDEQ(sessionID)).
+            Order(ent.Asc(ailog.FieldCreatedAt)).
+            All(ctx)
+    }
+
+    // GetUsageStats returns token usage statistics for a user
+    func (s *AILogService) GetUsageStats(ctx context.Context, userID uuid.UUID) (*UsageStats, error) {
+        // Aggregate query for token usage
+        var stats UsageStats
+        err := s.client.AILog.Query().
+            Where(ailog.UserIDEQ(userID)).
+            Aggregate(
+                ent.Sum(ailog.FieldTotalTokens),
+                ent.Sum(ailog.FieldEstimatedCostCents),
+                ent.Count(),
+            ).
+            Scan(ctx, &stats)
+        return &stats, err
+    }
+
+    type UsageStats struct {
+        TotalTokens int `json:"total_tokens"`
+        TotalCost   int `json:"total_cost_cents"`
+        RequestCount int `json:"request_count"`
+    }
+    ```
+
+### 검증
+
+```bash
+cd apps/backend
+moonx backend:generate   # Ent 코드 생성
+moonx backend:migrate-diff  # 마이그레이션 생성
+go build ./...
+```
+
+---
+
+## Step 10.3: 개별 Provider 구현
+
+### 설계 원칙
+
+각 Provider는 네이티브 SDK를 사용하여 해당 프로바이더의 모든 기능(thinking, streaming 등)을 지원합니다.
+모든 Provider는 동일한 `AIProvider` 인터페이스를 구현하고, 통합된 `ChatRequest`/`ChatResponse`를 사용합니다.
 
 ### 체크리스트
 
@@ -318,25 +767,27 @@ go build ./...
 
   ```bash
   cd apps/backend
-  # OpenAI
+  # OpenAI (go-openai)
   go get github.com/sashabaranov/go-openai
 
-  # Google Gemini
+  # Google Gemini (genai)
   go get github.com/google/generative-ai-go
 
-  # Anthropic Claude
+  # Anthropic Claude (anthropic-sdk-go)
   go get github.com/anthropics/anthropic-sdk-go
   ```
 
 - [ ] **OpenAI Provider 구현**
-  - [ ] `internal/infrastructure/ai/openai.go`
+  - [ ] `internal/infrastructure/ai/provider_openai.go`
 
     ```go
     package ai
 
     import (
         "context"
+        "encoding/json"
         "fmt"
+        "time"
 
         "github.com/sashabaranov/go-openai"
     )
@@ -346,20 +797,25 @@ go build ./...
         client *openai.Client
     }
 
-    func NewOpenAIProvider(apiKey, model string) *OpenAIProvider {
+    func NewOpenAIProvider(cfg ProviderConfig) *OpenAIProvider {
+        model := cfg.Model
         if model == "" {
-            model = "gpt-4-turbo-preview"
+            model = "gpt-4o"
         }
         return &OpenAIProvider{
             BaseProvider: BaseProvider{
-                providerType: ProviderOpenAI,
-                model:        model,
+                providerType:   ProviderOpenAI,
+                model:          model,
+                thinkingBudget: cfg.ThinkingBudget,
             },
-            client: openai.NewClient(apiKey),
+            client: openai.NewClient(cfg.APIKey),
         }
     }
 
-    func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+    func (p *OpenAIProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
+        startTime := time.Now()
+        messages := buildMessages(req)
+
         chatMessages := make([]openai.ChatCompletionMessage, len(messages))
         for i, msg := range messages {
             chatMessages[i] = openai.ChatCompletionMessage{
@@ -368,16 +824,23 @@ go build ./...
             }
         }
 
-        req := openai.ChatCompletionRequest{
+        apiReq := openai.ChatCompletionRequest{
             Model:       p.model,
             Messages:    chatMessages,
-            Temperature: float32(opts.Temperature),
-            MaxTokens:   opts.MaxTokens,
-            TopP:        float32(opts.TopP),
-            Stop:        opts.StopSequences,
+            Temperature: float32(req.Options.Temperature),
+            MaxTokens:   req.Options.MaxTokens,
+            TopP:        float32(req.Options.TopP),
+            Stop:        req.Options.StopSequences,
         }
 
-        resp, err := p.client.CreateChatCompletion(ctx, req)
+        // JSON mode
+        if req.Options.JSONMode {
+            apiReq.ResponseFormat = &openai.ChatCompletionResponseFormat{
+                Type: openai.ChatCompletionResponseFormatTypeJSONObject,
+            }
+        }
+
+        resp, err := p.client.CreateChatCompletion(ctx, apiReq)
         if err != nil {
             return nil, fmt.Errorf("openai chat: %w", err)
         }
@@ -386,16 +849,34 @@ go build ./...
             return nil, ErrNoResponse
         }
 
+        content := resp.Choices[0].Message.Content
+
+        // Validate JSON if JSON mode enabled
+        if req.Options.JSONMode {
+            var js json.RawMessage
+            if err := json.Unmarshal([]byte(content), &js); err != nil {
+                return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
+            }
+        }
+
         return &ChatResponse{
-            Content:      resp.Choices[0].Message.Content,
+            Content:      content,
+            Thinking:     "", // OpenAI doesn't expose thinking for non-o1 models
+            Provider:     ProviderOpenAI,
             Model:        resp.Model,
-            Provider:     string(ProviderOpenAI),
             InputTokens:  resp.Usage.PromptTokens,
             OutputTokens: resp.Usage.CompletionTokens,
+            TotalTokens:  resp.Usage.TotalTokens,
+            LatencyMs:    time.Since(startTime).Milliseconds(),
+            RequestID:    resp.ID,
+            CreatedAt:    time.Now(),
         }, nil
     }
 
-    func (p *OpenAIProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+    func (p *OpenAIProvider) ChatStream(ctx context.Context, req ChatRequest, handler StreamHandler) error {
+        startTime := time.Now()
+        messages := buildMessages(req)
+
         chatMessages := make([]openai.ChatCompletionMessage, len(messages))
         for i, msg := range messages {
             chatMessages[i] = openai.ChatCompletionMessage{
@@ -404,45 +885,57 @@ go build ./...
             }
         }
 
-        req := openai.ChatCompletionRequest{
+        stream, err := p.client.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
             Model:       p.model,
             Messages:    chatMessages,
-            Temperature: float32(opts.Temperature),
-            MaxTokens:   opts.MaxTokens,
-            TopP:        float32(opts.TopP),
-            ResponseFormat: &openai.ChatCompletionResponseFormat{
-                Type: openai.ChatCompletionResponseFormatTypeJSONObject,
-            },
-        }
-
-        resp, err := p.client.CreateChatCompletion(ctx, req)
+            Temperature: float32(req.Options.Temperature),
+            MaxTokens:   req.Options.MaxTokens,
+            Stream:      true,
+        })
         if err != nil {
-            return nil, fmt.Errorf("openai chat json: %w", err)
+            handler.OnError(err)
+            return err
+        }
+        defer stream.Close()
+
+        var fullContent string
+        for {
+            chunk, err := stream.Recv()
+            if err != nil {
+                break
+            }
+            if len(chunk.Choices) > 0 {
+                delta := chunk.Choices[0].Delta.Content
+                fullContent += delta
+                if handler.OnContent != nil {
+                    handler.OnContent(delta)
+                }
+            }
         }
 
-        if len(resp.Choices) == 0 {
-            return nil, ErrNoResponse
+        if handler.OnDone != nil {
+            handler.OnDone(&ChatResponse{
+                Content:   fullContent,
+                Provider:  ProviderOpenAI,
+                Model:     p.model,
+                LatencyMs: time.Since(startTime).Milliseconds(),
+                CreatedAt: time.Now(),
+            })
         }
-
-        return &ChatResponse{
-            Content:      resp.Choices[0].Message.Content,
-            Model:        resp.Model,
-            Provider:     string(ProviderOpenAI),
-            InputTokens:  resp.Usage.PromptTokens,
-            OutputTokens: resp.Usage.CompletionTokens,
-        }, nil
+        return nil
     }
 
     func (p *OpenAIProvider) IsHealthy(ctx context.Context) bool {
-        _, err := p.Chat(ctx, []Message{
-            {Role: RoleUser, Content: "ping"},
-        }, ChatOptions{MaxTokens: 5})
+        _, err := p.Chat(ctx, ChatRequest{
+            UserPrompt: "ping",
+            Options:    ChatOptions{MaxTokens: 5},
+        })
         return err == nil
     }
     ```
 
-- [ ] **Google Gemini Provider 구현**
-  - [ ] `internal/infrastructure/ai/gemini.go`
+- [ ] **Google Gemini Provider 구현** (Thinking 지원)
+  - [ ] `internal/infrastructure/ai/provider_gemini.go`
 
     ```go
     package ai
@@ -452,6 +945,7 @@ go build ./...
         "encoding/json"
         "fmt"
         "strings"
+        "time"
 
         "github.com/google/generative-ai-go/genai"
         "google.golang.org/api/option"
@@ -462,52 +956,60 @@ go build ./...
         client *genai.Client
     }
 
-    func NewGeminiProvider(ctx context.Context, apiKey, model string) (*GeminiProvider, error) {
+    func NewGeminiProvider(ctx context.Context, cfg ProviderConfig) (*GeminiProvider, error) {
+        model := cfg.Model
         if model == "" {
-            model = "gemini-1.5-pro"
+            model = "gemini-2.0-flash"
         }
 
-        client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+        client, err := genai.NewClient(ctx, option.WithAPIKey(cfg.APIKey))
         if err != nil {
             return nil, fmt.Errorf("create gemini client: %w", err)
         }
 
         return &GeminiProvider{
             BaseProvider: BaseProvider{
-                providerType: ProviderGemini,
-                model:        model,
+                providerType:   ProviderGemini,
+                model:          model,
+                thinkingBudget: cfg.ThinkingBudget,
             },
             client: client,
         }, nil
     }
 
-    func (p *GeminiProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+    func (p *GeminiProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
+        startTime := time.Now()
         model := p.client.GenerativeModel(p.model)
 
-        model.SetTemperature(float32(opts.Temperature))
-        model.SetMaxOutputTokens(int32(opts.MaxTokens))
-        model.SetTopP(float32(opts.TopP))
+        model.SetTemperature(float32(req.Options.Temperature))
+        model.SetMaxOutputTokens(int32(req.Options.MaxTokens))
+        model.SetTopP(float32(req.Options.TopP))
 
-        if len(opts.StopSequences) > 0 {
-            model.StopSequences = opts.StopSequences
+        if len(req.Options.StopSequences) > 0 {
+            model.StopSequences = req.Options.StopSequences
         }
 
-        var parts []genai.Part
-        var systemPrompt string
+        // JSON mode
+        if req.Options.JSONMode {
+            model.ResponseMIMEType = "application/json"
+        }
 
-        for _, msg := range messages {
-            switch msg.Role {
-            case RoleSystem:
-                systemPrompt = msg.Content
-            case RoleUser, RoleAssistant:
+        // System prompt
+        if req.SystemPrompt != "" {
+            model.SystemInstruction = &genai.Content{
+                Parts: []genai.Part{genai.Text(req.SystemPrompt)},
+            }
+        }
+
+        // Build parts from messages + user prompt
+        var parts []genai.Part
+        for _, msg := range req.Messages {
+            if msg.Role != RoleSystem {
                 parts = append(parts, genai.Text(msg.Content))
             }
         }
-
-        if systemPrompt != "" {
-            model.SystemInstruction = &genai.Content{
-                Parts: []genai.Part{genai.Text(systemPrompt)},
-            }
+        if req.UserPrompt != "" {
+            parts = append(parts, genai.Text(req.UserPrompt))
         }
 
         resp, err := model.GenerateContent(ctx, parts...)
@@ -526,75 +1028,82 @@ go build ./...
             }
         }
 
+        // Validate JSON if requested
+        if req.Options.JSONMode {
+            var js json.RawMessage
+            if err := json.Unmarshal([]byte(content.String()), &js); err != nil {
+                return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
+            }
+        }
+
         return &ChatResponse{
             Content:      content.String(),
+            Provider:     ProviderGemini,
             Model:        p.model,
-            Provider:     string(ProviderGemini),
             InputTokens:  int(resp.UsageMetadata.PromptTokenCount),
             OutputTokens: int(resp.UsageMetadata.CandidatesTokenCount),
+            TotalTokens:  int(resp.UsageMetadata.TotalTokenCount),
+            LatencyMs:    time.Since(startTime).Milliseconds(),
+            CreatedAt:    time.Now(),
         }, nil
     }
 
-    func (p *GeminiProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
+    func (p *GeminiProvider) ChatStream(ctx context.Context, req ChatRequest, handler StreamHandler) error {
+        startTime := time.Now()
         model := p.client.GenerativeModel(p.model)
 
-        model.SetTemperature(float32(opts.Temperature))
-        model.SetMaxOutputTokens(int32(opts.MaxTokens))
-        model.SetTopP(float32(opts.TopP))
-        model.ResponseMIMEType = "application/json"
+        model.SetTemperature(float32(req.Options.Temperature))
+        model.SetMaxOutputTokens(int32(req.Options.MaxTokens))
+
+        if req.SystemPrompt != "" {
+            model.SystemInstruction = &genai.Content{
+                Parts: []genai.Part{genai.Text(req.SystemPrompt)},
+            }
+        }
 
         var parts []genai.Part
-        var systemPrompt string
+        if req.UserPrompt != "" {
+            parts = append(parts, genai.Text(req.UserPrompt))
+        }
 
-        for _, msg := range messages {
-            switch msg.Role {
-            case RoleSystem:
-                systemPrompt = msg.Content
-            case RoleUser, RoleAssistant:
-                parts = append(parts, genai.Text(msg.Content))
+        iter := model.GenerateContentStream(ctx, parts...)
+        var fullContent strings.Builder
+
+        for {
+            resp, err := iter.Next()
+            if err != nil {
+                break
+            }
+            for _, cand := range resp.Candidates {
+                for _, part := range cand.Content.Parts {
+                    if text, ok := part.(genai.Text); ok {
+                        delta := string(text)
+                        fullContent.WriteString(delta)
+                        if handler.OnContent != nil {
+                            handler.OnContent(delta)
+                        }
+                    }
+                }
             }
         }
 
-        if systemPrompt != "" {
-            model.SystemInstruction = &genai.Content{
-                Parts: []genai.Part{genai.Text(systemPrompt)},
-            }
+        if handler.OnDone != nil {
+            handler.OnDone(&ChatResponse{
+                Content:   fullContent.String(),
+                Provider:  ProviderGemini,
+                Model:     p.model,
+                LatencyMs: time.Since(startTime).Milliseconds(),
+                CreatedAt: time.Now(),
+            })
         }
-
-        resp, err := model.GenerateContent(ctx, parts...)
-        if err != nil {
-            return nil, fmt.Errorf("gemini generate json: %w", err)
-        }
-
-        if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-            return nil, ErrNoResponse
-        }
-
-        var content strings.Builder
-        for _, part := range resp.Candidates[0].Content.Parts {
-            if text, ok := part.(genai.Text); ok {
-                content.WriteString(string(text))
-            }
-        }
-
-        var js json.RawMessage
-        if err := json.Unmarshal([]byte(content.String()), &js); err != nil {
-            return nil, fmt.Errorf("invalid json response: %w", err)
-        }
-
-        return &ChatResponse{
-            Content:      content.String(),
-            Model:        p.model,
-            Provider:     string(ProviderGemini),
-            InputTokens:  int(resp.UsageMetadata.PromptTokenCount),
-            OutputTokens: int(resp.UsageMetadata.CandidatesTokenCount),
-        }, nil
+        return nil
     }
 
     func (p *GeminiProvider) IsHealthy(ctx context.Context) bool {
-        _, err := p.Chat(ctx, []Message{
-            {Role: RoleUser, Content: "ping"},
-        }, ChatOptions{MaxTokens: 5})
+        _, err := p.Chat(ctx, ChatRequest{
+            UserPrompt: "ping",
+            Options:    ChatOptions{MaxTokens: 5},
+        })
         return err == nil
     }
 
@@ -603,8 +1112,8 @@ go build ./...
     }
     ```
 
-- [ ] **Anthropic Claude Provider 구현**
-  - [ ] `internal/infrastructure/ai/claude.go`
+- [ ] **Anthropic Claude Provider 구현** (Extended Thinking 지원)
+  - [ ] `internal/infrastructure/ai/provider_claude.go`
 
     ```go
     package ai
@@ -613,6 +1122,7 @@ go build ./...
         "context"
         "encoding/json"
         "fmt"
+        "time"
 
         "github.com/anthropics/anthropic-sdk-go"
         "github.com/anthropics/anthropic-sdk-go/option"
@@ -623,32 +1133,33 @@ go build ./...
         client *anthropic.Client
     }
 
-    func NewClaudeProvider(apiKey, model string) *ClaudeProvider {
+    func NewClaudeProvider(cfg ProviderConfig) *ClaudeProvider {
+        model := cfg.Model
         if model == "" {
-            model = "claude-3-5-sonnet-20241022"
+            model = "claude-sonnet-4-20250514"
         }
 
         client := anthropic.NewClient(
-            option.WithAPIKey(apiKey),
+            option.WithAPIKey(cfg.APIKey),
         )
 
         return &ClaudeProvider{
             BaseProvider: BaseProvider{
-                providerType: ProviderClaude,
-                model:        model,
+                providerType:   ProviderClaude,
+                model:          model,
+                thinkingBudget: cfg.ThinkingBudget,
             },
             client: client,
         }
     }
 
-    func (p *ClaudeProvider) Chat(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
-        var systemPrompt string
-        var anthropicMessages []anthropic.MessageParam
+    func (p *ClaudeProvider) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
+        startTime := time.Now()
+        messages := buildMessages(req)
 
+        var anthropicMessages []anthropic.MessageParam
         for _, msg := range messages {
             switch msg.Role {
-            case RoleSystem:
-                systemPrompt = msg.Content
             case RoleUser:
                 anthropicMessages = append(anthropicMessages, anthropic.NewUserMessage(
                     anthropic.NewTextBlock(msg.Content),
@@ -661,27 +1172,41 @@ go build ./...
         }
 
         params := anthropic.MessageNewParams{
-            Model:       anthropic.F(p.model),
-            MaxTokens:   anthropic.F(int64(opts.MaxTokens)),
-            Messages:    anthropic.F(anthropicMessages),
+            Model:     anthropic.F(p.model),
+            MaxTokens: anthropic.F(int64(req.Options.MaxTokens)),
+            Messages:  anthropic.F(anthropicMessages),
         }
 
-        if systemPrompt != "" {
+        // System prompt
+        if req.SystemPrompt != "" {
             params.System = anthropic.F([]anthropic.TextBlockParam{
-                anthropic.NewTextBlock(systemPrompt),
+                anthropic.NewTextBlock(req.SystemPrompt),
             })
         }
 
-        if opts.Temperature > 0 {
-            params.Temperature = anthropic.F(opts.Temperature)
+        // Extended Thinking 활성화
+        if req.Options.EnableThinking {
+            budget := req.Options.ThinkingBudget
+            if budget == 0 {
+                budget = p.thinkingBudget
+            }
+            if budget == 0 {
+                budget = 10000 // default
+            }
+            params.Thinking = anthropic.F(anthropic.ThinkingConfigParamUnion(
+                anthropic.ThinkingConfigEnabledParam{
+                    Type:         anthropic.F(anthropic.ThinkingConfigEnabledTypeEnabled),
+                    BudgetTokens: anthropic.F(int64(budget)),
+                },
+            ))
         }
 
-        if opts.TopP > 0 && opts.TopP < 1 {
-            params.TopP = anthropic.F(opts.TopP)
+        if req.Options.Temperature > 0 {
+            params.Temperature = anthropic.F(req.Options.Temperature)
         }
 
-        if len(opts.StopSequences) > 0 {
-            params.StopSequences = anthropic.F(opts.StopSequences)
+        if req.Options.TopP > 0 && req.Options.TopP < 1 {
+            params.TopP = anthropic.F(req.Options.TopP)
         }
 
         resp, err := p.client.Messages.New(ctx, params)
@@ -693,50 +1218,123 @@ go build ./...
             return nil, ErrNoResponse
         }
 
-        var content string
+        // thinking과 content 분리
+        var thinking, content string
+        var thinkingTokens int
         for _, block := range resp.Content {
-            if block.Type == anthropic.ContentBlockTypeText {
+            switch block.Type {
+            case anthropic.ContentBlockTypeThinking:
+                thinking = block.Thinking
+            case anthropic.ContentBlockTypeText:
                 content += block.Text
             }
         }
 
-        return &ChatResponse{
-            Content:      content,
-            Model:        string(resp.Model),
-            Provider:     string(ProviderClaude),
-            InputTokens:  int(resp.Usage.InputTokens),
-            OutputTokens: int(resp.Usage.OutputTokens),
-        }, nil
-    }
+        // Thinking tokens from usage
+        if resp.Usage.CacheCreationInputTokens > 0 {
+            thinkingTokens = int(resp.Usage.CacheCreationInputTokens)
+        }
 
-    func (p *ClaudeProvider) ChatWithJSON(ctx context.Context, messages []Message, opts ChatOptions) (*ChatResponse, error) {
-        modifiedMessages := make([]Message, len(messages))
-        copy(modifiedMessages, messages)
-
-        for i := len(modifiedMessages) - 1; i >= 0; i-- {
-            if modifiedMessages[i].Role == RoleUser {
-                modifiedMessages[i].Content += "\n\nRespond with valid JSON only. No markdown, no explanation."
-                break
+        // Validate JSON if requested
+        if req.Options.JSONMode {
+            var js json.RawMessage
+            if err := json.Unmarshal([]byte(content), &js); err != nil {
+                return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
             }
         }
 
-        resp, err := p.Chat(ctx, modifiedMessages, opts)
-        if err != nil {
-            return nil, err
+        return &ChatResponse{
+            Content:        content,
+            Thinking:       thinking,
+            Provider:       ProviderClaude,
+            Model:          string(resp.Model),
+            InputTokens:    int(resp.Usage.InputTokens),
+            OutputTokens:   int(resp.Usage.OutputTokens),
+            ThinkingTokens: thinkingTokens,
+            TotalTokens:    int(resp.Usage.InputTokens + resp.Usage.OutputTokens),
+            LatencyMs:      time.Since(startTime).Milliseconds(),
+            RequestID:      resp.ID,
+            CreatedAt:      time.Now(),
+        }, nil
+    }
+
+    func (p *ClaudeProvider) ChatStream(ctx context.Context, req ChatRequest, handler StreamHandler) error {
+        startTime := time.Now()
+        messages := buildMessages(req)
+
+        var anthropicMessages []anthropic.MessageParam
+        for _, msg := range messages {
+            switch msg.Role {
+            case RoleUser:
+                anthropicMessages = append(anthropicMessages, anthropic.NewUserMessage(
+                    anthropic.NewTextBlock(msg.Content),
+                ))
+            case RoleAssistant:
+                anthropicMessages = append(anthropicMessages, anthropic.NewAssistantMessage(
+                    anthropic.NewTextBlock(msg.Content),
+                ))
+            }
         }
 
-        var js json.RawMessage
-        if err := json.Unmarshal([]byte(resp.Content), &js); err != nil {
-            return nil, fmt.Errorf("invalid json response: %w", err)
+        params := anthropic.MessageNewParams{
+            Model:     anthropic.F(p.model),
+            MaxTokens: anthropic.F(int64(req.Options.MaxTokens)),
+            Messages:  anthropic.F(anthropicMessages),
         }
 
-        return resp, nil
+        if req.SystemPrompt != "" {
+            params.System = anthropic.F([]anthropic.TextBlockParam{
+                anthropic.NewTextBlock(req.SystemPrompt),
+            })
+        }
+
+        stream := p.client.Messages.NewStreaming(ctx, params)
+
+        var fullThinking, fullContent string
+        for stream.Next() {
+            event := stream.Current()
+            switch event.Type {
+            case anthropic.MessageStreamEventTypeContentBlockDelta:
+                delta := event.Delta
+                if delta.Type == "thinking_delta" {
+                    fullThinking += delta.Thinking
+                    if handler.OnThinking != nil {
+                        handler.OnThinking(delta.Thinking)
+                    }
+                } else if delta.Type == "text_delta" {
+                    fullContent += delta.Text
+                    if handler.OnContent != nil {
+                        handler.OnContent(delta.Text)
+                    }
+                }
+            }
+        }
+
+        if err := stream.Err(); err != nil {
+            if handler.OnError != nil {
+                handler.OnError(err)
+            }
+            return err
+        }
+
+        if handler.OnDone != nil {
+            handler.OnDone(&ChatResponse{
+                Content:   fullContent,
+                Thinking:  fullThinking,
+                Provider:  ProviderClaude,
+                Model:     p.model,
+                LatencyMs: time.Since(startTime).Milliseconds(),
+                CreatedAt: time.Now(),
+            })
+        }
+        return nil
     }
 
     func (p *ClaudeProvider) IsHealthy(ctx context.Context) bool {
-        _, err := p.Chat(ctx, []Message{
-            {Role: RoleUser, Content: "ping"},
-        }, ChatOptions{MaxTokens: 5})
+        _, err := p.Chat(ctx, ChatRequest{
+            UserPrompt: "ping",
+            Options:    ChatOptions{MaxTokens: 5},
+        })
         return err == nil
     }
     ```
@@ -751,7 +1349,11 @@ go build ./...
 
 ---
 
-## Step 10.3: Provider Manager 및 Config
+## Step 10.4: Provider Manager 및 Config
+
+### 목표
+
+여러 Provider를 관리하고, Task 유형에 따라 적절한 Provider를 선택하며, AI 호출 결과를 자동으로 로깅합니다.
 
 ### 체크리스트
 
@@ -763,20 +1365,21 @@ go build ./...
   AI_FALLBACK_PROVIDERS=gemini,claude
 
   # 용도별 프로바이더 (선택적)
-  AI_TAG_EXTRACTION_PROVIDER=gemini
-  AI_MINDMAP_PROVIDER=openai
+  AI_TAG_PROVIDER=gemini          # 태그 추출용 (저비용)
+  AI_MINDMAP_PROVIDER=claude      # 마인드맵 생성용 (고품질)
 
   # OpenAI
   OPENAI_API_KEY=sk-...
-  OPENAI_MODEL=gpt-4-turbo-preview
+  OPENAI_MODEL=gpt-4o
 
   # Google Gemini
   GEMINI_API_KEY=...
-  GEMINI_MODEL=gemini-1.5-flash
+  GEMINI_MODEL=gemini-2.0-flash
 
   # Anthropic Claude
   CLAUDE_API_KEY=sk-ant-...
-  CLAUDE_MODEL=claude-3-5-sonnet-20241022
+  CLAUDE_MODEL=claude-sonnet-4-20250514
+  CLAUDE_THINKING_BUDGET=10000    # Extended thinking 토큰 예산
   ```
 
 - [ ] **Config 업데이트**
@@ -789,36 +1392,25 @@ go build ./...
     }
 
     type AIConfig struct {
-        DefaultProvider      string   `json:"default_provider"`
-        FallbackProviders    []string `json:"fallback_providers"`
-        TagExtractionProvider string  `json:"tag_extraction_provider"`
-        MindmapProvider      string   `json:"mindmap_provider"`
+        DefaultProvider   string   `json:"default_provider"`
+        FallbackProviders []string `json:"fallback_providers"`
+        TagProvider       string   `json:"tag_provider"`
+        MindmapProvider   string   `json:"mindmap_provider"`
 
-        OpenAI  OpenAIConfig  `json:"openai"`
-        Gemini  GeminiConfig  `json:"gemini"`
-        Claude  ClaudeConfig  `json:"claude"`
+        OpenAI  ProviderSettings `json:"openai"`
+        Gemini  ProviderSettings `json:"gemini"`
+        Claude  ProviderSettings `json:"claude"`
     }
 
-    type OpenAIConfig struct {
-        APIKey  string `json:"api_key"`
-        Model   string `json:"model"`
-        Enabled bool   `json:"enabled"`
-    }
-
-    type GeminiConfig struct {
-        APIKey  string `json:"api_key"`
-        Model   string `json:"model"`
-        Enabled bool   `json:"enabled"`
-    }
-
-    type ClaudeConfig struct {
-        APIKey  string `json:"api_key"`
-        Model   string `json:"model"`
-        Enabled bool   `json:"enabled"`
+    type ProviderSettings struct {
+        APIKey         string `json:"api_key"`
+        Model          string `json:"model"`
+        Enabled        bool   `json:"enabled"`
+        ThinkingBudget int    `json:"thinking_budget,omitempty"`
     }
     ```
 
-- [ ] **Provider Manager 구현**
+- [ ] **Provider Manager 구현** (AILogService 자동 연동)
   - [ ] `internal/infrastructure/ai/manager.go`
 
     ```go
@@ -831,39 +1423,40 @@ go build ./...
         "sync"
     )
 
-    // TaskType identifies the AI task for provider selection
-    type TaskType string
-
-    const (
-        TaskTagExtraction TaskType = "tag_extraction"
-        TaskMindmap       TaskType = "mindmap"
-        TaskGeneral       TaskType = "general"
-    )
-
-    // ProviderManager manages multiple AI providers with fallback support
+    // ProviderManager manages multiple AI providers with fallback and logging
     type ProviderManager struct {
         providers       map[ProviderType]AIProvider
         defaultProvider ProviderType
         fallbackOrder   []ProviderType
         taskProviders   map[TaskType]ProviderType
+        aiLogService    *service.AILogService // 자동 로깅
         mu              sync.RWMutex
     }
 
     // NewProviderManager creates a new provider manager from config
-    func NewProviderManager(ctx context.Context, cfg AIConfig) (*ProviderManager, error) {
+    func NewProviderManager(ctx context.Context, cfg AIConfig, aiLogService *service.AILogService) (*ProviderManager, error) {
         pm := &ProviderManager{
             providers:     make(map[ProviderType]AIProvider),
             taskProviders: make(map[TaskType]ProviderType),
+            aiLogService:  aiLogService,
         }
 
-        // Initialize enabled providers
+        // Initialize enabled providers using unified ProviderConfig
         if cfg.OpenAI.Enabled {
-            pm.providers[ProviderOpenAI] = NewOpenAIProvider(cfg.OpenAI.APIKey, cfg.OpenAI.Model)
+            pm.providers[ProviderOpenAI] = NewOpenAIProvider(ProviderConfig{
+                Type:   ProviderOpenAI,
+                APIKey: cfg.OpenAI.APIKey,
+                Model:  cfg.OpenAI.Model,
+            })
             slog.Info("initialized ai provider", "provider", "openai", "model", cfg.OpenAI.Model)
         }
 
         if cfg.Gemini.Enabled {
-            gemini, err := NewGeminiProvider(ctx, cfg.Gemini.APIKey, cfg.Gemini.Model)
+            gemini, err := NewGeminiProvider(ctx, ProviderConfig{
+                Type:   ProviderGemini,
+                APIKey: cfg.Gemini.APIKey,
+                Model:  cfg.Gemini.Model,
+            })
             if err != nil {
                 slog.Warn("failed to initialize gemini provider", "error", err)
             } else {
@@ -873,7 +1466,12 @@ go build ./...
         }
 
         if cfg.Claude.Enabled {
-            pm.providers[ProviderClaude] = NewClaudeProvider(cfg.Claude.APIKey, cfg.Claude.Model)
+            pm.providers[ProviderClaude] = NewClaudeProvider(ProviderConfig{
+                Type:           ProviderClaude,
+                APIKey:         cfg.Claude.APIKey,
+                Model:          cfg.Claude.Model,
+                ThinkingBudget: cfg.Claude.ThinkingBudget,
+            })
             slog.Info("initialized ai provider", "provider", "claude", "model", cfg.Claude.Model)
         }
 
@@ -899,8 +1497,8 @@ go build ./...
         }
 
         // Set task-specific providers
-        if cfg.TagExtractionProvider != "" {
-            pt := ProviderType(cfg.TagExtractionProvider)
+        if cfg.TagProvider != "" {
+            pt := ProviderType(cfg.TagProvider)
             if _, ok := pm.providers[pt]; ok {
                 pm.taskProviders[TaskTagExtraction] = pt
             }
@@ -922,12 +1520,8 @@ go build ./...
         return pm, nil
     }
 
-    // ChatWithJSON executes chat with JSON mode and automatic fallback
-    func (pm *ProviderManager) ChatWithJSON(ctx context.Context, task TaskType, messages []Message, opts ChatOptions) (*ChatResponse, error) {
-        return pm.chatWithFallback(ctx, task, messages, opts, true)
-    }
-
-    func (pm *ProviderManager) chatWithFallback(ctx context.Context, task TaskType, messages []Message, opts ChatOptions, jsonMode bool) (*ChatResponse, error) {
+    // Chat executes a chat request with automatic fallback and logging
+    func (pm *ProviderManager) Chat(ctx context.Context, task TaskType, req ChatRequest) (*ChatResponse, error) {
         pm.mu.RLock()
         providers := pm.getProvidersInOrder(task)
         pm.mu.RUnlock()
@@ -935,38 +1529,68 @@ go build ./...
         var lastErr error
         for _, provider := range providers {
             slog.Debug("attempting ai request",
-                "provider", provider.Name(),
+                "provider", provider.Type(),
                 "model", provider.Model(),
                 "task", task,
             )
 
-            var resp *ChatResponse
-            var err error
-
-            if jsonMode {
-                resp, err = provider.ChatWithJSON(ctx, messages, opts)
-            } else {
-                resp, err = provider.Chat(ctx, messages, opts)
-            }
+            resp, err := provider.Chat(ctx, req)
 
             if err == nil {
+                // 성공 시 자동 로깅
+                pm.logRequest(ctx, task, req, resp, "")
+
                 slog.Info("ai request successful",
-                    "provider", provider.Name(),
+                    "provider", resp.Provider,
                     "model", resp.Model,
                     "input_tokens", resp.InputTokens,
                     "output_tokens", resp.OutputTokens,
+                    "latency_ms", resp.LatencyMs,
                 )
                 return resp, nil
             }
 
+            // 실패 시 에러 로깅
+            pm.logRequest(ctx, task, req, nil, err.Error())
+
             lastErr = err
             slog.Warn("ai provider failed, trying fallback",
-                "provider", provider.Name(),
+                "provider", provider.Type(),
                 "error", err,
             )
         }
 
         return nil, fmt.Errorf("all ai providers failed, last error: %w", lastErr)
+    }
+
+    // logRequest logs the AI request to ai_logs table
+    func (pm *ProviderManager) logRequest(ctx context.Context, task TaskType, req ChatRequest, resp *ChatResponse, errMsg string) {
+        if pm.aiLogService == nil {
+            return
+        }
+
+        logReq := service.AILogRequest{
+            TaskType:     task,
+            Request:      req,
+            Response:     resp,
+            ErrorMessage: errMsg,
+        }
+
+        // Extract user_id and session_id from metadata
+        if userID, ok := req.Metadata["user_id"]; ok {
+            if uid, err := uuid.Parse(userID); err == nil {
+                logReq.UserID = &uid
+            }
+        }
+        if sessionID, ok := req.Metadata["session_id"]; ok {
+            if sid, err := uuid.Parse(sessionID); err == nil {
+                logReq.SessionID = &sid
+            }
+        }
+
+        if _, err := pm.aiLogService.Log(ctx, logReq); err != nil {
+            slog.Error("failed to log ai request", "error", err)
+        }
     }
 
     func (pm *ProviderManager) getProvidersInOrder(task TaskType) []AIProvider {
@@ -1005,10 +1629,8 @@ go build ./...
         defer pm.mu.Unlock()
 
         for _, provider := range pm.providers {
-            if closer, ok := provider.(interface{ Close() error }); ok {
-                if err := closer.Close(); err != nil {
-                    slog.Warn("failed to close provider", "provider", provider.Name(), "error", err)
-                }
+            if err := provider.Close(); err != nil {
+                slog.Warn("failed to close provider", "provider", provider.Type(), "error", err)
             }
         }
         return nil
@@ -1025,895 +1647,10 @@ go build ./...
 
 ---
 
-## Step 10.4: 태그 추출 Worker Handler
+## 다음 단계
 
-### 목표
+Phase 10 완료 후, [Phase 10.1: 마인드맵 생성](./phase-10.1-mindmap.md)에서 다음을 구현합니다:
 
-이벤트 배치 수신 시 새로운 URL에 대해 Asynq Task를 생성하고, Worker에서 태그를 추출합니다.
-
-### 체크리스트
-
-- [ ] **태그 추출 Task 정의 (Phase 6에서 이미 정의됨)**
-  - [ ] `internal/infrastructure/queue/tasks.go`에 추가 확인
-
-    ```go
-    const TypeURLTagExtraction = "url:tag_extraction"
-
-    type URLTagExtractionPayload struct {
-        URLID string `json:"url_id"`
-    }
-
-    func NewURLTagExtractionTask(urlID string) (*asynq.Task, error) {
-        payload, err := json.Marshal(URLTagExtractionPayload{URLID: urlID})
-        if err != nil {
-            return nil, err
-        }
-        return asynq.NewTask(TypeURLTagExtraction, payload), nil
-    }
-    ```
-
-- [ ] **태그 추출 Handler 구현**
-  - [ ] `internal/worker/handler/tag_extraction.go`
-
-    ```go
-    package handler
-
-    import (
-        "context"
-        "encoding/json"
-        "fmt"
-        "log/slog"
-
-        "github.com/google/uuid"
-        "github.com/hibiken/asynq"
-
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/internal/infrastructure/ai"
-        "github.com/mindhit/api/internal/infrastructure/queue"
-    )
-
-    const tagExtractionPrompt = `웹 페이지를 분석하고 다음을 추출하세요:
-
-1. 핵심 태그 3-5개 (한국어, 명사형)
-2. 1-2문장 요약 (한국어)
-
-페이지 제목: %s
-페이지 내용:
-%s
-
-JSON 형식으로 응답:
-{
-  "tags": ["태그1", "태그2", "태그3"],
-  "summary": "페이지 요약"
-}`
-
-    type TagResult struct {
-        Tags    []string `json:"tags"`
-        Summary string   `json:"summary"`
-    }
-
-    func (h *handlers) HandleURLTagExtraction(ctx context.Context, t *asynq.Task) error {
-        var payload queue.URLTagExtractionPayload
-        if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-            return fmt.Errorf("unmarshal payload: %w", err)
-        }
-
-        urlID, err := uuid.Parse(payload.URLID)
-        if err != nil {
-            return fmt.Errorf("parse url id: %w", err)
-        }
-
-        slog.Info("extracting tags", "url_id", payload.URLID)
-
-        // Get URL from database
-        u, err := h.client.URL.Get(ctx, urlID)
-        if err != nil {
-            return fmt.Errorf("get url: %w", err)
-        }
-
-        // Skip if already has tags
-        if len(u.Tags) > 0 {
-            slog.Debug("url already has tags, skipping", "url", u.URL)
-            return nil
-        }
-
-        // Skip if no content
-        if u.Content == "" {
-            slog.Warn("url has no content, skipping", "url", u.URL)
-            return nil
-        }
-
-        // Generate tags using AI
-        messages := []ai.Message{
-            {
-                Role:    ai.RoleUser,
-                Content: fmt.Sprintf(tagExtractionPrompt, u.Title, truncateContent(u.Content, 8000)),
-            },
-        }
-
-        opts := ai.DefaultChatOptions()
-        opts.MaxTokens = 500
-
-        response, err := h.aiManager.ChatWithJSON(ctx, ai.TaskTagExtraction, messages, opts)
-        if err != nil {
-            return fmt.Errorf("ai tag extraction: %w", err)
-        }
-
-        var result TagResult
-        if err := json.Unmarshal([]byte(response.Content), &result); err != nil {
-            return fmt.Errorf("parse ai response: %w", err)
-        }
-
-        // Update URL with tags and summary
-        _, err = h.client.URL.UpdateOneID(urlID).
-            SetTags(result.Tags).
-            SetSummary(result.Summary).
-            Save(ctx)
-
-        if err != nil {
-            return fmt.Errorf("update url: %w", err)
-        }
-
-        slog.Info("extracted tags",
-            "url", u.URL,
-            "tags", result.Tags,
-            "provider", response.Provider,
-            "tokens", response.InputTokens+response.OutputTokens,
-        )
-        return nil
-    }
-
-    func truncateContent(content string, maxLen int) string {
-        if len(content) <= maxLen {
-            return content
-        }
-        return content[:maxLen] + "..."
-    }
-    ```
-
-- [ ] **Handler 등록 업데이트**
-  - [ ] `internal/worker/handler/handler.go`
-
-    ```go
-    package handler
-
-    import (
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/internal/infrastructure/ai"
-        "github.com/mindhit/api/internal/infrastructure/queue"
-    )
-
-    type handlers struct {
-        client    *ent.Client
-        aiManager *ai.ProviderManager
-    }
-
-    func RegisterHandlers(server *queue.Server, client *ent.Client, aiManager *ai.ProviderManager) {
-        h := &handlers{
-            client:    client,
-            aiManager: aiManager,
-        }
-
-        server.HandleFunc(queue.TypeSessionProcess, h.HandleSessionProcess)
-        server.HandleFunc(queue.TypeSessionCleanup, h.HandleSessionCleanup)
-        server.HandleFunc(queue.TypeURLTagExtraction, h.HandleURLTagExtraction)
-        server.HandleFunc(queue.TypeMindmapGenerate, h.HandleMindmapGenerate)
-    }
-    ```
-
-- [ ] **API에서 새 URL 발견 시 Task Enqueue**
-  - [ ] `internal/service/event_service.go`
-
-    ```go
-    type EventService struct {
-        client      *ent.Client
-        queueClient *queue.Client
-    }
-
-    func (s *EventService) ProcessBatchEvents(ctx context.Context, sessionID uuid.UUID, events []Event) error {
-        for _, event := range events {
-            if event.Type == "page_visit" {
-                urlID, isNew, err := s.upsertURL(ctx, event)
-                if err != nil {
-                    slog.Error("failed to upsert url", "error", err)
-                    continue
-                }
-
-                // Enqueue tag extraction for new URLs
-                if isNew {
-                    task, err := queue.NewURLTagExtractionTask(urlID.String())
-                    if err != nil {
-                        slog.Error("failed to create tag extraction task", "error", err)
-                        continue
-                    }
-
-                    _, err = s.queueClient.Enqueue(task, asynq.MaxRetry(3))
-                    if err != nil {
-                        slog.Error("failed to enqueue tag extraction task", "error", err)
-                    }
-                }
-
-                // Save page visit...
-            }
-        }
-        return nil
-    }
-    ```
-
-### 검증
-
-```bash
-# Worker 실행
-cd apps/backend
-REDIS_ADDR=localhost:6379 go run ./cmd/worker
-
-# API 실행 후 이벤트 전송
-curl -X POST http://localhost:8080/api/v1/events/batch \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"session_id": "...", "events": [{"type": "page_visit", ...}]}'
-
-# Worker 로그 확인
-# "extracting tags" url_id=...
-# "extracted tags" url=https://... tags=["AI", "머신러닝"]
-```
-
----
-
-## Step 10.5: 마인드맵 생성 Worker Handler
-
-### 목표
-
-세션 종료 시 Asynq Task를 생성하고, Worker에서 관계도 JSON을 생성합니다.
-
-### 체크리스트
-
-- [ ] **마인드맵 타입 정의**
-  - [ ] `internal/service/mindmap_types.go`
-
-    ```go
-    package service
-
-    type MindmapNode struct {
-        ID       string                 `json:"id"`
-        Label    string                 `json:"label"`
-        Type     string                 `json:"type"` // core, topic, subtopic, page
-        Size     float64                `json:"size"`
-        Color    string                 `json:"color"`
-        Position *Position              `json:"position,omitempty"`
-        Data     map[string]interface{} `json:"data"`
-    }
-
-    type Position struct {
-        X float64 `json:"x"`
-        Y float64 `json:"y"`
-        Z float64 `json:"z"`
-    }
-
-    type MindmapEdge struct {
-        Source string  `json:"source"`
-        Target string  `json:"target"`
-        Weight float64 `json:"weight"`
-        Label  string  `json:"label,omitempty"`
-    }
-
-    type MindmapLayout struct {
-        Type   string                 `json:"type"` // galaxy, tree, radial
-        Params map[string]interface{} `json:"params"`
-    }
-
-    type MindmapData struct {
-        Nodes  []MindmapNode `json:"nodes"`
-        Edges  []MindmapEdge `json:"edges"`
-        Layout MindmapLayout `json:"layout"`
-    }
-    ```
-
-- [ ] **마인드맵 생성 Handler 구현**
-  - [ ] `internal/worker/handler/mindmap.go`
-
-    ```go
-    package handler
-
-    import (
-        "context"
-        "encoding/json"
-        "fmt"
-        "log/slog"
-        "math"
-        "strings"
-
-        "github.com/google/uuid"
-        "github.com/hibiken/asynq"
-
-        "github.com/mindhit/api/ent"
-        "github.com/mindhit/api/ent/session"
-        "github.com/mindhit/api/internal/infrastructure/ai"
-        "github.com/mindhit/api/internal/infrastructure/queue"
-        "github.com/mindhit/api/internal/service"
-    )
-
-    const relationshipGraphPrompt = `브라우징 세션의 페이지들과 추출된 태그를 분석하여 관계도를 생성하세요.
-
-## 세션 데이터
-
-### 방문한 페이지들 (URL + 태그 + 요약)
-
-%s
-
-### 하이라이트 (사용자가 선택한 텍스트)
-
-%s
-
-## 요청사항
-
-1. **핵심 주제 (core)**: 세션 전체를 관통하는 중심 테마 1개
-2. **주요 토픽 (topics)**: 공통 태그를 기반으로 3-5개 그룹화
-3. **페이지 연결**: 각 토픽에 해당하는 페이지들 매핑
-4. **토픽 간 연결 (connections)**: 태그가 겹치는 토픽들의 관계
-
-## JSON 형식으로 응답
-
-{
-  "core": {
-    "label": "핵심 주제 (한국어)",
-    "description": "세션 전체 요약 (1-2문장)"
-  },
-  "topics": [
-    {
-      "id": "topic-1",
-      "label": "토픽명 (한국어)",
-      "tags": ["관련", "태그들"],
-      "description": "토픽 설명",
-      "pages": [
-        {
-          "url_id": "uuid",
-          "title": "페이지 제목",
-          "relevance": 0.9
-        }
-      ]
-    }
-  ],
-  "connections": [
-    {
-      "from": "topic-1",
-      "to": "topic-2",
-      "shared_tags": ["공통태그"],
-      "reason": "연결 이유"
-    }
-  ]
-}`
-
-    type RelationshipGraphResponse struct {
-        Core struct {
-            Label       string `json:"label"`
-            Description string `json:"description"`
-        } `json:"core"`
-        Topics []struct {
-            ID          string   `json:"id"`
-            Label       string   `json:"label"`
-            Tags        []string `json:"tags"`
-            Description string   `json:"description"`
-            Pages       []struct {
-                URLID     string  `json:"url_id"`
-                Title     string  `json:"title"`
-                Relevance float64 `json:"relevance"`
-            } `json:"pages"`
-        } `json:"topics"`
-        Connections []struct {
-            From       string   `json:"from"`
-            To         string   `json:"to"`
-            SharedTags []string `json:"shared_tags"`
-            Reason     string   `json:"reason"`
-        } `json:"connections"`
-    }
-
-    func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
-        var payload queue.MindmapGeneratePayload
-        if err := json.Unmarshal(t.Payload(), &payload); err != nil {
-            return fmt.Errorf("unmarshal payload: %w", err)
-        }
-
-        sessionID, err := uuid.Parse(payload.SessionID)
-        if err != nil {
-            return fmt.Errorf("parse session id: %w", err)
-        }
-
-        slog.Info("generating mindmap", "session_id", payload.SessionID)
-
-        // Get session with all related data
-        sess, err := h.client.Session.
-            Query().
-            Where(session.IDEQ(sessionID)).
-            WithPageVisits(func(q *ent.PageVisitQuery) {
-                q.WithURL()
-            }).
-            WithHighlights().
-            Only(ctx)
-
-        if err != nil {
-            return fmt.Errorf("get session: %w", err)
-        }
-
-        // Build page data with tags
-        var pageData strings.Builder
-        durationMsMap := make(map[string]int)
-
-        for _, pv := range sess.Edges.PageVisits {
-            if pv.Edges.URL == nil {
-                continue
-            }
-            u := pv.Edges.URL
-
-            durationMs := 0
-            if pv.DurationMs != nil {
-                durationMs = *pv.DurationMs
-            }
-            durationMsMap[u.ID.String()] = durationMs
-
-            pageData.WriteString(fmt.Sprintf(`
-
-- ID: %s
-  제목: %s
-  URL: %s
-  태그: [%s]
-  요약: %s
-  체류시간: %dms
-`,
-                u.ID.String(),
-                u.Title,
-                u.URL,
-                strings.Join(u.Tags, ", "),
-                u.Summary,
-                durationMs,
-            ))
-        }
-
-        // Build highlights text
-        var highlights strings.Builder
-        if len(sess.Edges.Highlights) > 0 {
-            for _, h := range sess.Edges.Highlights {
-                highlights.WriteString(fmt.Sprintf("- \"%s\"\n", h.Text))
-            }
-        } else {
-            highlights.WriteString("(하이라이트 없음)")
-        }
-
-        // Generate relationship graph using AI
-        messages := []ai.Message{
-            {
-                Role:    ai.RoleUser,
-                Content: fmt.Sprintf(relationshipGraphPrompt, pageData.String(), highlights.String()),
-            },
-        }
-
-        opts := ai.DefaultChatOptions()
-        opts.MaxTokens = 4096
-
-        response, err := h.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
-        if err != nil {
-            return fmt.Errorf("ai generate mindmap: %w", err)
-        }
-
-        var aiResp RelationshipGraphResponse
-        if err := json.Unmarshal([]byte(response.Content), &aiResp); err != nil {
-            return fmt.Errorf("parse ai response: %w", err)
-        }
-
-        // Convert AI response to mindmap data
-        mindmapData := buildMindmapFromRelationship(aiResp, durationMsMap)
-
-        // Convert to JSON for storage
-        nodesJSON, _ := json.Marshal(mindmapData.Nodes)
-        edgesJSON, _ := json.Marshal(mindmapData.Edges)
-        layoutJSON, _ := json.Marshal(mindmapData.Layout)
-
-        // Save mindmap to database
-        _, err = h.client.MindmapGraph.
-            Create().
-            SetSessionID(sessionID).
-            SetNodes(nodesJSON).
-            SetEdges(edgesJSON).
-            SetLayout(layoutJSON).
-            Save(ctx)
-
-        if err != nil {
-            return fmt.Errorf("save mindmap: %w", err)
-        }
-
-        // Update session status to completed
-        _, err = h.client.Session.
-            UpdateOneID(sessionID).
-            SetStatus(session.StatusCompleted).
-            Save(ctx)
-
-        if err != nil {
-            return fmt.Errorf("update session status: %w", err)
-        }
-
-        slog.Info("mindmap generated",
-            "session_id", payload.SessionID,
-            "topics", len(aiResp.Topics),
-            "connections", len(aiResp.Connections),
-            "provider", response.Provider,
-        )
-        return nil
-    }
-
-    func buildMindmapFromRelationship(
-        resp RelationshipGraphResponse,
-        durationMsMap map[string]int,
-    ) service.MindmapData {
-        var nodes []service.MindmapNode
-        var edges []service.MindmapEdge
-
-        // Core node
-        coreID := "core"
-        nodes = append(nodes, service.MindmapNode{
-            ID:       coreID,
-            Label:    resp.Core.Label,
-            Type:     "core",
-            Size:     100,
-            Color:    "#FFD700",
-            Position: &service.Position{X: 0, Y: 0, Z: 0},
-            Data: map[string]interface{}{
-                "description": resp.Core.Description,
-            },
-        })
-
-        // Topic nodes
-        topicCount := len(resp.Topics)
-        for i, topic := range resp.Topics {
-            topicID := topic.ID
-            if topicID == "" {
-                topicID = fmt.Sprintf("topic-%d", i)
-            }
-
-            angle := (float64(i) / float64(topicCount)) * 2 * math.Pi
-            radius := 200.0
-            topicSize := 40.0 + float64(len(topic.Pages))*10
-            if topicSize > 80 {
-                topicSize = 80
-            }
-
-            nodes = append(nodes, service.MindmapNode{
-                ID:    topicID,
-                Label: topic.Label,
-                Type:  "topic",
-                Size:  topicSize,
-                Color: getTopicColor(i),
-                Position: &service.Position{
-                    X: radius * math.Cos(angle),
-                    Y: radius * math.Sin(angle),
-                    Z: 0,
-                },
-                Data: map[string]interface{}{
-                    "description": topic.Description,
-                    "tags":        topic.Tags,
-                },
-            })
-
-            edges = append(edges, service.MindmapEdge{
-                Source: coreID,
-                Target: topicID,
-                Weight: 1.0,
-            })
-
-            // Page nodes
-            for j, page := range topic.Pages {
-                pageID := page.URLID
-                subAngle := angle + (float64(j)-float64(len(topic.Pages))/2)*0.4
-                subRadius := 60.0 + float64(j)*15
-
-                size := 15.0
-                if durationMs, ok := durationMsMap[page.URLID]; ok {
-                    size = math.Min(40, 15+float64(durationMs)/20000)
-                }
-                size = size * (0.5 + page.Relevance*0.5)
-
-                nodes = append(nodes, service.MindmapNode{
-                    ID:    pageID,
-                    Label: page.Title,
-                    Type:  "page",
-                    Size:  size,
-                    Color: getTopicColor(i),
-                    Position: &service.Position{
-                        X: radius*math.Cos(angle) + subRadius*math.Cos(subAngle),
-                        Y: radius*math.Sin(angle) + subRadius*math.Sin(subAngle),
-                        Z: 0,
-                    },
-                    Data: map[string]interface{}{
-                        "url_id":    page.URLID,
-                        "relevance": page.Relevance,
-                    },
-                })
-
-                edges = append(edges, service.MindmapEdge{
-                    Source: topicID,
-                    Target: pageID,
-                    Weight: page.Relevance,
-                })
-            }
-        }
-
-        // Cross-topic connections
-        for _, conn := range resp.Connections {
-            edges = append(edges, service.MindmapEdge{
-                Source: conn.From,
-                Target: conn.To,
-                Weight: float64(len(conn.SharedTags)) * 0.2,
-                Label:  conn.Reason,
-            })
-        }
-
-        return service.MindmapData{
-            Nodes: nodes,
-            Edges: edges,
-            Layout: service.MindmapLayout{
-                Type: "galaxy",
-                Params: map[string]interface{}{
-                    "center": []float64{0, 0, 0},
-                    "scale":  1.0,
-                },
-            },
-        }
-    }
-
-    func getTopicColor(index int) string {
-        colors := []string{
-            "#3B82F6", "#10B981", "#F59E0B", "#EF4444",
-            "#8B5CF6", "#EC4899", "#14B8A6", "#F97316",
-        }
-        return colors[index%len(colors)]
-    }
-
-    ```
-
-- [ ] **세션 Stop 시 Task Enqueue**
-  - [ ] `internal/service/session_service.go`
-
-    ```go
-    func (s *SessionService) StopSession(ctx context.Context, sessionID string) (*ent.Session, error) {
-        sess, err := s.client.Session.Query().
-            Where(session.IDEQ(sessionID)).
-            Only(ctx)
-        if err != nil {
-            return nil, err
-        }
-
-        // Update status to processing
-        sess, err = s.client.Session.UpdateOne(sess).
-            SetStatus(session.StatusProcessing).
-            Save(ctx)
-        if err != nil {
-            return nil, err
-        }
-
-        // Enqueue mindmap generation task
-        task, err := queue.NewMindmapGenerateTask(sessionID)
-        if err != nil {
-            slog.Error("failed to create mindmap task", "error", err)
-            return sess, nil
-        }
-
-        _, err = s.queueClient.Enqueue(task, asynq.MaxRetry(3))
-        if err != nil {
-            slog.Error("failed to enqueue mindmap task", "error", err)
-            return sess, nil
-        }
-
-        slog.Info("mindmap generation enqueued", "session_id", sessionID)
-        return sess, nil
-    }
-    ```
-
-- [ ] **Worker main.go 업데이트**
-  - [ ] `cmd/worker/main.go`
-
-    ```go
-    func main() {
-        cfg := config.Load()
-
-        // Setup logger
-        slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-            Level: slog.LevelInfo,
-        })))
-
-        // Connect to database
-        client, err := ent.Open("postgres", cfg.DatabaseURL)
-        if err != nil {
-            slog.Error("failed to connect to database", "error", err)
-            os.Exit(1)
-        }
-        defer client.Close()
-
-        // Initialize AI Provider Manager
-        ctx := context.Background()
-        aiManager, err := ai.NewProviderManager(ctx, cfg.AI)
-        if err != nil {
-            slog.Error("failed to initialize ai manager", "error", err)
-            os.Exit(1)
-        }
-        defer aiManager.Close()
-
-        // Create worker server
-        server := queue.NewServer(queue.ServerConfig{
-            RedisAddr:   cfg.RedisAddr,
-            Concurrency: cfg.WorkerConcurrency,
-        })
-
-        // Register handlers with AI manager
-        handler.RegisterHandlers(server, client, aiManager)
-
-        // Graceful shutdown
-        go func() {
-            sigCh := make(chan os.Signal, 1)
-            signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-            <-sigCh
-            slog.Info("shutting down worker")
-            server.Shutdown()
-        }()
-
-        if err := server.Run(); err != nil {
-            slog.Error("worker server error", "error", err)
-            os.Exit(1)
-        }
-    }
-    ```
-
-### 검증
-
-```bash
-# Worker 실행
-cd apps/backend
-REDIS_ADDR=localhost:6379 \
-OPENAI_API_KEY=sk-... \
-go run ./cmd/worker
-
-# API에서 세션 종료
-curl -X POST http://localhost:8080/api/v1/sessions/{id}/stop \
-  -H "Authorization: Bearer $TOKEN"
-
-# Worker 로그 확인
-# "generating mindmap" session_id=...
-# "mindmap generated" session_id=... topics=4 connections=2 provider=openai
-```
-
----
-
-## 프로바이더 비교
-
-| 프로바이더 | 모델 | 장점 | 단점 | 권장 용도 |
-|-----------|------|------|------|----------|
-| **OpenAI** | gpt-4-turbo | JSON mode 네이티브 지원, 안정적 | 비용 높음 | 마인드맵 생성 |
-| **Gemini** | gemini-1.5-flash | 빠르고 저렴, 긴 컨텍스트 | JSON 불안정 가능 | 태그 추출 |
-| **Claude** | claude-3-5-sonnet | 뛰어난 분석력, 한국어 우수 | JSON mode 없음 | 복잡한 분석 |
-
-### 권장 설정
-
-```env
-# 비용 최적화 설정
-AI_DEFAULT_PROVIDER=gemini
-AI_TAG_EXTRACTION_PROVIDER=gemini   # 저비용, 빠름
-AI_MINDMAP_PROVIDER=openai          # JSON 안정성
-GEMINI_MODEL=gemini-1.5-flash
-```
-
----
-
-## Step 10.6: UsageService 연동 (토큰 측정)
-
-### 목표
-
-AI 서비스에서 토큰 사용량을 **정확하게** 추적하고 제한을 체크합니다.
-
-### 토큰 측정 원리
-
-AI API는 응답에 **실제 사용된 토큰 수**를 포함하여 반환합니다. 예상치가 아닌 정확한 값입니다.
-
-**AI 제공업체별 응답 필드:**
-
-| 제공업체 | 응답 필드 | 예시 값 |
-|---------|----------|--------|
-| OpenAI | `response.Usage.TotalTokens` | 3847 |
-| Google Gemini | `response.UsageMetadata.TotalTokenCount` | 3847 |
-| Anthropic Claude | `response.Usage.InputTokens + OutputTokens` | 3847 |
-
-### 체크리스트
-
-- [ ] AI 서비스에 UsageService 의존성 주입
-- [ ] 요청 전 사용량 제한 체크
-- [ ] API 호출 후 **응답에서 토큰 사용량 추출**
-- [ ] token_usage 테이블에 정확한 값 기록
-- [ ] 제한 초과 시 적절한 에러 반환
-
-### 코드 예시
-
-```go
-// internal/worker/handler/mindmap.go
-func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
-    // ... 기존 코드 ...
-
-    // 1. 제한 체크
-    status, err := h.usageService.CheckLimit(ctx, userID)
-    if err != nil {
-        return err
-    }
-    if !status.CanUseAI {
-        return ErrTokenLimitExceeded
-    }
-
-    // 2. AI 호출
-    response, err := h.aiManager.ChatWithJSON(ctx, ai.TaskMindmap, messages, opts)
-    if err != nil {
-        return err
-    }
-
-    // 3. 토큰 사용량 기록
-    tokensUsed := response.InputTokens + response.OutputTokens
-    if err := h.usageService.RecordUsage(ctx, service.UsageRecord{
-        UserID:    userID,
-        SessionID: sessionID,
-        Operation: "mindmap",
-        Tokens:    tokensUsed,
-        AIModel:   response.Model,
-    }); err != nil {
-        slog.Error("failed to record usage", "error", err)
-    }
-
-    // ... 나머지 처리 ...
-}
-```
-
----
-
-## Phase 10 완료 확인
-
-### 전체 검증 체크리스트
-
-- [ ] AI Provider 인터페이스 정의
-- [ ] OpenAI Provider 구현
-- [ ] Google Gemini Provider 구현
-- [ ] Anthropic Claude Provider 구현
-- [ ] Provider Manager 구현 (Fallback 지원)
-- [ ] 태그 추출 Worker Handler
-- [ ] 마인드맵 생성 Worker Handler
-- [ ] API에서 Task Enqueue 연동
-- [ ] Worker에서 AI 처리 완료
-- [ ] **UsageService 연동 (토큰 측정)**
-
-### 테스트 요구사항
-
-| 테스트 유형 | 대상 | 파일 |
-| ----------- | ---- | ---- |
-| 단위 테스트 | Provider Manager Fallback | `ai/manager_test.go` |
-| 단위 테스트 | 마인드맵 그래프 생성 | `handler/mindmap_test.go` |
-| Mock 테스트 | AI Provider (Mock 응답) | `ai/mock_provider_test.go` |
-| 단위 테스트 | 토큰 사용량 기록 | `service/usage_service_test.go` |
-
-```bash
-# Phase 10 테스트 실행
-moonx backend:test -- -run "TestAI|TestMindmap|TestUsage"
-```
-
-> **Note**: AI Provider 테스트는 실제 API 호출 대신 Mock을 사용합니다. 통합 테스트는 별도 환경에서 수동 실행합니다.
-
-### 산출물 요약
-
-| 항목 | 위치 |
-| ---- | ---- |
-| AI 타입 정의 | `internal/infrastructure/ai/types.go` |
-| Provider 인터페이스 | `internal/infrastructure/ai/provider.go` |
-| OpenAI Provider | `internal/infrastructure/ai/openai.go` |
-| Gemini Provider | `internal/infrastructure/ai/gemini.go` |
-| Claude Provider | `internal/infrastructure/ai/claude.go` |
-| Provider Manager | `internal/infrastructure/ai/manager.go` |
-| 태그 추출 Handler | `internal/worker/handler/tag_extraction.go` |
-| 마인드맵 Handler | `internal/worker/handler/mindmap.go` |
-| 마인드맵 타입 | `internal/service/mindmap_types.go` |
-| 테스트 | `internal/infrastructure/ai/*_test.go` |
-
----
-
-## 다음 Phase
-
-Phase 10 완료 후 [Phase 11: 웹앱 대시보드](./phase-11-dashboard.md)으로 진행하세요.
+- **Step 10.1.1**: 태그 추출 Worker Handler
+- **Step 10.1.2**: 마인드맵 생성 Worker Handler
+- **Step 10.1.3**: UsageService 연동 (토큰 측정)

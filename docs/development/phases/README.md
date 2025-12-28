@@ -21,7 +21,8 @@ phases/
 ├── phase-7-webapp.md            # Next.js 웹앱
 ├── phase-8-extension.md         # Chrome Extension
 ├── phase-9-plan-usage.md        # 플랜 및 사용량 시스템 (NEW)
-├── phase-10-ai.md               # AI 마인드맵 생성
+├── phase-10-ai.md               # AI Provider 인프라
+├── phase-10.1-mindmap.md        # 마인드맵 생성 (태그 추출, 관계도)
 ├── phase-11-dashboard.md        # 웹앱 대시보드
 ├── phase-12-monitoring.md       # 프로덕션 모니터링
 ├── phase-13-deployment.md       # 배포 및 운영
@@ -46,7 +47,8 @@ phases/
 | 7 | [Next.js 웹앱](./phase-7-webapp.md) | ✅ 완료 | 4 steps |
 | 8 | [Chrome Extension](./phase-8-extension.md) | ✅ 완료 | 5 steps |
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ✅ 완료 | 5 steps |
-| 10 | [AI 마인드맵](./phase-10-ai.md) | ⬜ 대기 | 6 steps |
+| 10 | [AI Provider 인프라](./phase-10-ai.md) | ⬜ 대기 | 4 steps |
+| 10.1 | [마인드맵 생성](./phase-10.1-mindmap.md) | ⬜ 대기 | 3 steps |
 | 11 | [웹앱 대시보드](./phase-11-dashboard.md) | ⬜ 대기 | 5 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ⬜ 대기 | 4 steps |
 | 13 | [배포 및 운영](./phase-13-deployment.md) | ⬜ 대기 | 4 steps |
@@ -88,13 +90,16 @@ flowchart TD
     %% Phase 9: 플랜/사용량 (AI 전에 필요)
     P8 --> P9[Phase 9<br/>플랜/사용량]
 
-    %% Phase 10: AI (사용량 시스템 연동)
-    P6 --> P10[Phase 10<br/>AI]
-    P9 --> P10
+    %% Phase 10: AI Provider 인프라 (Worker 의존)
+    P6 --> P10[Phase 10<br/>AI 인프라]
+
+    %% Phase 10.1: 마인드맵 생성 (AI 인프라 + 사용량 시스템 의존)
+    P10 --> P10_1[Phase 10.1<br/>마인드맵]
+    P9 --> P10_1
 
     %% Phase 11: 대시보드
     P7 --> P11[Phase 11<br/>대시보드]
-    P10 --> P11
+    P10_1 --> P11
 
     %% Phase 12-14: 운영 및 결제
     P11 --> P12[Phase 12<br/>모니터링]
@@ -114,6 +119,7 @@ flowchart TD
     style P8 fill:#fce4ec
     style P9 fill:#fff9c4
     style P10 fill:#f3e5f5
+    style P10_1 fill:#f3e5f5
     style P11 fill:#f3e5f5
     style P12 fill:#efebe9
     style P13 fill:#efebe9
@@ -181,21 +187,22 @@ flowchart TD
 7. Phase 2.1 (Google OAuth) - Phase 6 이후, Phase 7 전에 구현
 8. Phase 7 (웹앱 기본) - Phase 2, 3, 5, 2.1 의존
 9. Phase 9 (플랜/사용량) - Phase 8 이후
-10. Phase 10 (AI) - Phase 6, 9 의존
-11. **Core 완료**: 마인드맵 생성 가능
+10. Phase 10 (AI 인프라) - Phase 6 의존
+11. Phase 10.1 (마인드맵) - Phase 10, 9 의존
+12. **Core 완료**: 마인드맵 생성 가능
 
 ### Dashboard & Polish
 
-12. Phase 11 (대시보드) - Phase 7, 10 의존
+13. Phase 11 (대시보드) - Phase 7, 10.1 의존
 
 ### 프로덕션 준비
 
-13. Phase 12 (프로덕션 모니터링)
-14. Phase 13 (배포/운영)
+14. Phase 12 (프로덕션 모니터링)
+15. Phase 13 (배포/운영)
 
 ### 수익화
 
-15. Phase 14 (Stripe 결제)
+16. Phase 14 (Stripe 결제)
 
 ---
 

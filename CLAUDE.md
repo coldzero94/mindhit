@@ -154,7 +154,8 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 7 | ✅ Done | Next.js Web App |
 | Phase 8 | ✅ Done | Chrome Extension |
 | Phase 9 | ✅ Done | Plan & Usage System |
-| Phase 10 | ⬜ Pending | AI Mindmap Generation |
+| Phase 10 | ⬜ Pending | AI Provider Infrastructure |
+| Phase 10.1 | ⬜ Pending | Mindmap Generation |
 | Phase 11 | ⬜ Pending | Web App Dashboard |
 | Phase 12 | ⬜ Pending | Production Monitoring |
 | Phase 13 | ⬜ Pending | Deployment & Operations |
