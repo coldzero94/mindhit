@@ -4,10 +4,10 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | React Three Fiber 기반 3D 마인드맵 시각화 및 대시보드 |
-| **선행 조건** | Phase 7, 10 완료 |
-| **예상 소요** | 4 Steps |
-| **결과물** | 인터랙티브 3D "Knowledge Galaxy" 마인드맵 |
+| **목표** | React Three Fiber 기반 3D 마인드맵 시각화, 대시보드, 계정/사용량 페이지 |
+| **선행 조건** | Phase 7, 9, 10 완료 |
+| **예상 소요** | 5 Steps |
+| **결과물** | 인터랙티브 3D "Knowledge Galaxy" 마인드맵 + 계정/사용량 UI |
 
 ---
 
@@ -19,6 +19,7 @@
 | 11.2 | 3D 마인드맵 컴포넌트 | ⬜ |
 | 11.3 | 세션 상세 페이지 개선 | ⬜ |
 | 11.4 | 애니메이션 & 인터랙션 | ⬜ |
+| 11.5 | 계정 & 사용량 페이지 | ⬜ |
 
 ---
 
@@ -1238,6 +1239,280 @@ pnpm dev
 
 ---
 
+## Step 11.5: 계정 & 사용량 페이지
+
+### 목표
+
+Phase 9에서 구현한 Subscription/Usage API를 프론트엔드에서 사용할 수 있도록 UI를 구현합니다.
+
+### 체크리스트
+
+- [ ] **API 래퍼 함수 생성**
+  - [ ] `src/lib/api/subscription.ts`
+
+    ```typescript
+    import { client, handleApiResponse } from './client';
+    import {
+      subscriptionRoutesGetSubscription,
+      subscriptionRoutesListPlans,
+    } from '@/api/generated';
+    import type {
+      SubscriptionSubscriptionInfo,
+      SubscriptionPlan,
+    } from '@/api/generated';
+
+    export type { SubscriptionSubscriptionInfo, SubscriptionPlan };
+
+    export async function getSubscription(): Promise<SubscriptionSubscriptionInfo> {
+      const response = await subscriptionRoutesGetSubscription({ client });
+      return handleApiResponse(response).subscription;
+    }
+
+    export async function getPlans(): Promise<SubscriptionPlan[]> {
+      const response = await subscriptionRoutesListPlans({ client });
+      return handleApiResponse(response).plans;
+    }
+    ```
+
+  - [ ] `src/lib/api/usage.ts`
+
+    ```typescript
+    import { client, handleApiResponse } from './client';
+    import {
+      usageRoutesGetUsage,
+      usageRoutesGetUsageHistory,
+    } from '@/api/generated';
+    import type { UsageUsageSummary } from '@/api/generated';
+
+    export type { UsageUsageSummary };
+
+    export async function getUsage(): Promise<UsageUsageSummary> {
+      const response = await usageRoutesGetUsage({ client });
+      return handleApiResponse(response).usage;
+    }
+
+    export async function getUsageHistory(months?: number): Promise<UsageUsageSummary[]> {
+      const response = await usageRoutesGetUsageHistory({
+        client,
+        query: { months },
+      });
+      return handleApiResponse(response).history;
+    }
+    ```
+
+- [ ] **React Query Hooks 생성**
+  - [ ] `src/lib/hooks/use-subscription.ts`
+
+    ```typescript
+    import { useQuery } from '@tanstack/react-query';
+    import { getSubscription, getPlans } from '@/lib/api/subscription';
+
+    export function useSubscription() {
+      return useQuery({
+        queryKey: ['subscription'],
+        queryFn: getSubscription,
+      });
+    }
+
+    export function usePlans() {
+      return useQuery({
+        queryKey: ['plans'],
+        queryFn: getPlans,
+      });
+    }
+    ```
+
+  - [ ] `src/lib/hooks/use-usage.ts`
+
+    ```typescript
+    import { useQuery } from '@tanstack/react-query';
+    import { getUsage, getUsageHistory } from '@/lib/api/usage';
+
+    export function useUsage() {
+      return useQuery({
+        queryKey: ['usage'],
+        queryFn: getUsage,
+      });
+    }
+
+    export function useUsageHistory(months: number = 6) {
+      return useQuery({
+        queryKey: ['usage-history', months],
+        queryFn: () => getUsageHistory(months),
+      });
+    }
+    ```
+
+- [ ] **계정 페이지 생성**
+  - [ ] `src/app/(dashboard)/account/page.tsx`
+
+    ```tsx
+    'use client';
+
+    import { useSubscription, usePlans } from '@/lib/hooks/use-subscription';
+    import { useUsage, useUsageHistory } from '@/lib/hooks/use-usage';
+    import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+    import { Progress } from '@/components/ui/progress';
+    import { Badge } from '@/components/ui/badge';
+    import { Skeleton } from '@/components/ui/skeleton';
+    import { Button } from '@/components/ui/button';
+    import { formatDate } from '@/lib/utils';
+
+    export default function AccountPage() {
+      const { data: subscription, isLoading: isSubLoading } = useSubscription();
+      const { data: usage, isLoading: isUsageLoading } = useUsage();
+      const { data: history } = useUsageHistory(6);
+
+      if (isSubLoading || isUsageLoading) {
+        return (
+          <div className="space-y-6">
+            <Skeleton className="h-8 w-48" />
+            <div className="grid gap-6 md:grid-cols-2">
+              <Skeleton className="h-48" />
+              <Skeleton className="h-48" />
+            </div>
+          </div>
+        );
+      }
+
+      const usagePercent = usage?.limit
+        ? Math.round((usage.tokensUsed / usage.limit) * 100)
+        : 0;
+
+      return (
+        <div className="space-y-6">
+          <h1 className="text-2xl font-bold">계정</h1>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* 구독 정보 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>구독 정보</CardTitle>
+                <CardDescription>현재 플랜 및 구독 상태</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">플랜</span>
+                  <Badge variant="default">{subscription?.plan?.name || 'Free'}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">상태</span>
+                  <Badge variant={subscription?.status === 'active' ? 'default' : 'secondary'}>
+                    {subscription?.status || 'active'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">현재 기간</span>
+                  <span className="text-sm">
+                    {subscription?.currentPeriodStart && subscription?.currentPeriodEnd
+                      ? `${formatDate(subscription.currentPeriodStart)} ~ ${formatDate(subscription.currentPeriodEnd)}`
+                      : '-'}
+                  </span>
+                </div>
+                {subscription?.plan?.priceCents === 0 && (
+                  <Button className="w-full mt-4">Pro로 업그레이드</Button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 사용량 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>토큰 사용량</CardTitle>
+                <CardDescription>이번 달 AI 토큰 사용량</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{usage?.tokensUsed?.toLocaleString() || 0} 토큰 사용</span>
+                    <span className="text-gray-500">
+                      {usage?.limit ? `${usage.limit.toLocaleString()} 제한` : '무제한'}
+                    </span>
+                  </div>
+                  {usage?.limit && (
+                    <Progress value={usagePercent} className="h-2" />
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">기간</span>
+                  <span className="text-sm">
+                    {usage?.periodStart && usage?.periodEnd
+                      ? `${formatDate(usage.periodStart)} ~ ${formatDate(usage.periodEnd)}`
+                      : '-'}
+                  </span>
+                </div>
+                {usagePercent >= 80 && (
+                  <p className="text-sm text-orange-600">
+                    ⚠️ 토큰 사용량이 80%를 초과했습니다.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 사용량 히스토리 */}
+          {history && history.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>사용량 히스토리</CardTitle>
+                <CardDescription>최근 6개월 토큰 사용량</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {history.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <span className="text-sm">
+                        {formatDate(item.periodStart)} ~ {formatDate(item.periodEnd)}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {item.tokensUsed.toLocaleString()} 토큰
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      );
+    }
+    ```
+
+- [ ] **사이드바에 계정 링크 추가**
+  - [ ] `src/components/layout/Sidebar.tsx` 업데이트
+
+    ```tsx
+    // 사이드바 메뉴에 추가
+    { href: '/account', icon: User, label: '계정' }
+    ```
+
+- [ ] **헤더에 사용량 표시 (옵션)**
+  - [ ] `src/components/layout/Header.tsx` 업데이트
+
+    ```tsx
+    // 헤더 우측에 사용량 요약 표시
+    import { useUsage } from '@/lib/hooks/use-usage';
+
+    const { data: usage } = useUsage();
+    const usagePercent = usage?.limit
+      ? Math.round((usage.tokensUsed / usage.limit) * 100)
+      : 0;
+
+    // 80% 이상일 경우 경고 배지 표시
+    ```
+
+### 검증
+
+```bash
+pnpm dev
+# http://localhost:3000/account 접속
+# - 구독 정보 카드 표시 확인
+# - 토큰 사용량 Progress 바 표시 확인
+# - 사용량 히스토리 목록 표시 확인
+```
+
+---
+
 ## Phase 11 완료 확인
 
 ### 전체 검증 체크리스트
@@ -1252,6 +1527,7 @@ pnpm dev
 - [ ] 배경 별/파티클 효과
 - [ ] 세션 통계 표시
 - [ ] 타임라인 뷰
+- [ ] 계정 페이지 (구독/사용량 UI)
 
 ### 테스트 요구사항
 
