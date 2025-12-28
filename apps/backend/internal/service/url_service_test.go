@@ -340,12 +340,12 @@ func TestURLService_GetURLsWithoutSummary_ExcludesEmptyContent(t *testing.T) {
 	urlWithContent, err := urlService.GetOrCreate(ctx, uniqueTestURL("has-content"), "Test", "Content")
 	require.NoError(t, err)
 
-	// Get URLs without summary (use high limit to get all)
-	urls, err := urlService.GetURLsWithoutSummary(ctx, 100)
+	// Get all URLs without summary - use large limit to include our test URLs
+	urls, err := urlService.GetURLsWithoutSummary(ctx, 10000)
 
 	require.NoError(t, err)
 
-	// Check that URL with content is included
+	// Check that URL with content is included and URL without content is excluded
 	foundWithContent := false
 	foundWithoutContent := false
 	for _, u := range urls {

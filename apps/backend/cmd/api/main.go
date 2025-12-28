@@ -87,14 +87,18 @@ func run() error {
 	sessionService := service.NewSessionService(client, queueClient)
 	urlService := service.NewURLService(client)
 	eventService := service.NewEventService(client, urlService)
+	subscriptionService := service.NewSubscriptionService(client)
+	usageService := service.NewUsageService(client)
 
 	// Controllers
 	authController := controller.NewAuthController(authService, jwtService)
 	sessionController := controller.NewSessionController(sessionService, jwtService)
 	eventController := controller.NewEventController(eventService, sessionService, jwtService)
+	subscriptionController := controller.NewSubscriptionController(subscriptionService, jwtService)
+	usageController := controller.NewUsageController(usageService, jwtService)
 
 	// Combined handler implementing StrictServerInterface
-	handler := controller.NewHandler(authController, sessionController, eventController)
+	handler := controller.NewHandler(authController, sessionController, eventController, subscriptionController, usageController)
 
 	// Router
 	r := gin.New()

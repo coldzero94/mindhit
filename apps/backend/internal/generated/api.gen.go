@@ -212,6 +212,64 @@ type SessionUpdateSessionRequest struct {
 	Title       *string `json:"title,omitempty"`
 }
 
+// SubscriptionPlan 플랜 정보
+type SubscriptionPlan struct {
+	BillingPeriod         string          `json:"billing_period"`
+	Features              map[string]bool `json:"features"`
+	Id                    string          `json:"id"`
+	MaxConcurrentSessions *int32          `json:"max_concurrent_sessions,omitempty"`
+	Name                  string          `json:"name"`
+	PriceCents            int32           `json:"price_cents"`
+	SessionRetentionDays  *int32          `json:"session_retention_days,omitempty"`
+	TokenLimit            *int32          `json:"token_limit,omitempty"`
+}
+
+// SubscriptionPlanListResponse 플랜 목록 응답
+type SubscriptionPlanListResponse struct {
+	Plans []SubscriptionPlan `json:"plans"`
+}
+
+// SubscriptionSubscriptionInfo 구독 정보
+type SubscriptionSubscriptionInfo struct {
+	CancelAtPeriodEnd  bool      `json:"cancel_at_period_end"`
+	CurrentPeriodEnd   time.Time `json:"current_period_end"`
+	CurrentPeriodStart time.Time `json:"current_period_start"`
+	Id                 string    `json:"id"`
+
+	// Plan 플랜 정보
+	Plan   SubscriptionPlan `json:"plan"`
+	Status string           `json:"status"`
+}
+
+// SubscriptionSubscriptionResponse 구독 응답
+type SubscriptionSubscriptionResponse struct {
+	// Subscription 구독 정보
+	Subscription SubscriptionSubscriptionInfo `json:"subscription"`
+}
+
+// UsageUsageHistoryResponse 사용량 히스토리 응답
+type UsageUsageHistoryResponse struct {
+	History []UsageUsageSummary `json:"history"`
+}
+
+// UsageUsageResponse 사용량 응답
+type UsageUsageResponse struct {
+	// Usage 사용량 현황
+	Usage UsageUsageSummary `json:"usage"`
+}
+
+// UsageUsageSummary 사용량 현황
+type UsageUsageSummary struct {
+	ByOperation map[string]int32 `json:"by_operation"`
+	CanUseAi    bool             `json:"can_use_ai"`
+	IsUnlimited bool             `json:"is_unlimited"`
+	PercentUsed float64          `json:"percent_used"`
+	PeriodEnd   time.Time        `json:"period_end"`
+	PeriodStart time.Time        `json:"period_start"`
+	TokenLimit  int32            `json:"token_limit"`
+	TokensUsed  int32            `json:"tokens_used"`
+}
+
 // RoutesLogoutParams defines parameters for RoutesLogout.
 type RoutesLogoutParams struct {
 	Authorization string `json:"authorization"`
@@ -284,6 +342,27 @@ type RoutesResumeParams struct {
 
 // RoutesStopParams defines parameters for RoutesStop.
 type RoutesStopParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// SubscriptionRoutesGetSubscriptionParams defines parameters for SubscriptionRoutesGetSubscription.
+type SubscriptionRoutesGetSubscriptionParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// SubscriptionRoutesListPlansParams defines parameters for SubscriptionRoutesListPlans.
+type SubscriptionRoutesListPlansParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// UsageRoutesGetUsageParams defines parameters for UsageRoutesGetUsage.
+type UsageRoutesGetUsageParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// UsageRoutesGetUsageHistoryParams defines parameters for UsageRoutesGetUsageHistory.
+type UsageRoutesGetUsageHistoryParams struct {
+	Months        *int32 `form:"months,omitempty" json:"months,omitempty"`
 	Authorization string `json:"authorization"`
 }
 
@@ -361,6 +440,18 @@ type ServerInterface interface {
 
 	// (POST /v1/sessions/{id}/stop)
 	RoutesStop(c *gin.Context, id string, params RoutesStopParams)
+
+	// (GET /v1/subscription)
+	SubscriptionRoutesGetSubscription(c *gin.Context, params SubscriptionRoutesGetSubscriptionParams)
+
+	// (GET /v1/subscription/plans)
+	SubscriptionRoutesListPlans(c *gin.Context, params SubscriptionRoutesListPlansParams)
+
+	// (GET /v1/usage)
+	UsageRoutesGetUsage(c *gin.Context, params UsageRoutesGetUsageParams)
+
+	// (GET /v1/usage/history)
+	UsageRoutesGetUsageHistory(c *gin.Context, params UsageRoutesGetUsageHistoryParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1133,6 +1224,182 @@ func (siw *ServerInterfaceWrapper) RoutesStop(c *gin.Context) {
 	siw.Handler.RoutesStop(c, id, params)
 }
 
+// SubscriptionRoutesGetSubscription operation middleware
+func (siw *ServerInterfaceWrapper) SubscriptionRoutesGetSubscription(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubscriptionRoutesGetSubscriptionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubscriptionRoutesGetSubscription(c, params)
+}
+
+// SubscriptionRoutesListPlans operation middleware
+func (siw *ServerInterfaceWrapper) SubscriptionRoutesListPlans(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubscriptionRoutesListPlansParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubscriptionRoutesListPlans(c, params)
+}
+
+// UsageRoutesGetUsage operation middleware
+func (siw *ServerInterfaceWrapper) UsageRoutesGetUsage(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UsageRoutesGetUsageParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UsageRoutesGetUsage(c, params)
+}
+
+// UsageRoutesGetUsageHistory operation middleware
+func (siw *ServerInterfaceWrapper) UsageRoutesGetUsageHistory(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UsageRoutesGetUsageHistoryParams
+
+	// ------------- Optional query parameter "months" -------------
+
+	err = runtime.BindQueryParameter("form", false, false, "months", c.Request.URL.Query(), &params.Months)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter months: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UsageRoutesGetUsageHistory(c, params)
+}
+
 // GinServerOptions provides options for the Gin server.
 type GinServerOptions struct {
 	BaseURL      string
@@ -1178,6 +1445,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/pause", wrapper.RoutesPause)
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/resume", wrapper.RoutesResume)
 	router.POST(options.BaseURL+"/v1/sessions/:id/stop", wrapper.RoutesStop)
+	router.GET(options.BaseURL+"/v1/subscription", wrapper.SubscriptionRoutesGetSubscription)
+	router.GET(options.BaseURL+"/v1/subscription/plans", wrapper.SubscriptionRoutesListPlans)
+	router.GET(options.BaseURL+"/v1/usage", wrapper.UsageRoutesGetUsage)
+	router.GET(options.BaseURL+"/v1/usage/history", wrapper.UsageRoutesGetUsageHistory)
 }
 
 type RoutesForgotPasswordRequestObject struct {
@@ -1876,6 +2147,110 @@ func (response RoutesStop404JSONResponse) VisitRoutesStopResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SubscriptionRoutesGetSubscriptionRequestObject struct {
+	Params SubscriptionRoutesGetSubscriptionParams
+}
+
+type SubscriptionRoutesGetSubscriptionResponseObject interface {
+	VisitSubscriptionRoutesGetSubscriptionResponse(w http.ResponseWriter) error
+}
+
+type SubscriptionRoutesGetSubscription200JSONResponse SubscriptionSubscriptionResponse
+
+func (response SubscriptionRoutesGetSubscription200JSONResponse) VisitSubscriptionRoutesGetSubscriptionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesGetSubscription401JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesGetSubscription401JSONResponse) VisitSubscriptionRoutesGetSubscriptionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesListPlansRequestObject struct {
+	Params SubscriptionRoutesListPlansParams
+}
+
+type SubscriptionRoutesListPlansResponseObject interface {
+	VisitSubscriptionRoutesListPlansResponse(w http.ResponseWriter) error
+}
+
+type SubscriptionRoutesListPlans200JSONResponse SubscriptionPlanListResponse
+
+func (response SubscriptionRoutesListPlans200JSONResponse) VisitSubscriptionRoutesListPlansResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesListPlans401JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesListPlans401JSONResponse) VisitSubscriptionRoutesListPlansResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UsageRoutesGetUsageRequestObject struct {
+	Params UsageRoutesGetUsageParams
+}
+
+type UsageRoutesGetUsageResponseObject interface {
+	VisitUsageRoutesGetUsageResponse(w http.ResponseWriter) error
+}
+
+type UsageRoutesGetUsage200JSONResponse UsageUsageResponse
+
+func (response UsageRoutesGetUsage200JSONResponse) VisitUsageRoutesGetUsageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UsageRoutesGetUsage401JSONResponse CommonErrorResponse
+
+func (response UsageRoutesGetUsage401JSONResponse) VisitUsageRoutesGetUsageResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UsageRoutesGetUsageHistoryRequestObject struct {
+	Params UsageRoutesGetUsageHistoryParams
+}
+
+type UsageRoutesGetUsageHistoryResponseObject interface {
+	VisitUsageRoutesGetUsageHistoryResponse(w http.ResponseWriter) error
+}
+
+type UsageRoutesGetUsageHistory200JSONResponse UsageUsageHistoryResponse
+
+func (response UsageRoutesGetUsageHistory200JSONResponse) VisitUsageRoutesGetUsageHistoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UsageRoutesGetUsageHistory401JSONResponse CommonErrorResponse
+
+func (response UsageRoutesGetUsageHistory401JSONResponse) VisitUsageRoutesGetUsageHistoryResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
@@ -1932,6 +2307,18 @@ type StrictServerInterface interface {
 
 	// (POST /v1/sessions/{id}/stop)
 	RoutesStop(ctx context.Context, request RoutesStopRequestObject) (RoutesStopResponseObject, error)
+
+	// (GET /v1/subscription)
+	SubscriptionRoutesGetSubscription(ctx context.Context, request SubscriptionRoutesGetSubscriptionRequestObject) (SubscriptionRoutesGetSubscriptionResponseObject, error)
+
+	// (GET /v1/subscription/plans)
+	SubscriptionRoutesListPlans(ctx context.Context, request SubscriptionRoutesListPlansRequestObject) (SubscriptionRoutesListPlansResponseObject, error)
+
+	// (GET /v1/usage)
+	UsageRoutesGetUsage(ctx context.Context, request UsageRoutesGetUsageRequestObject) (UsageRoutesGetUsageResponseObject, error)
+
+	// (GET /v1/usage/history)
+	UsageRoutesGetUsageHistory(ctx context.Context, request UsageRoutesGetUsageHistoryRequestObject) (UsageRoutesGetUsageHistoryResponseObject, error)
 }
 
 type StrictHandlerFunc = strictgin.StrictGinHandlerFunc
@@ -2481,50 +2868,167 @@ func (sh *strictHandler) RoutesStop(ctx *gin.Context, id string, params RoutesSt
 	}
 }
 
+// SubscriptionRoutesGetSubscription operation middleware
+func (sh *strictHandler) SubscriptionRoutesGetSubscription(ctx *gin.Context, params SubscriptionRoutesGetSubscriptionParams) {
+	var request SubscriptionRoutesGetSubscriptionRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubscriptionRoutesGetSubscription(ctx, request.(SubscriptionRoutesGetSubscriptionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubscriptionRoutesGetSubscription")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SubscriptionRoutesGetSubscriptionResponseObject); ok {
+		if err := validResponse.VisitSubscriptionRoutesGetSubscriptionResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubscriptionRoutesListPlans operation middleware
+func (sh *strictHandler) SubscriptionRoutesListPlans(ctx *gin.Context, params SubscriptionRoutesListPlansParams) {
+	var request SubscriptionRoutesListPlansRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubscriptionRoutesListPlans(ctx, request.(SubscriptionRoutesListPlansRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubscriptionRoutesListPlans")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SubscriptionRoutesListPlansResponseObject); ok {
+		if err := validResponse.VisitSubscriptionRoutesListPlansResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UsageRoutesGetUsage operation middleware
+func (sh *strictHandler) UsageRoutesGetUsage(ctx *gin.Context, params UsageRoutesGetUsageParams) {
+	var request UsageRoutesGetUsageRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UsageRoutesGetUsage(ctx, request.(UsageRoutesGetUsageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UsageRoutesGetUsage")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(UsageRoutesGetUsageResponseObject); ok {
+		if err := validResponse.VisitUsageRoutesGetUsageResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UsageRoutesGetUsageHistory operation middleware
+func (sh *strictHandler) UsageRoutesGetUsageHistory(ctx *gin.Context, params UsageRoutesGetUsageHistoryParams) {
+	var request UsageRoutesGetUsageHistoryRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UsageRoutesGetUsageHistory(ctx, request.(UsageRoutesGetUsageHistoryRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UsageRoutesGetUsageHistory")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(UsageRoutesGetUsageHistoryResponseObject); ok {
+		if err := validResponse.VisitUsageRoutesGetUsageHistoryResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

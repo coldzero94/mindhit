@@ -95,11 +95,13 @@ func (s *URLService) UpdateSummary(
 }
 
 // GetURLsWithoutSummary retrieves URLs that need summarization.
+// Only returns URLs with non-empty content and no summary.
 func (s *URLService) GetURLsWithoutSummary(ctx context.Context, limit int) ([]*ent.URL, error) {
 	return s.client.URL.
 		Query().
 		Where(
 			enturl.ContentNotNil(),
+			enturl.ContentNEQ(""),
 			enturl.SummaryIsNil(),
 		).
 		Limit(limit).

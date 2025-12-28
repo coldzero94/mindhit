@@ -58,9 +58,11 @@ type SessionEdges struct {
 	RawEvents []*RawEvent `json:"raw_events,omitempty"`
 	// Mindmap holds the value of the mindmap edge.
 	Mindmap *MindmapGraph `json:"mindmap,omitempty"`
+	// TokenUsage holds the value of the token_usage edge.
+	TokenUsage []*TokenUsage `json:"token_usage,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -110,6 +112,15 @@ func (e SessionEdges) MindmapOrErr() (*MindmapGraph, error) {
 		return nil, &NotFoundError{label: mindmapgraph.Label}
 	}
 	return nil, &NotLoadedError{edge: "mindmap"}
+}
+
+// TokenUsageOrErr returns the TokenUsage value or an error if the edge
+// was not loaded in eager-loading.
+func (e SessionEdges) TokenUsageOrErr() ([]*TokenUsage, error) {
+	if e.loadedTypes[5] {
+		return e.TokenUsage, nil
+	}
+	return nil, &NotLoadedError{edge: "token_usage"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -247,6 +258,11 @@ func (_m *Session) QueryRawEvents() *RawEventQuery {
 // QueryMindmap queries the "mindmap" edge of the Session entity.
 func (_m *Session) QueryMindmap() *MindmapGraphQuery {
 	return NewSessionClient(_m.config).QueryMindmap(_m)
+}
+
+// QueryTokenUsage queries the "token_usage" edge of the Session entity.
+func (_m *Session) QueryTokenUsage() *TokenUsageQuery {
+	return NewSessionClient(_m.config).QueryTokenUsage(_m)
 }
 
 // Update returns a builder for updating this Session.

@@ -10,9 +10,12 @@ import (
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
 	"github.com/mindhit/api/ent/passwordresettoken"
+	"github.com/mindhit/api/ent/plan"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/schema"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/ent/subscription"
+	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/url"
 	"github.com/mindhit/api/ent/user"
 	"github.com/mindhit/api/ent/usersettings"
@@ -121,6 +124,28 @@ func init() {
 	passwordresettokenDescID := passwordresettokenFields[0].Descriptor()
 	// passwordresettoken.DefaultID holds the default value on creation for the id field.
 	passwordresettoken.DefaultID = passwordresettokenDescID.Default.(func() uuid.UUID)
+	planFields := schema.Plan{}.Fields()
+	_ = planFields
+	// planDescName is the schema descriptor for name field.
+	planDescName := planFields[1].Descriptor()
+	// plan.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	plan.NameValidator = planDescName.Validators[0].(func(string) error)
+	// planDescPriceCents is the schema descriptor for price_cents field.
+	planDescPriceCents := planFields[2].Descriptor()
+	// plan.DefaultPriceCents holds the default value on creation for the price_cents field.
+	plan.DefaultPriceCents = planDescPriceCents.Default.(int)
+	// planDescBillingPeriod is the schema descriptor for billing_period field.
+	planDescBillingPeriod := planFields[3].Descriptor()
+	// plan.DefaultBillingPeriod holds the default value on creation for the billing_period field.
+	plan.DefaultBillingPeriod = planDescBillingPeriod.Default.(string)
+	// planDescFeatures is the schema descriptor for features field.
+	planDescFeatures := planFields[7].Descriptor()
+	// plan.DefaultFeatures holds the default value on creation for the features field.
+	plan.DefaultFeatures = planDescFeatures.Default.(map[string]bool)
+	// planDescCreatedAt is the schema descriptor for created_at field.
+	planDescCreatedAt := planFields[8].Descriptor()
+	// plan.DefaultCreatedAt holds the default value on creation for the created_at field.
+	plan.DefaultCreatedAt = planDescCreatedAt.Default.(func() time.Time)
 	raweventMixin := schema.RawEvent{}.Mixin()
 	raweventMixinFields0 := raweventMixin[0].Fields()
 	_ = raweventMixinFields0
@@ -173,6 +198,56 @@ func init() {
 	sessionDescID := sessionMixinFields0[0].Descriptor()
 	// session.DefaultID holds the default value on creation for the id field.
 	session.DefaultID = sessionDescID.Default.(func() uuid.UUID)
+	subscriptionMixin := schema.Subscription{}.Mixin()
+	subscriptionMixinFields0 := subscriptionMixin[0].Fields()
+	_ = subscriptionMixinFields0
+	subscriptionFields := schema.Subscription{}.Fields()
+	_ = subscriptionFields
+	// subscriptionDescCreatedAt is the schema descriptor for created_at field.
+	subscriptionDescCreatedAt := subscriptionMixinFields0[1].Descriptor()
+	// subscription.DefaultCreatedAt holds the default value on creation for the created_at field.
+	subscription.DefaultCreatedAt = subscriptionDescCreatedAt.Default.(func() time.Time)
+	// subscriptionDescUpdatedAt is the schema descriptor for updated_at field.
+	subscriptionDescUpdatedAt := subscriptionMixinFields0[2].Descriptor()
+	// subscription.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	subscription.DefaultUpdatedAt = subscriptionDescUpdatedAt.Default.(func() time.Time)
+	// subscription.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	subscription.UpdateDefaultUpdatedAt = subscriptionDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// subscriptionDescCancelAtPeriodEnd is the schema descriptor for cancel_at_period_end field.
+	subscriptionDescCancelAtPeriodEnd := subscriptionFields[3].Descriptor()
+	// subscription.DefaultCancelAtPeriodEnd holds the default value on creation for the cancel_at_period_end field.
+	subscription.DefaultCancelAtPeriodEnd = subscriptionDescCancelAtPeriodEnd.Default.(bool)
+	// subscriptionDescID is the schema descriptor for id field.
+	subscriptionDescID := subscriptionMixinFields0[0].Descriptor()
+	// subscription.DefaultID holds the default value on creation for the id field.
+	subscription.DefaultID = subscriptionDescID.Default.(func() uuid.UUID)
+	tokenusageMixin := schema.TokenUsage{}.Mixin()
+	tokenusageMixinFields0 := tokenusageMixin[0].Fields()
+	_ = tokenusageMixinFields0
+	tokenusageFields := schema.TokenUsage{}.Fields()
+	_ = tokenusageFields
+	// tokenusageDescCreatedAt is the schema descriptor for created_at field.
+	tokenusageDescCreatedAt := tokenusageMixinFields0[1].Descriptor()
+	// tokenusage.DefaultCreatedAt holds the default value on creation for the created_at field.
+	tokenusage.DefaultCreatedAt = tokenusageDescCreatedAt.Default.(func() time.Time)
+	// tokenusageDescUpdatedAt is the schema descriptor for updated_at field.
+	tokenusageDescUpdatedAt := tokenusageMixinFields0[2].Descriptor()
+	// tokenusage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	tokenusage.DefaultUpdatedAt = tokenusageDescUpdatedAt.Default.(func() time.Time)
+	// tokenusage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	tokenusage.UpdateDefaultUpdatedAt = tokenusageDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// tokenusageDescOperation is the schema descriptor for operation field.
+	tokenusageDescOperation := tokenusageFields[0].Descriptor()
+	// tokenusage.OperationValidator is a validator for the "operation" field. It is called by the builders before save.
+	tokenusage.OperationValidator = tokenusageDescOperation.Validators[0].(func(string) error)
+	// tokenusageDescTokensUsed is the schema descriptor for tokens_used field.
+	tokenusageDescTokensUsed := tokenusageFields[1].Descriptor()
+	// tokenusage.TokensUsedValidator is a validator for the "tokens_used" field. It is called by the builders before save.
+	tokenusage.TokensUsedValidator = tokenusageDescTokensUsed.Validators[0].(func(int) error)
+	// tokenusageDescID is the schema descriptor for id field.
+	tokenusageDescID := tokenusageMixinFields0[0].Descriptor()
+	// tokenusage.DefaultID holds the default value on creation for the id field.
+	tokenusage.DefaultID = tokenusageDescID.Default.(func() uuid.UUID)
 	urlMixin := schema.URL{}.Mixin()
 	urlMixinFields0 := urlMixin[0].Fields()
 	_ = urlMixinFields0

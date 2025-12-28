@@ -45,11 +45,11 @@ flowchart TB
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 9.1 | Ent 스키마 추가 | ⬜ |
-| 9.2 | Migration 생성 및 적용 | ⬜ |
-| 9.3 | UsageService 구현 | ⬜ |
-| 9.4 | SubscriptionService 구현 | ⬜ |
-| 9.5 | API 엔드포인트 구현 | ⬜ |
+| 9.1 | Ent 스키마 추가 | ✅ |
+| 9.2 | Migration 생성 및 적용 | ✅ |
+| 9.3 | UsageService 구현 | ✅ |
+| 9.4 | SubscriptionService 구현 | ✅ |
+| 9.5 | API 엔드포인트 구현 | ✅ |
 
 ---
 
@@ -61,12 +61,12 @@ flowchart TB
 
 ### 체크리스트
 
-- [ ] Plan 스키마 생성 (`ent/schema/plan.go`)
-- [ ] Subscription 스키마 생성 (`ent/schema/subscription.go`)
-- [ ] TokenUsage 스키마 생성 (`ent/schema/tokenusage.go`)
-- [ ] User 스키마에 edge 추가 (subscriptions, token_usage)
-- [ ] Session 스키마에 edge 추가 (token_usage)
-- [ ] `go generate ./ent` 실행
+- [x] Plan 스키마 생성 (`ent/schema/plan.go`)
+- [x] Subscription 스키마 생성 (`ent/schema/subscription.go`)
+- [x] TokenUsage 스키마 생성 (`ent/schema/tokenusage.go`)
+- [x] User 스키마에 edge 추가 (subscriptions, token_usage)
+- [x] Session 스키마에 edge 추가 (token_usage)
+- [x] `go generate ./ent` 실행
 
 ### 코드 예시
 
@@ -210,10 +210,10 @@ func (TokenUsage) Indexes() []ent.Index {
 
 ### 체크리스트
 
-- [ ] `atlas migrate diff add_plan_usage_tables` 실행
-- [ ] 생성된 SQL 파일 검토
-- [ ] 개발 DB에 `atlas migrate apply` 실행
-- [ ] 기본 플랜 데이터 seed 스크립트 작성
+- [x] `atlas migrate diff add_plan_usage_tables` 실행
+- [x] 생성된 SQL 파일 검토
+- [x] 개발 DB에 `atlas migrate apply` 실행
+- [x] 기본 플랜 데이터 seed 스크립트 작성
 
 ### Seed 데이터
 
@@ -234,11 +234,11 @@ INSERT INTO plans (id, name, price_cents, billing_period, token_limit, session_r
 
 ### 체크리스트
 
-- [ ] `internal/service/usage_service.go` 생성
-  - [ ] RecordUsage: 토큰 사용량 기록
-  - [ ] GetCurrentUsage: 현재 기간 사용량 조회
-  - [ ] GetUsageHistory: 월별 히스토리 조회
-  - [ ] CheckLimit: 제한 체크
+- [x] `internal/service/usage_service.go` 생성
+  - [x] RecordUsage: 토큰 사용량 기록
+  - [x] GetCurrentUsage: 현재 기간 사용량 조회
+  - [x] GetUsageHistory: 월별 히스토리 조회
+  - [x] CheckLimit: 제한 체크
 
 ### 빌링 주기 (Billing Period) 핵심 로직
 
@@ -414,11 +414,11 @@ func (s *UsageService) calculateFreePlanPeriodStart(ctx context.Context, userID 
 
 ### 체크리스트
 
-- [ ] `internal/service/subscription_service.go` 생성
-  - [ ] GetSubscription: 현재 구독 조회
-  - [ ] GetAvailablePlans: 플랜 목록 조회
-  - [ ] CreateFreeSubscription: 회원가입 시 Free 구독 자동 생성
-  - [ ] GetUserPlan: 사용자 현재 플랜 조회
+- [x] `internal/service/subscription_service.go` 생성
+  - [x] GetSubscription: 현재 구독 조회
+  - [x] GetAvailablePlans: 플랜 목록 조회
+  - [x] CreateFreeSubscription: 회원가입 시 Free 구독 자동 생성
+  - [x] GetUserPlan: 사용자 현재 플랜 조회
 
 ### 코드 예시
 
@@ -518,13 +518,13 @@ func (s *SubscriptionService) HasFeature(ctx context.Context, userID uuid.UUID, 
 
 ### 체크리스트
 
-- [ ] `internal/api/controller/subscription_controller.go` 생성
-  - [ ] GET `/v1/subscription` - 현재 구독 조회
-  - [ ] GET `/v1/subscription/plans` - 플랜 목록
-- [ ] `internal/api/controller/usage_controller.go` 생성
-  - [ ] GET `/v1/usage` - 현재 사용량
-  - [ ] GET `/v1/usage/history` - 월별 히스토리
-- [ ] 라우터에 엔드포인트 등록
+- [x] `internal/controller/subscription_controller.go` 생성
+  - [x] GET `/v1/subscription` - 현재 구독 조회
+  - [x] GET `/v1/subscription/plans` - 플랜 목록
+- [x] `internal/controller/usage_controller.go` 생성
+  - [x] GET `/v1/usage` - 현재 사용량
+  - [x] GET `/v1/usage/history` - 월별 히스토리
+- [x] 라우터에 엔드포인트 등록
 
 ### API 응답 예시
 
@@ -576,14 +576,14 @@ func (s *SubscriptionService) HasFeature(ctx context.Context, userID uuid.UUID, 
 
 ### 전체 검증 체크리스트
 
-- [ ] Plan 스키마 정의
-- [ ] Subscription 스키마 정의
-- [ ] TokenUsage 스키마 정의
-- [ ] Migration 적용
-- [ ] 기본 플랜 seed 데이터 삽입
-- [ ] UsageService 구현
-- [ ] SubscriptionService 구현
-- [ ] API 엔드포인트 동작
+- [x] Plan 스키마 정의
+- [x] Subscription 스키마 정의
+- [x] TokenUsage 스키마 정의
+- [x] Migration 적용
+- [x] 기본 플랜 seed 데이터 삽입
+- [x] UsageService 구현
+- [x] SubscriptionService 구현
+- [x] API 엔드포인트 동작
 
 ### 테스트 요구사항
 

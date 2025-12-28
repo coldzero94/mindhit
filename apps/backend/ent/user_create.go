@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/ent/subscription"
+	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/user"
 	"github.com/mindhit/api/ent/usersettings"
 )
@@ -153,6 +155,36 @@ func (_c *UserCreate) AddPasswordResetTokens(v ...*PasswordResetToken) *UserCrea
 		ids[i] = v[i].ID
 	}
 	return _c.AddPasswordResetTokenIDs(ids...)
+}
+
+// AddSubscriptionIDs adds the "subscriptions" edge to the Subscription entity by IDs.
+func (_c *UserCreate) AddSubscriptionIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddSubscriptionIDs(ids...)
+	return _c
+}
+
+// AddSubscriptions adds the "subscriptions" edges to the Subscription entity.
+func (_c *UserCreate) AddSubscriptions(v ...*Subscription) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddSubscriptionIDs(ids...)
+}
+
+// AddTokenUsageIDs adds the "token_usage" edge to the TokenUsage entity by IDs.
+func (_c *UserCreate) AddTokenUsageIDs(ids ...uuid.UUID) *UserCreate {
+	_c.mutation.AddTokenUsageIDs(ids...)
+	return _c
+}
+
+// AddTokenUsage adds the "token_usage" edges to the TokenUsage entity.
+func (_c *UserCreate) AddTokenUsage(v ...*TokenUsage) *UserCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTokenUsageIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -335,6 +367,38 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(passwordresettoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.SubscriptionsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.SubscriptionsTable,
+			Columns: []string{user.SubscriptionsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(subscription.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TokenUsageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.TokenUsageTable,
+			Columns: []string{user.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

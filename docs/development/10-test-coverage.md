@@ -2,7 +2,7 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-28 (Phase 8 Extension 테스트 추가)
+> **Last Updated**: 2025-12-28 (Phase 9 Plan & Usage 추가, url_service 버그 수정)
 
 ---
 
@@ -283,6 +283,43 @@ pnpm test:coverage
 | `handler/session.go` | `HandleSessionProcess` | 88.9% |
 | `handler/cleanup.go` | `HandleSessionCleanup` | 85.7% |
 
+### Phase 9: Plan & Usage (NEW)
+
+> **Note**: Phase 9 서비스는 API 엔드포인트까지 구현되었으나, 단위 테스트는 아직 미작성 상태입니다.
+> Phase 문서에 따라 향후 테스트 작성이 필요합니다.
+
+| 파일 | 함수 | 커버리지 | 비고 |
+| ---- | ---- | -------- | ---- |
+| `service/subscription_service.go` | `NewSubscriptionService` | 0.0% | 테스트 미작성 |
+| | `GetSubscription` | 0.0% | 테스트 미작성 |
+| | `GetAvailablePlans` | 0.0% | 테스트 미작성 |
+| | `CreateFreeSubscription` | 0.0% | 테스트 미작성 |
+| | `GetUserPlan` | 0.0% | 테스트 미작성 |
+| | `HasFeature` | 0.0% | 테스트 미작성 |
+| | `GetSubscriptionInfo` | 0.0% | 테스트 미작성 |
+| | `planToInfo` | 0.0% | 테스트 미작성 |
+| `service/usage_service.go` | `NewUsageService` | 0.0% | 테스트 미작성 |
+| | `RecordUsage` | 0.0% | 테스트 미작성 |
+| | `CheckLimit` | 0.0% | 테스트 미작성 |
+| | `GetCurrentUsage` | 0.0% | 테스트 미작성 |
+| | `GetUsageHistory` | 0.0% | 테스트 미작성 |
+| | `getCurrentPeriodStart` | 0.0% | 테스트 미작성 |
+| | `calculatePeriodStartForDate` | 0.0% | 테스트 미작성 |
+| | `calculateFreePlanPeriodStart` | 0.0% | 테스트 미작성 |
+| `controller/subscription_controller.go` | `NewSubscriptionController` | 0.0% | 테스트 미작성 |
+| | `SubscriptionRoutesGetSubscription` | 0.0% | 테스트 미작성 |
+| | `SubscriptionRoutesListPlans` | 0.0% | 테스트 미작성 |
+| `controller/usage_controller.go` | `NewUsageController` | 0.0% | 테스트 미작성 |
+| | `UsageRoutesGetUsage` | 0.0% | 테스트 미작성 |
+| | `UsageRoutesGetUsageHistory` | 0.0% | 테스트 미작성 |
+
+**향후 테스트 계획:**
+
+- `service/subscription_service_test.go`: 구독 서비스 단위 테스트
+- `service/usage_service_test.go`: 사용량 서비스 단위 테스트
+- `controller/subscription_controller_test.go`: 구독 API 통합 테스트
+- `controller/usage_controller_test.go`: 사용량 API 통합 테스트
+
 ---
 
 ## 미테스트 영역 (0% Coverage)
@@ -314,11 +351,15 @@ pnpm test:coverage
 | `internal/controller/auth_controller_test.go` | Auth API 테스트 | Phase 2 |
 | `internal/controller/session_controller_test.go` | Session API 테스트 | Phase 3 |
 | `internal/controller/event_controller_test.go` | Event API 테스트 | Phase 4 |
+| `internal/controller/subscription_controller_test.go` | Subscription API 테스트 | Phase 9 (TODO) |
+| `internal/controller/usage_controller_test.go` | Usage API 테스트 | Phase 9 (TODO) |
 | `internal/service/auth_service_test.go` | Auth 서비스 테스트 | Phase 2 |
 | `internal/service/session_service_test.go` | Session 서비스 테스트 | Phase 3 |
 | `internal/service/event_service_test.go` | Event 서비스 테스트 | Phase 4 |
 | `internal/service/url_service_test.go` | URL 서비스 테스트 | Phase 4 |
 | `internal/service/jwt_service_test.go` | JWT 서비스 테스트 | Phase 2 |
+| `internal/service/subscription_service_test.go` | Subscription 서비스 테스트 | Phase 9 (TODO) |
+| `internal/service/usage_service_test.go` | Usage 서비스 테스트 | Phase 9 (TODO) |
 | `internal/infrastructure/queue/*_test.go` | Queue 테스트 | Phase 6 |
 | `internal/worker/handler/handler_test.go` | Worker 핸들러 테스트 | Phase 6 |
 
@@ -522,6 +563,8 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-28 | Phase 9 | Plan & Usage 서비스/컨트롤러 추가 (테스트 미작성, 향후 작성 예정) |
+| 2025-12-28 | - | url_service.go 버그 수정: GetURLsWithoutSummary에 빈 content 제외 조건 추가 |
 | 2025-12-28 | Phase 8 | Extension 테스트 추가: API 통합 테스트 (MSW), stores, events (31개 테스트) |
 | 2025-12-27 | Phase 7 | Frontend 테스트 확장: stores, hooks, API 테스트 추가 (57개 테스트) |
 | 2025-12-26 | - | 테스트 커버리지 개선: Service 76.0%, Controller 76.6% |

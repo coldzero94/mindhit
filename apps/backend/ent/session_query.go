@@ -19,6 +19,7 @@ import (
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/user"
 )
 
@@ -34,6 +35,7 @@ type SessionQuery struct {
 	withHighlights *HighlightQuery
 	withRawEvents  *RawEventQuery
 	withMindmap    *MindmapGraphQuery
+	withTokenUsage *TokenUsageQuery
 	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -174,6 +176,28 @@ func (_q *SessionQuery) QueryMindmap() *MindmapGraphQuery {
 			sqlgraph.From(session.Table, session.FieldID, selector),
 			sqlgraph.To(mindmapgraph.Table, mindmapgraph.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, session.MindmapTable, session.MindmapColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTokenUsage chains the current query on the "token_usage" edge.
+func (_q *SessionQuery) QueryTokenUsage() *TokenUsageQuery {
+	query := (&TokenUsageClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(session.Table, session.FieldID, selector),
+			sqlgraph.To(tokenusage.Table, tokenusage.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, session.TokenUsageTable, session.TokenUsageColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -378,6 +402,7 @@ func (_q *SessionQuery) Clone() *SessionQuery {
 		withHighlights: _q.withHighlights.Clone(),
 		withRawEvents:  _q.withRawEvents.Clone(),
 		withMindmap:    _q.withMindmap.Clone(),
+		withTokenUsage: _q.withTokenUsage.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -436,6 +461,17 @@ func (_q *SessionQuery) WithMindmap(opts ...func(*MindmapGraphQuery)) *SessionQu
 		opt(query)
 	}
 	_q.withMindmap = query
+	return _q
+}
+
+// WithTokenUsage tells the query-builder to eager-load the nodes that are connected to
+// the "token_usage" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *SessionQuery) WithTokenUsage(opts ...func(*TokenUsageQuery)) *SessionQuery {
+	query := (&TokenUsageClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTokenUsage = query
 	return _q
 }
 
@@ -518,12 +554,13 @@ func (_q *SessionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sess
 		nodes       = []*Session{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withUser != nil,
 			_q.withPageVisits != nil,
 			_q.withHighlights != nil,
 			_q.withRawEvents != nil,
 			_q.withMindmap != nil,
+			_q.withTokenUsage != nil,
 		}
 	)
 	if _q.withUser != nil {
@@ -580,6 +617,13 @@ func (_q *SessionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sess
 	if query := _q.withMindmap; query != nil {
 		if err := _q.loadMindmap(ctx, query, nodes, nil,
 			func(n *Session, e *MindmapGraph) { n.Edges.Mindmap = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTokenUsage; query != nil {
+		if err := _q.loadTokenUsage(ctx, query, nodes,
+			func(n *Session) { n.Edges.TokenUsage = []*TokenUsage{} },
+			func(n *Session, e *TokenUsage) { n.Edges.TokenUsage = append(n.Edges.TokenUsage, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -734,6 +778,37 @@ func (_q *SessionQuery) loadMindmap(ctx context.Context, query *MindmapGraphQuer
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "session_mindmap" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *SessionQuery) loadTokenUsage(ctx context.Context, query *TokenUsageQuery, nodes []*Session, init func(*Session), assign func(*Session, *TokenUsage)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Session)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.TokenUsage(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(session.TokenUsageColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.session_token_usage
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "session_token_usage" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "session_token_usage" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

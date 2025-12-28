@@ -145,6 +145,24 @@ var (
 			},
 		},
 	}
+	// PlansColumns holds the columns for the "plans" table.
+	PlansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "price_cents", Type: field.TypeInt, Default: 0},
+		{Name: "billing_period", Type: field.TypeString, Default: "monthly"},
+		{Name: "token_limit", Type: field.TypeInt, Nullable: true},
+		{Name: "session_retention_days", Type: field.TypeInt, Nullable: true},
+		{Name: "max_concurrent_sessions", Type: field.TypeInt, Nullable: true},
+		{Name: "features", Type: field.TypeJSON},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// PlansTable holds the schema information for the "plans" table.
+	PlansTable = &schema.Table{
+		Name:       "plans",
+		Columns:    PlansColumns,
+		PrimaryKey: []*schema.Column{PlansColumns[0]},
+	}
 	// RawEventsColumns holds the columns for the "raw_events" table.
 	RawEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -220,6 +238,91 @@ var (
 				Name:    "session_session_status",
 				Unique:  false,
 				Columns: []*schema.Column{SessionsColumns[7]},
+			},
+		},
+	}
+	// SubscriptionsColumns holds the columns for the "subscriptions" table.
+	SubscriptionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "canceled", "past_due", "trialing"}, Default: "active"},
+		{Name: "current_period_start", Type: field.TypeTime},
+		{Name: "current_period_end", Type: field.TypeTime},
+		{Name: "cancel_at_period_end", Type: field.TypeBool, Default: false},
+		{Name: "stripe_subscription_id", Type: field.TypeString, Nullable: true},
+		{Name: "stripe_customer_id", Type: field.TypeString, Nullable: true},
+		{Name: "plan_subscriptions", Type: field.TypeString},
+		{Name: "user_subscriptions", Type: field.TypeUUID},
+	}
+	// SubscriptionsTable holds the schema information for the "subscriptions" table.
+	SubscriptionsTable = &schema.Table{
+		Name:       "subscriptions",
+		Columns:    SubscriptionsColumns,
+		PrimaryKey: []*schema.Column{SubscriptionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "subscriptions_plans_subscriptions",
+				Columns:    []*schema.Column{SubscriptionsColumns[9]},
+				RefColumns: []*schema.Column{PlansColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "subscriptions_users_subscriptions",
+				Columns:    []*schema.Column{SubscriptionsColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "subscription_status_user_subscriptions",
+				Unique:  false,
+				Columns: []*schema.Column{SubscriptionsColumns[3], SubscriptionsColumns[10]},
+			},
+		},
+	}
+	// TokenUsagesColumns holds the columns for the "token_usages" table.
+	TokenUsagesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "operation", Type: field.TypeString},
+		{Name: "tokens_used", Type: field.TypeInt},
+		{Name: "ai_model", Type: field.TypeString, Nullable: true},
+		{Name: "period_start", Type: field.TypeTime},
+		{Name: "session_token_usage", Type: field.TypeUUID, Nullable: true},
+		{Name: "user_token_usage", Type: field.TypeUUID},
+	}
+	// TokenUsagesTable holds the schema information for the "token_usages" table.
+	TokenUsagesTable = &schema.Table{
+		Name:       "token_usages",
+		Columns:    TokenUsagesColumns,
+		PrimaryKey: []*schema.Column{TokenUsagesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "token_usages_sessions_token_usage",
+				Columns:    []*schema.Column{TokenUsagesColumns[7]},
+				RefColumns: []*schema.Column{SessionsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "token_usages_users_token_usage",
+				Columns:    []*schema.Column{TokenUsagesColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "tokenusage_period_start_user_token_usage",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[6], TokenUsagesColumns[8]},
+			},
+			{
+				Name:    "tokenusage_operation_user_token_usage",
+				Unique:  false,
+				Columns: []*schema.Column{TokenUsagesColumns[3], TokenUsagesColumns[8]},
 			},
 		},
 	}
@@ -311,8 +414,11 @@ var (
 		MindmapGraphsTable,
 		PageVisitsTable,
 		PasswordResetTokensTable,
+		PlansTable,
 		RawEventsTable,
 		SessionsTable,
+		SubscriptionsTable,
+		TokenUsagesTable,
 		UrLsTable,
 		UsersTable,
 		UserSettingsTable,
@@ -328,5 +434,9 @@ func init() {
 	PasswordResetTokensTable.ForeignKeys[0].RefTable = UsersTable
 	RawEventsTable.ForeignKeys[0].RefTable = SessionsTable
 	SessionsTable.ForeignKeys[0].RefTable = UsersTable
+	SubscriptionsTable.ForeignKeys[0].RefTable = PlansTable
+	SubscriptionsTable.ForeignKeys[1].RefTable = UsersTable
+	TokenUsagesTable.ForeignKeys[0].RefTable = SessionsTable
+	TokenUsagesTable.ForeignKeys[1].RefTable = UsersTable
 	UserSettingsTable.ForeignKeys[0].RefTable = UsersTable
 }

@@ -673,6 +673,106 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/subscription:
+    get:
+      operationId: SubscriptionRoutes_getSubscription
+      description: 현재 구독 정보 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription.SubscriptionResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/subscription/plans:
+    get:
+      operationId: SubscriptionRoutes_listPlans
+      description: 사용 가능한 플랜 목록 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription.PlanListResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/usage:
+    get:
+      operationId: UsageRoutes_getUsage
+      description: 현재 사용량 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usage.UsageResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/usage/history:
+    get:
+      operationId: UsageRoutes_getUsageHistory
+      description: 사용량 히스토리 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: months
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 6
+          explode: false
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usage.UsageHistoryResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
 components:
   schemas:
     Auth.AuthResponse:
@@ -1016,6 +1116,136 @@ components:
         description:
           type: string
       description: 세션 업데이트 요청
+    Subscription.Plan:
+      type: object
+      required:
+        - id
+        - name
+        - price_cents
+        - billing_period
+        - features
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price_cents:
+          type: integer
+          format: int32
+        billing_period:
+          type: string
+        token_limit:
+          type: integer
+          format: int32
+        session_retention_days:
+          type: integer
+          format: int32
+        max_concurrent_sessions:
+          type: integer
+          format: int32
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+      description: 플랜 정보
+    Subscription.PlanListResponse:
+      type: object
+      required:
+        - plans
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription.Plan'
+      description: 플랜 목록 응답
+    Subscription.SubscriptionInfo:
+      type: object
+      required:
+        - id
+        - status
+        - current_period_start
+        - current_period_end
+        - cancel_at_period_end
+        - plan
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        current_period_start:
+          type: string
+          format: date-time
+        current_period_end:
+          type: string
+          format: date-time
+        cancel_at_period_end:
+          type: boolean
+        plan:
+          $ref: '#/components/schemas/Subscription.Plan'
+      description: 구독 정보
+    Subscription.SubscriptionResponse:
+      type: object
+      required:
+        - subscription
+      properties:
+        subscription:
+          $ref: '#/components/schemas/Subscription.SubscriptionInfo'
+      description: 구독 응답
+    Usage.UsageHistoryResponse:
+      type: object
+      required:
+        - history
+      properties:
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/Usage.UsageSummary'
+      description: 사용량 히스토리 응답
+    Usage.UsageResponse:
+      type: object
+      required:
+        - usage
+      properties:
+        usage:
+          $ref: '#/components/schemas/Usage.UsageSummary'
+      description: 사용량 응답
+    Usage.UsageSummary:
+      type: object
+      required:
+        - period_start
+        - period_end
+        - tokens_used
+        - token_limit
+        - percent_used
+        - is_unlimited
+        - can_use_ai
+        - by_operation
+      properties:
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        tokens_used:
+          type: integer
+          format: int32
+        token_limit:
+          type: integer
+          format: int32
+        percent_used:
+          type: number
+          format: double
+        is_unlimited:
+          type: boolean
+        can_use_ai:
+          type: boolean
+        by_operation:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+      description: 사용량 현황
 servers:
   - url: http://localhost:8080
     description: Development server

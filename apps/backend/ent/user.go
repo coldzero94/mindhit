@@ -46,9 +46,13 @@ type UserEdges struct {
 	Sessions []*Session `json:"sessions,omitempty"`
 	// PasswordResetTokens holds the value of the password_reset_tokens edge.
 	PasswordResetTokens []*PasswordResetToken `json:"password_reset_tokens,omitempty"`
+	// Subscriptions holds the value of the subscriptions edge.
+	Subscriptions []*Subscription `json:"subscriptions,omitempty"`
+	// TokenUsage holds the value of the token_usage edge.
+	TokenUsage []*TokenUsage `json:"token_usage,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [5]bool
 }
 
 // SettingsOrErr returns the Settings value or an error if the edge
@@ -78,6 +82,24 @@ func (e UserEdges) PasswordResetTokensOrErr() ([]*PasswordResetToken, error) {
 		return e.PasswordResetTokens, nil
 	}
 	return nil, &NotLoadedError{edge: "password_reset_tokens"}
+}
+
+// SubscriptionsOrErr returns the Subscriptions value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) SubscriptionsOrErr() ([]*Subscription, error) {
+	if e.loadedTypes[3] {
+		return e.Subscriptions, nil
+	}
+	return nil, &NotLoadedError{edge: "subscriptions"}
+}
+
+// TokenUsageOrErr returns the TokenUsage value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TokenUsageOrErr() ([]*TokenUsage, error) {
+	if e.loadedTypes[4] {
+		return e.TokenUsage, nil
+	}
+	return nil, &NotLoadedError{edge: "token_usage"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -175,6 +197,16 @@ func (_m *User) QuerySessions() *SessionQuery {
 // QueryPasswordResetTokens queries the "password_reset_tokens" edge of the User entity.
 func (_m *User) QueryPasswordResetTokens() *PasswordResetTokenQuery {
 	return NewUserClient(_m.config).QueryPasswordResetTokens(_m)
+}
+
+// QuerySubscriptions queries the "subscriptions" edge of the User entity.
+func (_m *User) QuerySubscriptions() *SubscriptionQuery {
+	return NewUserClient(_m.config).QuerySubscriptions(_m)
+}
+
+// QueryTokenUsage queries the "token_usage" edge of the User entity.
+func (_m *User) QueryTokenUsage() *TokenUsageQuery {
+	return NewUserClient(_m.config).QueryTokenUsage(_m)
 }
 
 // Update returns a builder for updating this User.

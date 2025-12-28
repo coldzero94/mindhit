@@ -11,14 +11,18 @@ type Handler struct {
 	*AuthController
 	*SessionController
 	*EventController
+	*SubscriptionController
+	*UsageController
 }
 
 // NewHandler creates a new Handler with all controllers
-func NewHandler(auth *AuthController, session *SessionController, event *EventController) *Handler {
+func NewHandler(auth *AuthController, session *SessionController, event *EventController, subscription *SubscriptionController, usage *UsageController) *Handler {
 	return &Handler{
-		AuthController:    auth,
-		SessionController: session,
-		EventController:   event,
+		AuthController:         auth,
+		SessionController:      session,
+		EventController:        event,
+		SubscriptionController: subscription,
+		UsageController:        usage,
 	}
 }
 
@@ -117,4 +121,24 @@ func (h *Handler) RoutesListEvents(ctx context.Context, request generated.Routes
 // RoutesGetEventStats delegates to EventController
 func (h *Handler) RoutesGetEventStats(ctx context.Context, request generated.RoutesGetEventStatsRequestObject) (generated.RoutesGetEventStatsResponseObject, error) {
 	return h.EventController.RoutesGetEventStats(ctx, request)
+}
+
+// SubscriptionRoutesGetSubscription delegates to SubscriptionController
+func (h *Handler) SubscriptionRoutesGetSubscription(ctx context.Context, request generated.SubscriptionRoutesGetSubscriptionRequestObject) (generated.SubscriptionRoutesGetSubscriptionResponseObject, error) {
+	return h.SubscriptionController.SubscriptionRoutesGetSubscription(ctx, request)
+}
+
+// SubscriptionRoutesListPlans delegates to SubscriptionController
+func (h *Handler) SubscriptionRoutesListPlans(ctx context.Context, request generated.SubscriptionRoutesListPlansRequestObject) (generated.SubscriptionRoutesListPlansResponseObject, error) {
+	return h.SubscriptionController.SubscriptionRoutesListPlans(ctx, request)
+}
+
+// UsageRoutesGetUsage delegates to UsageController
+func (h *Handler) UsageRoutesGetUsage(ctx context.Context, request generated.UsageRoutesGetUsageRequestObject) (generated.UsageRoutesGetUsageResponseObject, error) {
+	return h.UsageController.UsageRoutesGetUsage(ctx, request)
+}
+
+// UsageRoutesGetUsageHistory delegates to UsageController
+func (h *Handler) UsageRoutesGetUsageHistory(ctx context.Context, request generated.UsageRoutesGetUsageHistoryRequestObject) (generated.UsageRoutesGetUsageHistoryResponseObject, error) {
+	return h.UsageController.UsageRoutesGetUsageHistory(ctx, request)
 }

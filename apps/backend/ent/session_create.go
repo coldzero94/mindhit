@@ -16,6 +16,7 @@ import (
 	"github.com/mindhit/api/ent/pagevisit"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/user"
 )
 
@@ -239,6 +240,21 @@ func (_c *SessionCreate) SetNillableMindmapID(id *uuid.UUID) *SessionCreate {
 // SetMindmap sets the "mindmap" edge to the MindmapGraph entity.
 func (_c *SessionCreate) SetMindmap(v *MindmapGraph) *SessionCreate {
 	return _c.SetMindmapID(v.ID)
+}
+
+// AddTokenUsageIDs adds the "token_usage" edge to the TokenUsage entity by IDs.
+func (_c *SessionCreate) AddTokenUsageIDs(ids ...uuid.UUID) *SessionCreate {
+	_c.mutation.AddTokenUsageIDs(ids...)
+	return _c
+}
+
+// AddTokenUsage adds the "token_usage" edges to the TokenUsage entity.
+func (_c *SessionCreate) AddTokenUsage(v ...*TokenUsage) *SessionCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTokenUsageIDs(ids...)
 }
 
 // Mutation returns the SessionMutation object of the builder.
@@ -477,6 +493,22 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mindmapgraph.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TokenUsageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

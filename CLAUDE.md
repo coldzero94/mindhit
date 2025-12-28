@@ -153,7 +153,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 6 | ✅ Done | Worker & Job Queue |
 | Phase 7 | ✅ Done | Next.js Web App |
 | Phase 8 | ✅ Done | Chrome Extension |
-| Phase 9 | ⬜ Pending | Plan & Usage System |
+| Phase 9 | ✅ Done | Plan & Usage System |
 | Phase 10 | ⬜ Pending | AI Mindmap Generation |
 | Phase 11 | ⬜ Pending | Web App Dashboard |
 | Phase 12 | ⬜ Pending | Production Monitoring |
@@ -169,6 +169,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-28] Phase 9 completed: Plan & Usage System - Plan/Subscription/TokenUsage schemas, UsageService, SubscriptionService, Subscription and Usage API endpoints
 - [2025-12-28] Phase 8 completed: Chrome Extension - Side Panel UI, Session control, Event collection (page_visit, scroll, highlight), Batch sending with offline support
 - [2025-12-27] Phase 7 completed: Next.js Web App - Auth UI (login/signup), Sessions list/detail pages, Zustand + React Query, zod v4
 - [2025-12-26] Phase 6 completed: Worker & Job Queue - Asynq queue, session processing handler, cleanup scheduler, cmd/api and cmd/worker separation

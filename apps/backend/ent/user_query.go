@@ -16,6 +16,8 @@ import (
 	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/ent/subscription"
+	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/user"
 	"github.com/mindhit/api/ent/usersettings"
 )
@@ -30,6 +32,8 @@ type UserQuery struct {
 	withSettings            *UserSettingsQuery
 	withSessions            *SessionQuery
 	withPasswordResetTokens *PasswordResetTokenQuery
+	withSubscriptions       *SubscriptionQuery
+	withTokenUsage          *TokenUsageQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,6 +129,50 @@ func (_q *UserQuery) QueryPasswordResetTokens() *PasswordResetTokenQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(passwordresettoken.Table, passwordresettoken.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.PasswordResetTokensTable, user.PasswordResetTokensColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QuerySubscriptions chains the current query on the "subscriptions" edge.
+func (_q *UserQuery) QuerySubscriptions() *SubscriptionQuery {
+	query := (&SubscriptionClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(subscription.Table, subscription.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.SubscriptionsTable, user.SubscriptionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTokenUsage chains the current query on the "token_usage" edge.
+func (_q *UserQuery) QueryTokenUsage() *TokenUsageQuery {
+	query := (&TokenUsageClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(tokenusage.Table, tokenusage.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.TokenUsageTable, user.TokenUsageColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -327,6 +375,8 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withSettings:            _q.withSettings.Clone(),
 		withSessions:            _q.withSessions.Clone(),
 		withPasswordResetTokens: _q.withPasswordResetTokens.Clone(),
+		withSubscriptions:       _q.withSubscriptions.Clone(),
+		withTokenUsage:          _q.withTokenUsage.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -363,6 +413,28 @@ func (_q *UserQuery) WithPasswordResetTokens(opts ...func(*PasswordResetTokenQue
 		opt(query)
 	}
 	_q.withPasswordResetTokens = query
+	return _q
+}
+
+// WithSubscriptions tells the query-builder to eager-load the nodes that are connected to
+// the "subscriptions" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithSubscriptions(opts ...func(*SubscriptionQuery)) *UserQuery {
+	query := (&SubscriptionClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withSubscriptions = query
+	return _q
+}
+
+// WithTokenUsage tells the query-builder to eager-load the nodes that are connected to
+// the "token_usage" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithTokenUsage(opts ...func(*TokenUsageQuery)) *UserQuery {
+	query := (&TokenUsageClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTokenUsage = query
 	return _q
 }
 
@@ -444,10 +516,12 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [5]bool{
 			_q.withSettings != nil,
 			_q.withSessions != nil,
 			_q.withPasswordResetTokens != nil,
+			_q.withSubscriptions != nil,
+			_q.withTokenUsage != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -487,6 +561,20 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 			func(n *User, e *PasswordResetToken) {
 				n.Edges.PasswordResetTokens = append(n.Edges.PasswordResetTokens, e)
 			}); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withSubscriptions; query != nil {
+		if err := _q.loadSubscriptions(ctx, query, nodes,
+			func(n *User) { n.Edges.Subscriptions = []*Subscription{} },
+			func(n *User, e *Subscription) { n.Edges.Subscriptions = append(n.Edges.Subscriptions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTokenUsage; query != nil {
+		if err := _q.loadTokenUsage(ctx, query, nodes,
+			func(n *User) { n.Edges.TokenUsage = []*TokenUsage{} },
+			func(n *User, e *TokenUsage) { n.Edges.TokenUsage = append(n.Edges.TokenUsage, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -577,6 +665,68 @@ func (_q *UserQuery) loadPasswordResetTokens(ctx context.Context, query *Passwor
 		node, ok := nodeids[fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadSubscriptions(ctx context.Context, query *SubscriptionQuery, nodes []*User, init func(*User), assign func(*User, *Subscription)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Subscription(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.SubscriptionsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_subscriptions
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_subscriptions" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_subscriptions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadTokenUsage(ctx context.Context, query *TokenUsageQuery, nodes []*User, init func(*User), assign func(*User, *TokenUsage)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.TokenUsage(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.TokenUsageColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.user_token_usage
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_token_usage" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_token_usage" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

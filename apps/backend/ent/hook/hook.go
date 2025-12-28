@@ -57,6 +57,18 @@ func (f PasswordResetTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PasswordResetTokenMutation", m)
 }
 
+// The PlanFunc type is an adapter to allow the use of ordinary
+// function as Plan mutator.
+type PlanFunc func(context.Context, *ent.PlanMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PlanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PlanMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PlanMutation", m)
+}
+
 // The RawEventFunc type is an adapter to allow the use of ordinary
 // function as RawEvent mutator.
 type RawEventFunc func(context.Context, *ent.RawEventMutation) (ent.Value, error)
@@ -79,6 +91,30 @@ func (f SessionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SessionMutation", m)
+}
+
+// The SubscriptionFunc type is an adapter to allow the use of ordinary
+// function as Subscription mutator.
+type SubscriptionFunc func(context.Context, *ent.SubscriptionMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SubscriptionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SubscriptionMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SubscriptionMutation", m)
+}
+
+// The TokenUsageFunc type is an adapter to allow the use of ordinary
+// function as TokenUsage mutator.
+type TokenUsageFunc func(context.Context, *ent.TokenUsageMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TokenUsageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TokenUsageMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TokenUsageMutation", m)
 }
 
 // The URLFunc type is an adapter to allow the use of ordinary

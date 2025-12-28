@@ -18,6 +18,7 @@ import (
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/user"
 )
 
@@ -237,6 +238,21 @@ func (_u *SessionUpdate) SetMindmap(v *MindmapGraph) *SessionUpdate {
 	return _u.SetMindmapID(v.ID)
 }
 
+// AddTokenUsageIDs adds the "token_usage" edge to the TokenUsage entity by IDs.
+func (_u *SessionUpdate) AddTokenUsageIDs(ids ...uuid.UUID) *SessionUpdate {
+	_u.mutation.AddTokenUsageIDs(ids...)
+	return _u
+}
+
+// AddTokenUsage adds the "token_usage" edges to the TokenUsage entity.
+func (_u *SessionUpdate) AddTokenUsage(v ...*TokenUsage) *SessionUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTokenUsageIDs(ids...)
+}
+
 // Mutation returns the SessionMutation object of the builder.
 func (_u *SessionUpdate) Mutation() *SessionMutation {
 	return _u.mutation
@@ -315,6 +331,27 @@ func (_u *SessionUpdate) RemoveRawEvents(v ...*RawEvent) *SessionUpdate {
 func (_u *SessionUpdate) ClearMindmap() *SessionUpdate {
 	_u.mutation.ClearMindmap()
 	return _u
+}
+
+// ClearTokenUsage clears all "token_usage" edges to the TokenUsage entity.
+func (_u *SessionUpdate) ClearTokenUsage() *SessionUpdate {
+	_u.mutation.ClearTokenUsage()
+	return _u
+}
+
+// RemoveTokenUsageIDs removes the "token_usage" edge to TokenUsage entities by IDs.
+func (_u *SessionUpdate) RemoveTokenUsageIDs(ids ...uuid.UUID) *SessionUpdate {
+	_u.mutation.RemoveTokenUsageIDs(ids...)
+	return _u
+}
+
+// RemoveTokenUsage removes "token_usage" edges to TokenUsage entities.
+func (_u *SessionUpdate) RemoveTokenUsage(v ...*TokenUsage) *SessionUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTokenUsageIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -612,6 +649,51 @@ func (_u *SessionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.TokenUsageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTokenUsageIDs(); len(nodes) > 0 && !_u.mutation.TokenUsageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TokenUsageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{session.Label}
@@ -835,6 +917,21 @@ func (_u *SessionUpdateOne) SetMindmap(v *MindmapGraph) *SessionUpdateOne {
 	return _u.SetMindmapID(v.ID)
 }
 
+// AddTokenUsageIDs adds the "token_usage" edge to the TokenUsage entity by IDs.
+func (_u *SessionUpdateOne) AddTokenUsageIDs(ids ...uuid.UUID) *SessionUpdateOne {
+	_u.mutation.AddTokenUsageIDs(ids...)
+	return _u
+}
+
+// AddTokenUsage adds the "token_usage" edges to the TokenUsage entity.
+func (_u *SessionUpdateOne) AddTokenUsage(v ...*TokenUsage) *SessionUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTokenUsageIDs(ids...)
+}
+
 // Mutation returns the SessionMutation object of the builder.
 func (_u *SessionUpdateOne) Mutation() *SessionMutation {
 	return _u.mutation
@@ -913,6 +1010,27 @@ func (_u *SessionUpdateOne) RemoveRawEvents(v ...*RawEvent) *SessionUpdateOne {
 func (_u *SessionUpdateOne) ClearMindmap() *SessionUpdateOne {
 	_u.mutation.ClearMindmap()
 	return _u
+}
+
+// ClearTokenUsage clears all "token_usage" edges to the TokenUsage entity.
+func (_u *SessionUpdateOne) ClearTokenUsage() *SessionUpdateOne {
+	_u.mutation.ClearTokenUsage()
+	return _u
+}
+
+// RemoveTokenUsageIDs removes the "token_usage" edge to TokenUsage entities by IDs.
+func (_u *SessionUpdateOne) RemoveTokenUsageIDs(ids ...uuid.UUID) *SessionUpdateOne {
+	_u.mutation.RemoveTokenUsageIDs(ids...)
+	return _u
+}
+
+// RemoveTokenUsage removes "token_usage" edges to TokenUsage entities.
+func (_u *SessionUpdateOne) RemoveTokenUsage(v ...*TokenUsage) *SessionUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTokenUsageIDs(ids...)
 }
 
 // Where appends a list predicates to the SessionUpdate builder.
@@ -1233,6 +1351,51 @@ func (_u *SessionUpdateOne) sqlSave(ctx context.Context) (_node *Session, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mindmapgraph.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TokenUsageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTokenUsageIDs(); len(nodes) > 0 && !_u.mutation.TokenUsageCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TokenUsageIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.TokenUsageTable,
+			Columns: []string{session.TokenUsageColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

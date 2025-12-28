@@ -34,6 +34,10 @@ const (
 	EdgeSessions = "sessions"
 	// EdgePasswordResetTokens holds the string denoting the password_reset_tokens edge name in mutations.
 	EdgePasswordResetTokens = "password_reset_tokens"
+	// EdgeSubscriptions holds the string denoting the subscriptions edge name in mutations.
+	EdgeSubscriptions = "subscriptions"
+	// EdgeTokenUsage holds the string denoting the token_usage edge name in mutations.
+	EdgeTokenUsage = "token_usage"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// SettingsTable is the table that holds the settings relation/edge.
@@ -57,6 +61,20 @@ const (
 	PasswordResetTokensInverseTable = "password_reset_tokens"
 	// PasswordResetTokensColumn is the table column denoting the password_reset_tokens relation/edge.
 	PasswordResetTokensColumn = "user_id"
+	// SubscriptionsTable is the table that holds the subscriptions relation/edge.
+	SubscriptionsTable = "subscriptions"
+	// SubscriptionsInverseTable is the table name for the Subscription entity.
+	// It exists in this package in order to avoid circular dependency with the "subscription" package.
+	SubscriptionsInverseTable = "subscriptions"
+	// SubscriptionsColumn is the table column denoting the subscriptions relation/edge.
+	SubscriptionsColumn = "user_subscriptions"
+	// TokenUsageTable is the table that holds the token_usage relation/edge.
+	TokenUsageTable = "token_usages"
+	// TokenUsageInverseTable is the table name for the TokenUsage entity.
+	// It exists in this package in order to avoid circular dependency with the "tokenusage" package.
+	TokenUsageInverseTable = "token_usages"
+	// TokenUsageColumn is the table column denoting the token_usage relation/edge.
+	TokenUsageColumn = "user_token_usage"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -191,6 +209,34 @@ func ByPasswordResetTokens(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOpti
 		sqlgraph.OrderByNeighborTerms(s, newPasswordResetTokensStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// BySubscriptionsCount orders the results by subscriptions count.
+func BySubscriptionsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newSubscriptionsStep(), opts...)
+	}
+}
+
+// BySubscriptions orders the results by subscriptions terms.
+func BySubscriptions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newSubscriptionsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTokenUsageCount orders the results by token_usage count.
+func ByTokenUsageCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTokenUsageStep(), opts...)
+	}
+}
+
+// ByTokenUsage orders the results by token_usage terms.
+func ByTokenUsage(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTokenUsageStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newSettingsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -210,5 +256,19 @@ func newPasswordResetTokensStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(PasswordResetTokensInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, PasswordResetTokensTable, PasswordResetTokensColumn),
+	)
+}
+func newSubscriptionsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(SubscriptionsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, SubscriptionsTable, SubscriptionsColumn),
+	)
+}
+func newTokenUsageStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TokenUsageInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TokenUsageTable, TokenUsageColumn),
 	)
 }
