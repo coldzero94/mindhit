@@ -1,15 +1,89 @@
-# Phase 10.1: 태그 추출 및 마인드맵 생성
+# Phase 10.2: 마인드맵 생성
 
 ## 개요
 
 | 항목 | 내용 |
 |-----|------|
 | **목표** | AI Provider를 활용한 태그 추출 및 마인드맵 생성 Worker Handler 구현 |
-| **선행 조건** | Phase 10 완료 (AI Provider 인프라) |
+| **선행 조건** | Phase 10.1 완료 (AI 설정 및 로깅) |
 | **예상 소요** | 3 Steps |
 | **결과물** | 페이지 방문 시 태그 추출, 세션 종료 시 관계도 JSON 생성 |
 
-> **Note**: 이 Phase에서는 Phase 10에서 구현한 ProviderManager와 Phase 9의 UsageService를 연동합니다.
+> **Note**: AI Provider 구현은 [Phase 10](./phase-10-ai.md),
+> AI 설정 관리는 [Phase 10.1](./phase-10.1-ai-config.md)을 참조하세요.
+
+---
+
+## 마인드맵 생성 알고리즘
+
+### 핵심 원칙
+
+1. **페이지 방문 시**: LLM으로 태그/키워드 추출 (페이지당 1회, 중복 URL은 재사용)
+2. **세션 종료 시**: 추출된 태그들을 기반으로 LLM이 관계도 JSON 생성 (세션당 1회)
+
+### 처리 흐름 (Asynq Worker 기반)
+
+```mermaid
+sequenceDiagram
+    participant EXT as Extension
+    participant API as API Server
+    participant Redis as Redis Queue
+    participant Worker as Asynq Worker
+    participant DB as Database
+    participant AI as AI Provider
+
+    Note over EXT,AI: 1. 페이지 방문 시 (비동기 처리)
+    EXT->>API: 이벤트 배치 전송 (URL, content)
+    API->>DB: URL 중복 체크 (url_hash)
+    alt URL이 새로운 경우
+        API->>Redis: Enqueue TagExtraction Task
+        Redis->>Worker: Consume Task
+        Worker->>AI: 태그 추출 요청 (content)
+        AI-->>Worker: { tags: [...], summary: "..." }
+        Worker->>DB: urls 테이블에 tags, summary 저장
+    else URL이 이미 존재
+        API->>DB: 기존 tags 재사용
+    end
+
+    Note over EXT,AI: 2. 세션 종료 시 (비동기 처리)
+    EXT->>API: 세션 Stop 요청
+    API->>DB: 세션 상태 → processing
+    API->>Redis: Enqueue MindmapGenerate Task
+    Redis->>Worker: Consume Task
+    Worker->>DB: 세션의 모든 URL + tags 조회
+    Worker->>AI: 관계도 생성 요청 (tags 목록)
+    AI-->>Worker: { nodes: [...], edges: [...] }
+    Worker->>DB: mindmap_graphs 저장
+    Worker->>DB: 세션 상태 → completed
+```
+
+### 태그 추출 (페이지당)
+
+| 항목 | 설명 |
+|-----|------|
+| **트리거** | 이벤트 배치 수신 시 새로운 URL 감지 → Asynq Task Enqueue |
+| **입력** | 페이지 제목, 콘텐츠 (최대 10,000자) |
+| **출력** | 3-5개 태그, 1-2문장 요약 |
+| **저장** | `urls.tags`, `urls.summary` |
+| **중복 처리** | url_hash로 중복 체크, 기존 URL은 재처리 안 함 |
+
+### 관계도 생성 (세션당)
+
+| 항목 | 설명 |
+|-----|------|
+| **트리거** | 세션 종료 (Stop) 시 → Asynq Task Enqueue |
+| **입력** | 세션의 모든 URL + tags + 체류시간 + 하이라이트 |
+| **출력** | 마인드맵 JSON (nodes, edges) |
+| **저장** | `mindmap_graphs` 테이블 |
+
+### 비용 최적화
+
+| 전략 | 설명 |
+|-----|------|
+| **URL 중복 제거** | 같은 URL은 태그 1번만 추출 (url_hash 기반) |
+| **비동기 처리** | Asynq Worker에서 처리하여 API 응답 속도 유지 |
+| **경량 모델 사용** | 태그 추출은 GPT-3.5/Gemini Flash로 충분 |
+| **관계도만 고급 모델** | 세션당 1회이므로 GPT-4/Claude 사용 가능 |
 
 ---
 
@@ -17,13 +91,13 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 10.1.1 | 태그 추출 Worker Handler | ⬜ |
-| 10.1.2 | 마인드맵 생성 Worker Handler | ⬜ |
-| 10.1.3 | UsageService 연동 (토큰 측정) | ⬜ |
+| 10.2.1 | 태그 추출 Worker Handler | ⬜ |
+| 10.2.2 | 마인드맵 생성 Worker Handler | ⬜ |
+| 10.2.3 | UsageService 연동 (토큰 측정) | ⬜ |
 
 ---
 
-## Step 10.1.1: 태그 추출 Worker Handler
+## Step 10.2.1: 태그 추출 Worker Handler
 
 ### 목표
 
@@ -31,8 +105,8 @@
 
 ### 체크리스트
 
-- [ ] **태그 추출 Task 정의 (Phase 6에서 이미 정의됨)**
-  - [ ] `internal/infrastructure/queue/tasks.go`에 추가 확인
+- [ ] **태그 추출 Task 정의**
+  - [ ] `internal/infrastructure/queue/tasks.go`
 
     ```go
     const TypeURLTagExtraction = "url:tag_extraction"
@@ -72,24 +146,26 @@
 
     const tagExtractionPrompt = `웹 페이지를 분석하고 다음을 추출하세요:
 
-1. 핵심 태그 3-5개 (한국어, 명사형)
-2. 1-2문장 요약 (한국어)
+    1. 핵심 태그 3-5개 (한국어, 명사형)
+    2. 1-2문장 요약 (한국어)
 
-페이지 제목: %s
-페이지 내용:
-%s
+    페이지 제목: %s
+    페이지 내용:
+    %s
 
-JSON 형식으로 응답:
-{
-  "tags": ["태그1", "태그2", "태그3"],
-  "summary": "페이지 요약"
-}`
+    JSON 형식으로 응답:
+    {
+      "tags": ["태그1", "태그2", "태그3"],
+      "summary": "페이지 요약"
+    }`
 
+    // TagResult represents the AI response for tag extraction.
     type TagResult struct {
         Tags    []string `json:"tags"`
         Summary string   `json:"summary"`
     }
 
+    // HandleURLTagExtraction processes tag extraction for a URL.
     func (h *handlers) HandleURLTagExtraction(ctx context.Context, t *asynq.Task) error {
         var payload queue.URLTagExtractionPayload
         if err := json.Unmarshal(t.Payload(), &payload); err != nil {
@@ -187,6 +263,7 @@ JSON 형식으로 응답:
         aiManager *ai.ProviderManager
     }
 
+    // RegisterHandlers registers all worker handlers.
     func RegisterHandlers(server *queue.Server, client *ent.Client, aiManager *ai.ProviderManager) {
         h := &handlers{
             client:    client,
@@ -231,8 +308,6 @@ JSON 형식으로 응답:
                         slog.Error("failed to enqueue tag extraction task", "error", err)
                     }
                 }
-
-                // Save page visit...
             }
         }
         return nil
@@ -258,7 +333,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
 
 ---
 
-## Step 10.1.2: 마인드맵 생성 Worker Handler
+## Step 10.2.2: 마인드맵 생성 Worker Handler
 
 ### 목표
 
@@ -272,6 +347,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     ```go
     package service
 
+    // MindmapNode represents a node in the mindmap graph.
     type MindmapNode struct {
         ID       string                 `json:"id"`
         Label    string                 `json:"label"`
@@ -282,12 +358,14 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         Data     map[string]interface{} `json:"data"`
     }
 
+    // Position represents 3D coordinates.
     type Position struct {
         X float64 `json:"x"`
         Y float64 `json:"y"`
         Z float64 `json:"z"`
     }
 
+    // MindmapEdge represents a connection between nodes.
     type MindmapEdge struct {
         Source string  `json:"source"`
         Target string  `json:"target"`
@@ -295,15 +373,36 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         Label  string  `json:"label,omitempty"`
     }
 
+    // MindmapLayout defines the layout configuration.
     type MindmapLayout struct {
         Type   string                 `json:"type"` // galaxy, tree, radial
         Params map[string]interface{} `json:"params"`
     }
 
+    // MindmapData contains the complete mindmap structure.
     type MindmapData struct {
         Nodes  []MindmapNode `json:"nodes"`
         Edges  []MindmapEdge `json:"edges"`
         Layout MindmapLayout `json:"layout"`
+    }
+    ```
+
+- [ ] **마인드맵 생성 Task 정의**
+  - [ ] `internal/infrastructure/queue/tasks.go`
+
+    ```go
+    const TypeMindmapGenerate = "mindmap:generate"
+
+    type MindmapGeneratePayload struct {
+        SessionID string `json:"session_id"`
+    }
+
+    func NewMindmapGenerateTask(sessionID string) (*asynq.Task, error) {
+        payload, err := json.Marshal(MindmapGeneratePayload{SessionID: sessionID})
+        if err != nil {
+            return nil, err
+        }
+        return asynq.NewTask(TypeMindmapGenerate, payload), nil
     }
     ```
 
@@ -333,55 +432,56 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
 
     const relationshipGraphPrompt = `브라우징 세션의 페이지들과 추출된 태그를 분석하여 관계도를 생성하세요.
 
-## 세션 데이터
+    ## 세션 데이터
 
-### 방문한 페이지들 (URL + 태그 + 요약)
+    ### 방문한 페이지들 (URL + 태그 + 요약)
 
-%s
+    %s
 
-### 하이라이트 (사용자가 선택한 텍스트)
+    ### 하이라이트 (사용자가 선택한 텍스트)
 
-%s
+    %s
 
-## 요청사항
+    ## 요청사항
 
-1. **핵심 주제 (core)**: 세션 전체를 관통하는 중심 테마 1개
-2. **주요 토픽 (topics)**: 공통 태그를 기반으로 3-5개 그룹화
-3. **페이지 연결**: 각 토픽에 해당하는 페이지들 매핑
-4. **토픽 간 연결 (connections)**: 태그가 겹치는 토픽들의 관계
+    1. **핵심 주제 (core)**: 세션 전체를 관통하는 중심 테마 1개
+    2. **주요 토픽 (topics)**: 공통 태그를 기반으로 3-5개 그룹화
+    3. **페이지 연결**: 각 토픽에 해당하는 페이지들 매핑
+    4. **토픽 간 연결 (connections)**: 태그가 겹치는 토픽들의 관계
 
-## JSON 형식으로 응답
+    ## JSON 형식으로 응답
 
-{
-  "core": {
-    "label": "핵심 주제 (한국어)",
-    "description": "세션 전체 요약 (1-2문장)"
-  },
-  "topics": [
     {
-      "id": "topic-1",
-      "label": "토픽명 (한국어)",
-      "tags": ["관련", "태그들"],
-      "description": "토픽 설명",
-      "pages": [
+      "core": {
+        "label": "핵심 주제 (한국어)",
+        "description": "세션 전체 요약 (1-2문장)"
+      },
+      "topics": [
         {
-          "url_id": "uuid",
-          "title": "페이지 제목",
-          "relevance": 0.9
+          "id": "topic-1",
+          "label": "토픽명 (한국어)",
+          "tags": ["관련", "태그들"],
+          "description": "토픽 설명",
+          "pages": [
+            {
+              "url_id": "uuid",
+              "title": "페이지 제목",
+              "relevance": 0.9
+            }
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "from": "topic-1",
+          "to": "topic-2",
+          "shared_tags": ["공통태그"],
+          "reason": "연결 이유"
         }
       ]
-    }
-  ],
-  "connections": [
-    {
-      "from": "topic-1",
-      "to": "topic-2",
-      "shared_tags": ["공통태그"],
-      "reason": "연결 이유"
-    }
-  ]
-}`
+    }`
 
+    // RelationshipGraphResponse represents the AI response structure.
     type RelationshipGraphResponse struct {
         Core struct {
             Label       string `json:"label"`
@@ -406,6 +506,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         } `json:"connections"`
     }
 
+    // HandleMindmapGenerate processes mindmap generation for a session.
     func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
         var payload queue.MindmapGeneratePayload
         if err := json.Unmarshal(t.Payload(), &payload); err != nil {
@@ -427,6 +528,7 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
                 q.WithURL()
             }).
             WithHighlights().
+            WithUser().
             Only(ctx)
 
         if err != nil {
@@ -450,14 +552,13 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
             durationMsMap[u.ID.String()] = durationMs
 
             pageData.WriteString(fmt.Sprintf(`
-
-- ID: %s
-  제목: %s
-  URL: %s
-  태그: [%s]
-  요약: %s
-  체류시간: %dms
-`,
+    - ID: %s
+      제목: %s
+      URL: %s
+      태그: [%s]
+      요약: %s
+      체류시간: %dms
+    `,
                 u.ID.String(),
                 u.Title,
                 u.URL,
@@ -674,8 +775,9 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
 
     ```go
     func (s *SessionService) StopSession(ctx context.Context, sessionID string) (*ent.Session, error) {
+        id, _ := uuid.Parse(sessionID)
         sess, err := s.client.Session.Query().
-            Where(session.IDEQ(sessionID)).
+            Where(session.IDEQ(id)).
             Only(ctx)
         if err != nil {
             return nil, err
@@ -714,7 +816,6 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     func main() {
         cfg := config.Load()
 
-        // Setup logger
         slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
             Level: slog.LevelInfo,
         })))
@@ -727,12 +828,13 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
         }
         defer client.Close()
 
-        // Initialize AI Log Service
+        // Initialize services
+        aiConfigService := service.NewAIConfigService(client)
         aiLogService := service.NewAILogService(client)
 
-        // Initialize AI Provider Manager with logging
+        // Initialize AI Provider Manager
         ctx := context.Background()
-        aiManager, err := ai.NewProviderManager(ctx, cfg.AI, aiLogService)
+        aiManager, err := ai.NewProviderManager(ctx, cfg.AI, aiConfigService, aiLogService)
         if err != nil {
             slog.Error("failed to initialize ai manager", "error", err)
             os.Exit(1)
@@ -779,7 +881,7 @@ curl -X POST http://localhost:8080/api/v1/sessions/{id}/stop \
 
 # Worker 로그 확인
 # "generating mindmap" session_id=...
-# "mindmap generated" session_id=... topics=4 connections=2 provider=openai
+# "mindmap generated" session_id=... topics=4 connections=2
 ```
 
 ---
@@ -804,7 +906,7 @@ GEMINI_MODEL=gemini-2.0-flash
 
 ---
 
-## Step 10.1.3: UsageService 연동 (토큰 측정)
+## Step 10.2.3: UsageService 연동 (토큰 측정)
 
 ### 목표
 
@@ -812,7 +914,7 @@ AI 서비스에서 토큰 사용량을 **정확하게** 추적하고 제한을 �
 
 ### 토큰 측정 원리
 
-AI API는 응답에 **실제 사용된 토큰 수**를 포함하여 반환합니다. 예상치가 아닌 정확한 값입니다.
+AI API는 응답에 **실제 사용된 토큰 수**를 포함하여 반환합니다.
 
 **AI 제공업체별 응답 필드:**
 
@@ -826,7 +928,7 @@ AI API는 응답에 **실제 사용된 토큰 수**를 포함하여 반환합니
 
 - [ ] AI 서비스에 UsageService 의존성 주입
 - [ ] 요청 전 사용량 제한 체크
-- [ ] API 호출 후 **응답에서 토큰 사용량 추출**
+- [ ] API 호출 후 응답에서 토큰 사용량 추출
 - [ ] token_usage 테이블에 정확한 값 기록
 - [ ] 제한 초과 시 적절한 에러 반환
 
@@ -870,7 +972,7 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 
 ---
 
-## Phase 10.1 완료 확인
+## Phase 10.2 완료 확인
 
 ### 전체 검증 체크리스트
 
@@ -889,7 +991,7 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 | 단위 테스트 | 토큰 사용량 기록 | `service/usage_service_test.go` |
 
 ```bash
-# Phase 10.1 테스트 실행
+# Phase 10.2 테스트 실행
 moonx backend:test -- -run "TestMindmap|TestTag|TestUsage"
 ```
 
@@ -906,4 +1008,4 @@ moonx backend:test -- -run "TestMindmap|TestTag|TestUsage"
 
 ## 다음 Phase
 
-Phase 10.1 완료 후 [Phase 11: 웹앱 대시보드](./phase-11-dashboard.md)으로 진행하세요.
+Phase 10.2 완료 후 [Phase 11: 웹앱 대시보드](./phase-11-dashboard.md)로 진행하세요.
