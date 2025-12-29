@@ -2,8 +2,8 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -93,11 +93,8 @@ func (p *GeminiProvider) Chat(ctx context.Context, req ChatRequest) (*ChatRespon
 	}
 
 	// Validate JSON if requested
-	if req.Options.JSONMode {
-		var js json.RawMessage
-		if err := json.Unmarshal([]byte(content.String()), &js); err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
-		}
+	if err := validateJSONResponse(content.String(), req.Options.JSONMode); err != nil {
+		return nil, err
 	}
 
 	var inputTokens, outputTokens, totalTokens int
@@ -186,7 +183,11 @@ func (p *GeminiProvider) IsHealthy(ctx context.Context) bool {
 		UserPrompt: "ping",
 		Options:    ChatOptions{MaxTokens: 5},
 	})
-	return err == nil
+	if err != nil {
+		slog.Warn("gemini health check failed", "error", err)
+		return false
+	}
+	return true
 }
 
 // Close closes the Gemini client.

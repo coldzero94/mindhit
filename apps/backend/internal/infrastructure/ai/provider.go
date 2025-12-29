@@ -2,19 +2,29 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // Common errors for AI providers.
 var (
 	ErrProviderNotConfigured = errors.New("ai provider not configured")
 	ErrNoResponse            = errors.New("no response from ai provider")
-	ErrRateLimited           = errors.New("rate limited by ai provider")
-	ErrTokenLimitExceeded    = errors.New("token limit exceeded")
-	ErrInvalidAPIKey         = errors.New("invalid api key")
-	ErrContextCanceled       = errors.New("context canceled")
 	ErrInvalidJSON           = errors.New("invalid json response")
 )
+
+// validateJSONResponse validates that the content is valid JSON when JSONMode is enabled.
+func validateJSONResponse(content string, jsonMode bool) error {
+	if !jsonMode {
+		return nil
+	}
+	var js json.RawMessage
+	if err := json.Unmarshal([]byte(content), &js); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalidJSON, err)
+	}
+	return nil
+}
 
 // Provider defines the interface that all AI providers must implement.
 type Provider interface {

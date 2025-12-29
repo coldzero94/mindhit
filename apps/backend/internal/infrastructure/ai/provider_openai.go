@@ -2,9 +2,9 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"time"
 
 	"github.com/sashabaranov/go-openai"
@@ -73,11 +73,8 @@ func (p *OpenAIProvider) Chat(ctx context.Context, req ChatRequest) (*ChatRespon
 	content := resp.Choices[0].Message.Content
 
 	// Validate JSON if JSON mode enabled
-	if req.Options.JSONMode {
-		var js json.RawMessage
-		if err := json.Unmarshal([]byte(content), &js); err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
-		}
+	if err := validateJSONResponse(content, req.Options.JSONMode); err != nil {
+		return nil, err
 	}
 
 	return &ChatResponse{
@@ -161,5 +158,9 @@ func (p *OpenAIProvider) IsHealthy(ctx context.Context) bool {
 		UserPrompt: "ping",
 		Options:    ChatOptions{MaxTokens: 5},
 	})
-	return err == nil
+	if err != nil {
+		slog.Warn("openai health check failed", "error", err)
+		return false
+	}
+	return true
 }

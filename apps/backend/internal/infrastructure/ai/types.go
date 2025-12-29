@@ -15,6 +15,16 @@ const (
 	ProviderClaude ProviderType = "claude"
 )
 
+// Default models for each provider (centralized to avoid magic strings).
+const (
+	// DefaultOpenAIModel is the default model for OpenAI provider.
+	DefaultOpenAIModel = "gpt-4o"
+	// DefaultGeminiModel is the default model for Gemini provider.
+	DefaultGeminiModel = "gemini-2.0-flash"
+	// DefaultClaudeModel is the default model for Claude provider.
+	DefaultClaudeModel = "claude-sonnet-4-20250514"
+)
+
 // TaskType identifies the AI task for provider selection.
 type TaskType string
 

@@ -50,7 +50,7 @@ phases/
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ✅ 완료 | 5 steps |
 | 10 | [AI Provider 인프라](./phase-10-ai.md) | ✅ 완료 | 2 steps |
 | 10.1 | [AI 설정 및 로깅](./phase-10.1-ai-config.md) | ✅ 완료 | 2 steps |
-| 10.2 | [마인드맵 생성](./phase-10.2-mindmap.md) | ⬜ 대기 | 3 steps |
+| 10.2 | [마인드맵 생성](./phase-10.2-mindmap.md) | ✅ 완료 | 3 steps |
 | 11 | [웹앱 대시보드](./phase-11-dashboard.md) | ⬜ 대기 | 5 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ⬜ 대기 | 4 steps |
 | 13 | [배포 및 운영](./phase-13-deployment.md) | ⬜ 대기 | 4 steps |

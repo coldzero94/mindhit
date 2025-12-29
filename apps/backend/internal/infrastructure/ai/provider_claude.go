@@ -2,8 +2,8 @@ package ai
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -100,11 +100,8 @@ func (p *ClaudeProvider) Chat(ctx context.Context, req ChatRequest) (*ChatRespon
 	}
 
 	// Validate JSON if requested
-	if req.Options.JSONMode {
-		var js json.RawMessage
-		if err := json.Unmarshal([]byte(content), &js); err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidJSON, err)
-		}
+	if err := validateJSONResponse(content, req.Options.JSONMode); err != nil {
+		return nil, err
 	}
 
 	return &ChatResponse{
@@ -199,5 +196,9 @@ func (p *ClaudeProvider) IsHealthy(ctx context.Context) bool {
 		UserPrompt: "ping",
 		Options:    ChatOptions{MaxTokens: 5},
 	})
-	return err == nil
+	if err != nil {
+		slog.Warn("claude health check failed", "error", err)
+		return false
+	}
+	return true
 }

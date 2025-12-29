@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -57,7 +58,7 @@ func NewProviderManager(
 		pm.providers[ProviderOpenAI] = NewOpenAIProvider(ProviderConfig{
 			Type:   ProviderOpenAI,
 			APIKey: cfg.OpenAIAPIKey,
-			Model:  "gpt-4o",
+			Model:  DefaultOpenAIModel,
 		})
 		slog.Info("initialized ai provider", "provider", "openai")
 	}
@@ -66,7 +67,7 @@ func NewProviderManager(
 		gemini, err := NewGeminiProvider(ctx, ProviderConfig{
 			Type:   ProviderGemini,
 			APIKey: cfg.GeminiAPIKey,
-			Model:  "gemini-2.0-flash",
+			Model:  DefaultGeminiModel,
 		})
 		if err != nil {
 			slog.Warn("failed to initialize gemini provider", "error", err)
@@ -80,7 +81,7 @@ func NewProviderManager(
 		pm.providers[ProviderClaude] = NewClaudeProvider(ProviderConfig{
 			Type:   ProviderClaude,
 			APIKey: cfg.ClaudeAPIKey,
-			Model:  "claude-sonnet-4-20250514",
+			Model:  DefaultClaudeModel,
 		})
 		slog.Info("initialized ai provider", "provider", "claude")
 	}
@@ -238,4 +239,55 @@ func (pm *ProviderManager) HasProviders() bool {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
 	return len(pm.providers) > 0
+}
+
+// ProviderHealth represents the health status of a provider.
+type ProviderHealth struct {
+	Provider  ProviderType `json:"provider"`
+	Model     string       `json:"model"`
+	Healthy   bool         `json:"healthy"`
+	CheckedAt time.Time    `json:"checked_at"`
+}
+
+// CheckAllHealth checks the health of all configured providers.
+func (pm *ProviderManager) CheckAllHealth(ctx context.Context) []ProviderHealth {
+	pm.mu.RLock()
+	providers := make([]Provider, 0, len(pm.providers))
+	for _, p := range pm.providers {
+		providers = append(providers, p)
+	}
+	pm.mu.RUnlock()
+
+	results := make([]ProviderHealth, 0, len(providers))
+	for _, p := range providers {
+		healthy := p.IsHealthy(ctx)
+		results = append(results, ProviderHealth{
+			Provider:  p.Type(),
+			Model:     p.Model(),
+			Healthy:   healthy,
+			CheckedAt: time.Now(),
+		})
+
+		if healthy {
+			slog.Info("provider health check passed", "provider", p.Type(), "model", p.Model())
+		} else {
+			slog.Warn("provider health check failed", "provider", p.Type(), "model", p.Model())
+		}
+	}
+
+	return results
+}
+
+// GetHealthyProviders returns only providers that pass health check.
+func (pm *ProviderManager) GetHealthyProviders(ctx context.Context) []ProviderType {
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+
+	var healthy []ProviderType
+	for pt, p := range pm.providers {
+		if p.IsHealthy(ctx) {
+			healthy = append(healthy, pt)
+		}
+	}
+	return healthy
 }

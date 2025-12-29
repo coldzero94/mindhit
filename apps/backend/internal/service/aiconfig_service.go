@@ -7,6 +7,7 @@ import (
 
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/aiconfig"
+	"github.com/mindhit/api/internal/infrastructure/ai"
 )
 
 // AIConfigService manages AI provider configuration in DB with caching.
@@ -31,6 +32,7 @@ func NewAIConfigService(client *ent.Client) *AIConfigService {
 
 // GetConfigForTask returns the config for a specific task type.
 func (s *AIConfigService) GetConfigForTask(ctx context.Context, taskType string) (*ent.AIConfig, error) {
+	// Try read lock first for cache hit
 	s.cacheMu.RLock()
 	if time.Since(s.cacheTime) < s.cacheTTL {
 		if cfg, ok := s.cache[taskType]; ok {
@@ -40,11 +42,23 @@ func (s *AIConfigService) GetConfigForTask(ctx context.Context, taskType string)
 	}
 	s.cacheMu.RUnlock()
 
-	return s.refreshCache(ctx, taskType)
+	// Acquire write lock for cache refresh
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
+
+	// Double-check after acquiring write lock (another goroutine may have refreshed)
+	if time.Since(s.cacheTime) < s.cacheTTL {
+		if cfg, ok := s.cache[taskType]; ok {
+			return cfg, nil
+		}
+	}
+
+	return s.refreshCacheLocked(ctx, taskType)
 }
 
-// refreshCache loads config from DB and updates cache.
-func (s *AIConfigService) refreshCache(ctx context.Context, taskType string) (*ent.AIConfig, error) {
+// refreshCacheLocked loads config from DB and updates cache.
+// Caller must hold s.cacheMu write lock.
+func (s *AIConfigService) refreshCacheLocked(ctx context.Context, taskType string) (*ent.AIConfig, error) {
 	cfg, err := s.client.AIConfig.Query().
 		Where(aiconfig.TaskTypeEQ(taskType)).
 		Where(aiconfig.EnabledEQ(true)).
@@ -52,15 +66,13 @@ func (s *AIConfigService) refreshCache(ctx context.Context, taskType string) (*e
 
 	if err != nil {
 		if ent.IsNotFound(err) && taskType != "default" {
-			return s.refreshCache(ctx, "default")
+			return s.refreshCacheLocked(ctx, "default")
 		}
 		return nil, err
 	}
 
-	s.cacheMu.Lock()
 	s.cache[taskType] = cfg
 	s.cacheTime = time.Now()
-	s.cacheMu.Unlock()
 
 	return cfg, nil
 }
@@ -160,28 +172,28 @@ func (s *AIConfigService) SeedDefaultConfigs(ctx context.Context) error {
 	defaults := []UpsertAIConfigRequest{
 		{
 			TaskType:          "default",
-			Provider:          "openai",
-			Model:             "gpt-4o",
-			FallbackProviders: []string{"gemini", "claude"},
+			Provider:          string(ai.ProviderOpenAI),
+			Model:             ai.DefaultOpenAIModel,
+			FallbackProviders: []string{string(ai.ProviderGemini), string(ai.ProviderClaude)},
 			Temperature:       0.7,
 			MaxTokens:         4096,
 			Enabled:           true,
 		},
 		{
-			TaskType:          "tag_extraction",
-			Provider:          "gemini",
-			Model:             "gemini-2.0-flash",
-			FallbackProviders: []string{"openai"},
+			TaskType:          string(ai.TaskTagExtraction),
+			Provider:          string(ai.ProviderGemini),
+			Model:             ai.DefaultGeminiModel,
+			FallbackProviders: []string{string(ai.ProviderOpenAI)},
 			Temperature:       0.3,
 			MaxTokens:         1024,
 			JSONMode:          true,
 			Enabled:           true,
 		},
 		{
-			TaskType:          "mindmap",
-			Provider:          "claude",
-			Model:             "claude-sonnet-4-20250514",
-			FallbackProviders: []string{"openai"},
+			TaskType:          string(ai.TaskMindmap),
+			Provider:          string(ai.ProviderClaude),
+			Model:             ai.DefaultClaudeModel,
+			FallbackProviders: []string{string(ai.ProviderOpenAI)},
 			Temperature:       0.5,
 			MaxTokens:         8192,
 			ThinkingBudget:    10000,

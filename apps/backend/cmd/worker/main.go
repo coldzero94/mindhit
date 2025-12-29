@@ -15,8 +15,10 @@ import (
 	_ "github.com/lib/pq"
 
 	"github.com/mindhit/api/ent"
+	"github.com/mindhit/api/internal/infrastructure/ai"
 	"github.com/mindhit/api/internal/infrastructure/config"
 	"github.com/mindhit/api/internal/infrastructure/queue"
+	"github.com/mindhit/api/internal/service"
 	"github.com/mindhit/api/internal/worker/handler"
 )
 
@@ -67,6 +69,37 @@ func run() error {
 		}
 	}
 
+	// Initialize AI services
+	ctx := context.Background()
+	aiConfigService := service.NewAIConfigService(client)
+	aiLogService := service.NewAILogService(client)
+
+	// Initialize AI Provider Manager
+	var aiManager *ai.ProviderManager
+	aiCfg := ai.Config{
+		OpenAIAPIKey: cfg.AI.OpenAIAPIKey,
+		GeminiAPIKey: cfg.AI.GeminiAPIKey,
+		ClaudeAPIKey: cfg.AI.ClaudeAPIKey,
+	}
+
+	configAdapter := service.NewAIConfigAdapter(aiConfigService)
+	logAdapter := service.NewAILogAdapter(aiLogService)
+
+	aiManager, err = ai.NewProviderManager(ctx, aiCfg, configAdapter, logAdapter)
+	if err != nil {
+		slog.Warn("failed to initialize ai manager", "error", err)
+		// Continue without AI - handlers will skip AI operations
+	} else {
+		defer func() {
+			if err := aiManager.Close(); err != nil {
+				slog.Error("failed to close ai manager", "error", err)
+			}
+		}()
+	}
+
+	// Initialize usage service for token tracking
+	usageService := service.NewUsageService(client)
+
 	// Create worker server
 	server := queue.NewServer(queue.ServerConfig{
 		RedisAddr:   cfg.RedisAddr,
@@ -74,7 +107,7 @@ func run() error {
 	})
 
 	// Register handlers
-	handler.RegisterHandlers(server, client)
+	handler.RegisterHandlers(server, client, aiManager, usageService)
 
 	// Create scheduler for periodic tasks
 	scheduler, err := queue.NewScheduler(cfg.RedisAddr)

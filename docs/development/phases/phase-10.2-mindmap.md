@@ -91,9 +91,9 @@ sequenceDiagram
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 10.2.1 | 태그 추출 Worker Handler | ⬜ |
-| 10.2.2 | 마인드맵 생성 Worker Handler | ⬜ |
-| 10.2.3 | UsageService 연동 (토큰 측정) | ⬜ |
+| 10.2.1 | 태그 추출 Worker Handler | ✅ |
+| 10.2.2 | 마인드맵 생성 Worker Handler | ✅ |
+| 10.2.3 | UsageService 연동 (토큰 측정) | ✅ |
 
 ---
 

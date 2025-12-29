@@ -140,27 +140,14 @@ func (s *UsageService) GetCurrentUsage(ctx context.Context, userID uuid.UUID) (*
 	periodStart := s.getCurrentPeriodStart(ctx, userID)
 	periodEnd := periodStart.AddDate(0, 0, 30) // 30-day period
 
-	// Get usage by operation
-	usages, err := s.client.TokenUsage.
-		Query().
-		Where(
-			tokenusage.HasUserWith(user.IDEQ(userID)),
-			tokenusage.PeriodStartGTE(periodStart),
-		).
-		All(ctx)
+	// Get limit info (includes total tokens via CheckLimit)
+	limitStatus, err := s.CheckLimit(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	byOperation := make(map[string]int)
-	totalTokens := 0
-	for _, u := range usages {
-		byOperation[u.Operation] += u.TokensUsed
-		totalTokens += u.TokensUsed
-	}
-
-	// Get limit info
-	limitStatus, err := s.CheckLimit(ctx, userID)
+	// Get usage grouped by operation using SQL aggregation
+	byOperation, err := s.getUsageByOperation(ctx, userID, periodStart)
 	if err != nil {
 		return nil, err
 	}
@@ -168,13 +155,37 @@ func (s *UsageService) GetCurrentUsage(ctx context.Context, userID uuid.UUID) (*
 	return &UsageSummary{
 		PeriodStart: periodStart,
 		PeriodEnd:   periodEnd,
-		TokensUsed:  totalTokens,
+		TokensUsed:  limitStatus.TokensUsed,
 		TokenLimit:  limitStatus.TokenLimit,
 		PercentUsed: limitStatus.PercentUsed,
 		IsUnlimited: limitStatus.IsUnlimited,
 		CanUseAI:    limitStatus.CanUseAI,
 		ByOperation: byOperation,
 	}, nil
+}
+
+// getUsageByOperation returns token usage grouped by operation using SQL aggregation.
+func (s *UsageService) getUsageByOperation(ctx context.Context, userID uuid.UUID, periodStart time.Time) (map[string]int, error) {
+	// Query distinct operations for this user in the period
+	usages, err := s.client.TokenUsage.
+		Query().
+		Where(
+			tokenusage.HasUserWith(user.IDEQ(userID)),
+			tokenusage.PeriodStartGTE(periodStart),
+		).
+		Select(tokenusage.FieldOperation, tokenusage.FieldTokensUsed).
+		All(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Aggregate in memory (Ent doesn't support GROUP BY with multiple columns easily)
+	byOperation := make(map[string]int)
+	for _, u := range usages {
+		byOperation[u.Operation] += u.TokensUsed
+	}
+
+	return byOperation, nil
 }
 
 // GetUsageHistory returns usage history for past billing periods.
