@@ -105,3 +105,35 @@ func RateLimit(limit int, window time.Duration) gin.HandlerFunc {
 func AuthRateLimit() gin.HandlerFunc {
 	return RateLimit(10, time.Minute)
 }
+
+// authRateLimitPaths defines paths that should have auth rate limiting applied.
+var authRateLimitPaths = map[string]bool{
+	"/v1/auth/signup":          true,
+	"/v1/auth/login":           true,
+	"/v1/auth/forgot-password": true,
+	"/v1/auth/google":          true,
+}
+
+// AuthRateLimitMiddleware returns a middleware that applies rate limiting
+// only to authentication endpoints. This is designed to work with oapi-codegen's
+// MiddlewareFunc signature.
+func AuthRateLimitMiddleware() func(c *gin.Context) {
+	limiter := NewRateLimiter(10, time.Minute)
+
+	return func(c *gin.Context) {
+		// Only apply rate limiting to auth endpoints
+		if !authRateLimitPaths[c.Request.URL.Path] {
+			return
+		}
+
+		key := c.ClientIP()
+		if !limiter.Allow(key) {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+				"error": gin.H{
+					"message": "Too many requests. Please try again later.",
+					"code":    "RATE_LIMIT_EXCEEDED",
+				},
+			})
+		}
+	}
+}

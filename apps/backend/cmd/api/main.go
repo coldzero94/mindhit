@@ -118,16 +118,13 @@ func run() error {
 	// Metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Rate limiting for auth endpoints (10 requests per minute per IP)
-	authRateLimiter := middleware.AuthRateLimit()
-	r.POST("/v1/auth/signup", authRateLimiter)
-	r.POST("/v1/auth/login", authRateLimiter)
-	r.POST("/v1/auth/forgot-password", authRateLimiter)
-	r.POST("/v1/auth/google", authRateLimiter)
-
-	// Register API handlers using generated code
+	// Register API handlers using generated code with rate limiting middleware
 	strictHandler := generated.NewStrictHandler(handler, nil)
-	generated.RegisterHandlers(r, strictHandler)
+	generated.RegisterHandlersWithOptions(r, strictHandler, generated.GinServerOptions{
+		Middlewares: []generated.MiddlewareFunc{
+			middleware.AuthRateLimitMiddleware(),
+		},
+	})
 
 	slog.Info("starting server", "port", cfg.Port, "env", cfg.Environment)
 	if err := r.Run(":" + cfg.Port); err != nil {
