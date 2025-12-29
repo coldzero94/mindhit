@@ -68,8 +68,8 @@
 
 ### 체크리스트
 
-- [ ] **AILog Ent 스키마 정의**
-  - [ ] `ent/schema/ailog.go`
+- [x] **AILog Ent 스키마 정의**
+  - [x] `ent/schema/ailog.go`
 
     ```go
     package schema
@@ -192,8 +192,8 @@
     }
     ```
 
-- [ ] **AILogService 구현**
-  - [ ] `internal/service/ailog_service.go`
+- [x] **AILogService 구현**
+  - [x] `internal/service/ailog_service.go`
 
     ```go
     package service
@@ -325,8 +325,8 @@
     }
     ```
 
-- [ ] **AIConfig Ent 스키마 정의**
-  - [ ] `ent/schema/aiconfig.go`
+- [x] **AIConfig Ent 스키마 정의**
+  - [x] `ent/schema/aiconfig.go`
 
     ```go
     package schema
@@ -406,8 +406,8 @@
     }
     ```
 
-- [ ] **AIConfigService 구현** (DB CRUD + 캐싱)
-  - [ ] `internal/service/aiconfig_service.go`
+- [x] **AIConfigService 구현** (DB CRUD + 캐싱)
+  - [x] `internal/service/aiconfig_service.go`
 
     ```go
     package service
@@ -615,7 +615,7 @@ go build ./...
 
 ### 체크리스트
 
-- [ ] **환경 변수 설정** (API 키만)
+- [x] **환경 변수 설정** (API 키만)
 
   ```env
   # AI Provider API Keys (보안: 환경변수로만 관리)
@@ -624,8 +624,8 @@ go build ./...
   CLAUDE_API_KEY=sk-ant-...
   ```
 
-- [ ] **Config 업데이트**
-  - [ ] `internal/infrastructure/config/config.go`에 AI 설정 추가
+- [x] **Config 업데이트**
+  - [x] `internal/infrastructure/config/config.go`에 AI 설정 추가
 
     ```go
     type Config struct {
@@ -649,8 +649,8 @@ go build ./...
     }
     ```
 
-- [ ] **Provider Manager 구현**
-  - [ ] `internal/infrastructure/ai/manager.go`
+- [x] **Provider Manager 구현**
+  - [x] `internal/infrastructure/ai/manager.go`
 
     ```go
     package ai
@@ -874,8 +874,8 @@ go build ./...
     }
     ```
 
-- [ ] **Admin AI Controller 구현**
-  - [ ] `internal/controller/admin_ai_controller.go`
+- [x] **Admin AI Controller 구현**
+  - [x] `internal/controller/admin_ai_controller.go`
 
     ```go
     package controller
@@ -1004,8 +1004,8 @@ go build ./...
     }
     ```
 
-- [ ] **TypeSpec Admin API 정의**
-  - [ ] `packages/protocol/src/admin/ai.tsp`
+- [x] **TypeSpec Admin API 정의**
+  - [x] `packages/protocol/src/admin/ai.tsp`
 
     ```typespec
     import "@typespec/http";
@@ -1050,8 +1050,8 @@ go build ./...
     }
     ```
 
-- [ ] **라우터 등록**
-  - [ ] `cmd/api/main.go`
+- [x] **라우터 등록**
+  - [x] `cmd/api/main.go`
 
     ```go
     // Admin routes (require admin role)

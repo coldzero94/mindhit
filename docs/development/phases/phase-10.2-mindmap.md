@@ -105,8 +105,8 @@ sequenceDiagram
 
 ### 체크리스트
 
-- [ ] **태그 추출 Task 정의**
-  - [ ] `internal/infrastructure/queue/tasks.go`
+- [x] **태그 추출 Task 정의**
+  - [x] `internal/infrastructure/queue/tasks.go`
 
     ```go
     const TypeURLTagExtraction = "url:tag_extraction"
@@ -124,8 +124,8 @@ sequenceDiagram
     }
     ```
 
-- [ ] **태그 추출 Handler 구현**
-  - [ ] `internal/worker/handler/tag_extraction.go`
+- [x] **태그 추출 Handler 구현**
+  - [x] `internal/worker/handler/tag_extraction.go`
 
     ```go
     package handler
@@ -246,8 +246,8 @@ sequenceDiagram
     }
     ```
 
-- [ ] **Handler 등록 업데이트**
-  - [ ] `internal/worker/handler/handler.go`
+- [x] **Handler 등록 업데이트**
+  - [x] `internal/worker/handler/handler.go`
 
     ```go
     package handler
@@ -277,8 +277,8 @@ sequenceDiagram
     }
     ```
 
-- [ ] **API에서 새 URL 발견 시 Task Enqueue**
-  - [ ] `internal/service/event_service.go`
+- [x] **API에서 새 URL 발견 시 Task Enqueue**
+  - [x] `internal/service/event_service.go`
 
     ```go
     type EventService struct {
@@ -341,8 +341,8 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
 
 ### 체크리스트
 
-- [ ] **마인드맵 타입 정의**
-  - [ ] `internal/service/mindmap_types.go`
+- [x] **마인드맵 타입 정의**
+  - [x] `internal/service/mindmap_types.go`
 
     ```go
     package service
@@ -387,8 +387,8 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     }
     ```
 
-- [ ] **마인드맵 생성 Task 정의**
-  - [ ] `internal/infrastructure/queue/tasks.go`
+- [x] **마인드맵 생성 Task 정의**
+  - [x] `internal/infrastructure/queue/tasks.go`
 
     ```go
     const TypeMindmapGenerate = "mindmap:generate"
@@ -406,8 +406,8 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     }
     ```
 
-- [ ] **마인드맵 생성 Handler 구현**
-  - [ ] `internal/worker/handler/mindmap.go`
+- [x] **마인드맵 생성 Handler 구현**
+  - [x] `internal/worker/handler/mindmap.go`
 
     ```go
     package handler
@@ -770,8 +770,8 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     }
     ```
 
-- [ ] **세션 Stop 시 Task Enqueue**
-  - [ ] `internal/service/session_service.go`
+- [x] **세션 Stop 시 Task Enqueue**
+  - [x] `internal/service/session_service.go`
 
     ```go
     func (s *SessionService) StopSession(ctx context.Context, sessionID string) (*ent.Session, error) {
@@ -809,8 +809,8 @@ curl -X POST http://localhost:8080/api/v1/events/batch \
     }
     ```
 
-- [ ] **Worker main.go 업데이트**
-  - [ ] `cmd/worker/main.go`
+- [x] **Worker main.go 업데이트**
+  - [x] `cmd/worker/main.go`
 
     ```go
     func main() {
@@ -926,11 +926,11 @@ AI API는 응답에 **실제 사용된 토큰 수**를 포함하여 반환합니
 
 ### 체크리스트
 
-- [ ] AI 서비스에 UsageService 의존성 주입
-- [ ] 요청 전 사용량 제한 체크
-- [ ] API 호출 후 응답에서 토큰 사용량 추출
-- [ ] token_usage 테이블에 정확한 값 기록
-- [ ] 제한 초과 시 적절한 에러 반환
+- [x] AI 서비스에 UsageService 의존성 주입
+- [x] 요청 전 사용량 제한 체크
+- [x] API 호출 후 응답에서 토큰 사용량 추출
+- [x] token_usage 테이블에 정확한 값 기록
+- [x] 제한 초과 시 적절한 에러 반환
 
 ### 코드 예시
 
@@ -976,11 +976,11 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 
 ### 전체 검증 체크리스트
 
-- [ ] 태그 추출 Worker Handler 구현
-- [ ] 마인드맵 생성 Worker Handler 구현
-- [ ] API에서 Task Enqueue 연동
-- [ ] Worker에서 AI 처리 완료
-- [ ] UsageService 연동 (토큰 측정)
+- [x] 태그 추출 Worker Handler 구현
+- [x] 마인드맵 생성 Worker Handler 구현
+- [x] API에서 Task Enqueue 연동
+- [x] Worker에서 AI 처리 완료
+- [x] UsageService 연동 (토큰 측정)
 
 ### 테스트 요구사항
 
