@@ -11,7 +11,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/mindhit/api/ent"
+	"github.com/mindhit/api/ent/aiconfig"
 	"github.com/mindhit/api/ent/plan"
+	"github.com/mindhit/api/ent/subscription"
 	"github.com/mindhit/api/ent/user"
 
 	_ "github.com/lib/pq"
@@ -34,9 +36,11 @@ func run() error {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run ./scripts/seed.go <command>")
 		fmt.Println("Commands:")
-		fmt.Println("  plans        Create or update plans")
-		fmt.Println("  test-user    Create or update test user")
-		fmt.Println("  all          Run all seeds")
+		fmt.Println("  plans         Create or update plans")
+		fmt.Println("  test-user     Create or update test user")
+		fmt.Println("  subscriptions Create or update test user subscription")
+		fmt.Println("  ai-configs    Create or update AI configs")
+		fmt.Println("  all           Run all seeds")
 		return fmt.Errorf("no command specified")
 	}
 
@@ -62,6 +66,14 @@ func run() error {
 		if err := seedTestUser(ctx, client); err != nil {
 			return fmt.Errorf("failed to seed test user: %w", err)
 		}
+	case "subscriptions":
+		if err := seedSubscriptions(ctx, client); err != nil {
+			return fmt.Errorf("failed to seed subscriptions: %w", err)
+		}
+	case "ai-configs":
+		if err := seedAIConfigs(ctx, client); err != nil {
+			return fmt.Errorf("failed to seed ai configs: %w", err)
+		}
 	case "all":
 		if err := seedAll(ctx, client); err != nil {
 			return fmt.Errorf("failed to seed: %w", err)
@@ -78,6 +90,12 @@ func seedAll(ctx context.Context, client *ent.Client) error {
 		return err
 	}
 	if err := seedTestUser(ctx, client); err != nil {
+		return err
+	}
+	if err := seedSubscriptions(ctx, client); err != nil {
+		return err
+	}
+	if err := seedAIConfigs(ctx, client); err != nil {
 		return err
 	}
 	return nil
@@ -263,5 +281,136 @@ func seedTestUser(ctx context.Context, client *ent.Client) error {
 	}
 
 	fmt.Printf("✓ Test user created: %s (ID: %s)\n", TestUserEmail, newUser.ID)
+	return nil
+}
+
+func seedSubscriptions(ctx context.Context, client *ent.Client) error {
+	// Get test user
+	testUser, err := client.User.Query().
+		Where(user.EmailEQ(TestUserEmail)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to find test user: %w", err)
+	}
+
+	// Check if subscription already exists
+	exists, err := client.Subscription.Query().
+		Where(subscription.HasUserWith(user.IDEQ(testUser.ID))).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check subscription: %w", err)
+	}
+
+	if exists {
+		fmt.Printf("✓ Subscription already exists for %s\n", TestUserEmail)
+		return nil
+	}
+
+	// Create subscription with free plan
+	now := time.Now()
+	_, err = client.Subscription.Create().
+		SetUserID(testUser.ID).
+		SetPlanID("free").
+		SetStatus(subscription.StatusActive).
+		SetCurrentPeriodStart(now).
+		SetCurrentPeriodEnd(now.AddDate(0, 1, 0)). // 1 month from now
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create subscription: %w", err)
+	}
+
+	fmt.Printf("✓ Subscription created for %s (Plan: free)\n", TestUserEmail)
+	return nil
+}
+
+func seedAIConfigs(ctx context.Context, client *ent.Client) error {
+	configs := []struct {
+		TaskType          string
+		Provider          string
+		Model             string
+		FallbackProviders []string
+		Temperature       float64
+		MaxTokens         int
+		ThinkingBudget    int
+		JSONMode          bool
+	}{
+		{
+			TaskType:          "default",
+			Provider:          "openai",
+			Model:             "gpt-4o",
+			FallbackProviders: []string{"gemini", "claude"},
+			Temperature:       0.7,
+			MaxTokens:         4096,
+			ThinkingBudget:    0,
+			JSONMode:          false,
+		},
+		{
+			TaskType:          "tag_extraction",
+			Provider:          "gemini",
+			Model:             "gemini-2.0-flash-exp",
+			FallbackProviders: []string{"openai"},
+			Temperature:       0.3,
+			MaxTokens:         1024,
+			ThinkingBudget:    0,
+			JSONMode:          true,
+		},
+		{
+			TaskType:          "mindmap",
+			Provider:          "claude",
+			Model:             "claude-sonnet-4-20250514",
+			FallbackProviders: []string{"openai"},
+			Temperature:       0.5,
+			MaxTokens:         8192,
+			ThinkingBudget:    10000,
+			JSONMode:          true,
+		},
+	}
+
+	for _, cfg := range configs {
+		// Check if config already exists
+		exists, err := client.AIConfig.Query().
+			Where(aiconfig.TaskTypeEQ(cfg.TaskType)).
+			Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check ai config %s: %w", cfg.TaskType, err)
+		}
+
+		if exists {
+			// Update existing config
+			_, err = client.AIConfig.Update().
+				Where(aiconfig.TaskTypeEQ(cfg.TaskType)).
+				SetProvider(cfg.Provider).
+				SetModel(cfg.Model).
+				SetFallbackProviders(cfg.FallbackProviders).
+				SetTemperature(cfg.Temperature).
+				SetMaxTokens(cfg.MaxTokens).
+				SetThinkingBudget(cfg.ThinkingBudget).
+				SetJSONMode(cfg.JSONMode).
+				SetEnabled(true).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to update ai config %s: %w", cfg.TaskType, err)
+			}
+			fmt.Printf("✓ AI config updated: %s\n", cfg.TaskType)
+		} else {
+			// Create new config
+			_, err = client.AIConfig.Create().
+				SetTaskType(cfg.TaskType).
+				SetProvider(cfg.Provider).
+				SetModel(cfg.Model).
+				SetFallbackProviders(cfg.FallbackProviders).
+				SetTemperature(cfg.Temperature).
+				SetMaxTokens(cfg.MaxTokens).
+				SetThinkingBudget(cfg.ThinkingBudget).
+				SetJSONMode(cfg.JSONMode).
+				SetEnabled(true).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create ai config %s: %w", cfg.TaskType, err)
+			}
+			fmt.Printf("✓ AI config created: %s\n", cfg.TaskType)
+		}
+	}
+
 	return nil
 }
