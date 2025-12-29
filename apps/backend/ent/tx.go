@@ -12,6 +12,10 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// AIConfig is the client for interacting with the AIConfig builders.
+	AIConfig *AIConfigClient
+	// AILog is the client for interacting with the AILog builders.
+	AILog *AILogClient
 	// Highlight is the client for interacting with the Highlight builders.
 	Highlight *HighlightClient
 	// MindmapGraph is the client for interacting with the MindmapGraph builders.
@@ -167,6 +171,8 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.AIConfig = NewAIConfigClient(tx.config)
+	tx.AILog = NewAILogClient(tx.config)
 	tx.Highlight = NewHighlightClient(tx.config)
 	tx.MindmapGraph = NewMindmapGraphClient(tx.config)
 	tx.PageVisit = NewPageVisitClient(tx.config)
@@ -188,7 +194,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Highlight.QueryXXX(), the query will be executed
+// applies a query, for example: AIConfig.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

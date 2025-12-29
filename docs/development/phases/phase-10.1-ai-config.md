@@ -54,8 +54,8 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 10.1.1 | ai_logs, ai_configs 테이블 및 Service | ⬜ |
-| 10.1.2 | Provider Manager 및 Admin API | ⬜ |
+| 10.1.1 | ai_logs, ai_configs 테이블 및 Service | ✅ |
+| 10.1.2 | Provider Manager 및 Admin API | ✅ |
 
 ---
 

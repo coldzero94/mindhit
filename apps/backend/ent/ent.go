@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/mindhit/api/ent/aiconfig"
+	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
@@ -84,6 +86,8 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			aiconfig.Table:           aiconfig.ValidColumn,
+			ailog.Table:              ailog.ValidColumn,
 			highlight.Table:          highlight.ValidColumn,
 			mindmapgraph.Table:       mindmapgraph.ValidColumn,
 			pagevisit.Table:          pagevisit.ValidColumn,

@@ -48,8 +48,8 @@ phases/
 | 7 | [Next.js 웹앱](./phase-7-webapp.md) | ✅ 완료 | 4 steps |
 | 8 | [Chrome Extension](./phase-8-extension.md) | ✅ 완료 | 5 steps |
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ✅ 완료 | 5 steps |
-| 10 | [AI Provider 인프라](./phase-10-ai.md) | ⬜ 대기 | 2 steps |
-| 10.1 | [AI 설정 및 로깅](./phase-10.1-ai-config.md) | ⬜ 대기 | 2 steps |
+| 10 | [AI Provider 인프라](./phase-10-ai.md) | ✅ 완료 | 2 steps |
+| 10.1 | [AI 설정 및 로깅](./phase-10.1-ai-config.md) | ✅ 완료 | 2 steps |
 | 10.2 | [마인드맵 생성](./phase-10.2-mindmap.md) | ⬜ 대기 | 3 steps |
 | 11 | [웹앱 대시보드](./phase-11-dashboard.md) | ⬜ 대기 | 5 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ⬜ 대기 | 4 steps |

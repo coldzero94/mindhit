@@ -18,6 +18,15 @@ type Config struct {
 	RedisURL          string
 	RedisAddr         string
 	WorkerConcurrency int
+	AI                AIConfig
+}
+
+// AIConfig holds API keys for AI providers.
+// Provider/model selection is managed in DB (ai_configs table).
+type AIConfig struct {
+	OpenAIAPIKey string
+	GeminiAPIKey string
+	ClaudeAPIKey string
 }
 
 // Load reads configuration from environment variables and returns a Config struct.
@@ -33,6 +42,11 @@ func Load() *Config {
 		RedisURL:          getEnv("REDIS_URL", "redis://localhost:6380"),
 		RedisAddr:         getEnv("REDIS_ADDR", "localhost:6380"),
 		WorkerConcurrency: getEnvInt("WORKER_CONCURRENCY", 10),
+		AI: AIConfig{
+			OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
+			GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
+			ClaudeAPIKey: getEnv("CLAUDE_API_KEY", ""),
+		},
 	}
 }
 

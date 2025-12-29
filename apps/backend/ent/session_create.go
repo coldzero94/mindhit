@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
@@ -255,6 +256,21 @@ func (_c *SessionCreate) AddTokenUsage(v ...*TokenUsage) *SessionCreate {
 		ids[i] = v[i].ID
 	}
 	return _c.AddTokenUsageIDs(ids...)
+}
+
+// AddAiLogIDs adds the "ai_logs" edge to the AILog entity by IDs.
+func (_c *SessionCreate) AddAiLogIDs(ids ...uuid.UUID) *SessionCreate {
+	_c.mutation.AddAiLogIDs(ids...)
+	return _c
+}
+
+// AddAiLogs adds the "ai_logs" edges to the AILog entity.
+func (_c *SessionCreate) AddAiLogs(v ...*AILog) *SessionCreate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddAiLogIDs(ids...)
 }
 
 // Mutation returns the SessionMutation object of the builder.
@@ -509,6 +525,22 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.AiLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   session.AiLogsTable,
+			Columns: []string{session.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

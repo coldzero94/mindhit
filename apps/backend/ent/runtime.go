@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mindhit/api/ent/aiconfig"
+	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
@@ -25,6 +27,96 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	aiconfigFields := schema.AIConfig{}.Fields()
+	_ = aiconfigFields
+	// aiconfigDescTaskType is the schema descriptor for task_type field.
+	aiconfigDescTaskType := aiconfigFields[0].Descriptor()
+	// aiconfig.TaskTypeValidator is a validator for the "task_type" field. It is called by the builders before save.
+	aiconfig.TaskTypeValidator = aiconfigDescTaskType.Validators[0].(func(string) error)
+	// aiconfigDescProvider is the schema descriptor for provider field.
+	aiconfigDescProvider := aiconfigFields[1].Descriptor()
+	// aiconfig.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
+	aiconfig.ProviderValidator = aiconfigDescProvider.Validators[0].(func(string) error)
+	// aiconfigDescModel is the schema descriptor for model field.
+	aiconfigDescModel := aiconfigFields[2].Descriptor()
+	// aiconfig.ModelValidator is a validator for the "model" field. It is called by the builders before save.
+	aiconfig.ModelValidator = aiconfigDescModel.Validators[0].(func(string) error)
+	// aiconfigDescTemperature is the schema descriptor for temperature field.
+	aiconfigDescTemperature := aiconfigFields[4].Descriptor()
+	// aiconfig.DefaultTemperature holds the default value on creation for the temperature field.
+	aiconfig.DefaultTemperature = aiconfigDescTemperature.Default.(float64)
+	// aiconfigDescMaxTokens is the schema descriptor for max_tokens field.
+	aiconfigDescMaxTokens := aiconfigFields[5].Descriptor()
+	// aiconfig.DefaultMaxTokens holds the default value on creation for the max_tokens field.
+	aiconfig.DefaultMaxTokens = aiconfigDescMaxTokens.Default.(int)
+	// aiconfigDescThinkingBudget is the schema descriptor for thinking_budget field.
+	aiconfigDescThinkingBudget := aiconfigFields[6].Descriptor()
+	// aiconfig.DefaultThinkingBudget holds the default value on creation for the thinking_budget field.
+	aiconfig.DefaultThinkingBudget = aiconfigDescThinkingBudget.Default.(int)
+	// aiconfigDescJSONMode is the schema descriptor for json_mode field.
+	aiconfigDescJSONMode := aiconfigFields[7].Descriptor()
+	// aiconfig.DefaultJSONMode holds the default value on creation for the json_mode field.
+	aiconfig.DefaultJSONMode = aiconfigDescJSONMode.Default.(bool)
+	// aiconfigDescEnabled is the schema descriptor for enabled field.
+	aiconfigDescEnabled := aiconfigFields[8].Descriptor()
+	// aiconfig.DefaultEnabled holds the default value on creation for the enabled field.
+	aiconfig.DefaultEnabled = aiconfigDescEnabled.Default.(bool)
+	// aiconfigDescCreatedAt is the schema descriptor for created_at field.
+	aiconfigDescCreatedAt := aiconfigFields[10].Descriptor()
+	// aiconfig.DefaultCreatedAt holds the default value on creation for the created_at field.
+	aiconfig.DefaultCreatedAt = aiconfigDescCreatedAt.Default.(func() time.Time)
+	// aiconfigDescUpdatedAt is the schema descriptor for updated_at field.
+	aiconfigDescUpdatedAt := aiconfigFields[11].Descriptor()
+	// aiconfig.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	aiconfig.DefaultUpdatedAt = aiconfigDescUpdatedAt.Default.(func() time.Time)
+	// aiconfig.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	aiconfig.UpdateDefaultUpdatedAt = aiconfigDescUpdatedAt.UpdateDefault.(func() time.Time)
+	ailogFields := schema.AILog{}.Fields()
+	_ = ailogFields
+	// ailogDescTaskType is the schema descriptor for task_type field.
+	ailogDescTaskType := ailogFields[3].Descriptor()
+	// ailog.TaskTypeValidator is a validator for the "task_type" field. It is called by the builders before save.
+	ailog.TaskTypeValidator = ailogDescTaskType.Validators[0].(func(string) error)
+	// ailogDescProvider is the schema descriptor for provider field.
+	ailogDescProvider := ailogFields[4].Descriptor()
+	// ailog.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
+	ailog.ProviderValidator = ailogDescProvider.Validators[0].(func(string) error)
+	// ailogDescModel is the schema descriptor for model field.
+	ailogDescModel := ailogFields[5].Descriptor()
+	// ailog.ModelValidator is a validator for the "model" field. It is called by the builders before save.
+	ailog.ModelValidator = ailogDescModel.Validators[0].(func(string) error)
+	// ailogDescInputTokens is the schema descriptor for input_tokens field.
+	ailogDescInputTokens := ailogFields[10].Descriptor()
+	// ailog.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	ailog.DefaultInputTokens = ailogDescInputTokens.Default.(int)
+	// ailogDescOutputTokens is the schema descriptor for output_tokens field.
+	ailogDescOutputTokens := ailogFields[11].Descriptor()
+	// ailog.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	ailog.DefaultOutputTokens = ailogDescOutputTokens.Default.(int)
+	// ailogDescThinkingTokens is the schema descriptor for thinking_tokens field.
+	ailogDescThinkingTokens := ailogFields[12].Descriptor()
+	// ailog.DefaultThinkingTokens holds the default value on creation for the thinking_tokens field.
+	ailog.DefaultThinkingTokens = ailogDescThinkingTokens.Default.(int)
+	// ailogDescTotalTokens is the schema descriptor for total_tokens field.
+	ailogDescTotalTokens := ailogFields[13].Descriptor()
+	// ailog.DefaultTotalTokens holds the default value on creation for the total_tokens field.
+	ailog.DefaultTotalTokens = ailogDescTotalTokens.Default.(int)
+	// ailogDescLatencyMs is the schema descriptor for latency_ms field.
+	ailogDescLatencyMs := ailogFields[14].Descriptor()
+	// ailog.DefaultLatencyMs holds the default value on creation for the latency_ms field.
+	ailog.DefaultLatencyMs = ailogDescLatencyMs.Default.(int64)
+	// ailogDescEstimatedCostCents is the schema descriptor for estimated_cost_cents field.
+	ailogDescEstimatedCostCents := ailogFields[18].Descriptor()
+	// ailog.DefaultEstimatedCostCents holds the default value on creation for the estimated_cost_cents field.
+	ailog.DefaultEstimatedCostCents = ailogDescEstimatedCostCents.Default.(int)
+	// ailogDescCreatedAt is the schema descriptor for created_at field.
+	ailogDescCreatedAt := ailogFields[20].Descriptor()
+	// ailog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	ailog.DefaultCreatedAt = ailogDescCreatedAt.Default.(func() time.Time)
+	// ailogDescID is the schema descriptor for id field.
+	ailogDescID := ailogFields[0].Descriptor()
+	// ailog.DefaultID holds the default value on creation for the id field.
+	ailog.DefaultID = ailogDescID.Default.(func() uuid.UUID)
 	highlightMixin := schema.Highlight{}.Mixin()
 	highlightMixinFields0 := highlightMixin[0].Fields()
 	_ = highlightMixinFields0

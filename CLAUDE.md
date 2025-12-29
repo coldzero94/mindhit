@@ -154,8 +154,9 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 7 | ✅ Done | Next.js Web App |
 | Phase 8 | ✅ Done | Chrome Extension |
 | Phase 9 | ✅ Done | Plan & Usage System |
-| Phase 10 | ⬜ Pending | AI Provider Infrastructure |
-| Phase 10.1 | ⬜ Pending | Mindmap Generation |
+| Phase 10 | ✅ Done | AI Provider Infrastructure |
+| Phase 10.1 | ✅ Done | AI Settings & Logging |
+| Phase 10.2 | ⬜ Pending | Mindmap Generation |
 | Phase 11 | ⬜ Pending | Web App Dashboard |
 | Phase 12 | ⬜ Pending | Production Monitoring |
 | Phase 13 | ⬜ Pending | Deployment & Operations |
@@ -170,6 +171,8 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-29] Phase 10.1 completed: AI Settings & Logging - ai_logs/ai_configs tables, AILogService, AIConfigService (5-min caching), ProviderManager with DB config + fallback support
+- [2025-12-29] Phase 10 completed: AI Provider Infrastructure - Unified ChatRequest/ChatResponse types, OpenAI/Gemini/Claude provider implementations, Streaming support
 - [2025-12-28] Phase 2.1 completed: Google OAuth - Google Identity Services (GIS) integration, OAuthService, OAuthController, Google Sign-In button on login/signup pages
 - [2025-12-28] Phase 9 completed: Plan & Usage System - Plan/Subscription/TokenUsage schemas, UsageService, SubscriptionService, Subscription and Usage API endpoints
 - [2025-12-28] Phase 8 completed: Chrome Extension - Side Panel UI, Session control, Event collection (page_visit, scroll, highlight), Batch sending with offline support

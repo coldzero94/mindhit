@@ -56,6 +56,7 @@ func (Session) Edges() []ent.Edge {
 		edge.To("mindmap", MindmapGraph.Type).
 			Unique(),
 		edge.To("token_usage", TokenUsage.Type),
+		edge.To("ai_logs", AILog.Type),
 	}
 }
 

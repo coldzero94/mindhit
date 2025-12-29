@@ -46,6 +46,8 @@ const (
 	EdgeMindmap = "mindmap"
 	// EdgeTokenUsage holds the string denoting the token_usage edge name in mutations.
 	EdgeTokenUsage = "token_usage"
+	// EdgeAiLogs holds the string denoting the ai_logs edge name in mutations.
+	EdgeAiLogs = "ai_logs"
 	// Table holds the table name of the session in the database.
 	Table = "sessions"
 	// UserTable is the table that holds the user relation/edge.
@@ -90,6 +92,13 @@ const (
 	TokenUsageInverseTable = "token_usages"
 	// TokenUsageColumn is the table column denoting the token_usage relation/edge.
 	TokenUsageColumn = "session_token_usage"
+	// AiLogsTable is the table that holds the ai_logs relation/edge.
+	AiLogsTable = "ai_logs"
+	// AiLogsInverseTable is the table name for the AILog entity.
+	// It exists in this package in order to avoid circular dependency with the "ailog" package.
+	AiLogsInverseTable = "ai_logs"
+	// AiLogsColumn is the table column denoting the ai_logs relation/edge.
+	AiLogsColumn = "session_id"
 )
 
 // Columns holds all SQL columns for session fields.
@@ -317,6 +326,20 @@ func ByTokenUsage(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTokenUsageStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByAiLogsCount orders the results by ai_logs count.
+func ByAiLogsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newAiLogsStep(), opts...)
+	}
+}
+
+// ByAiLogs orders the results by ai_logs terms.
+func ByAiLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newAiLogsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -357,5 +380,12 @@ func newTokenUsageStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TokenUsageInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TokenUsageTable, TokenUsageColumn),
+	)
+}
+func newAiLogsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(AiLogsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, AiLogsTable, AiLogsColumn),
 	)
 }

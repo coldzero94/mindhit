@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
@@ -36,6 +37,7 @@ type SessionQuery struct {
 	withRawEvents  *RawEventQuery
 	withMindmap    *MindmapGraphQuery
 	withTokenUsage *TokenUsageQuery
+	withAiLogs     *AILogQuery
 	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -198,6 +200,28 @@ func (_q *SessionQuery) QueryTokenUsage() *TokenUsageQuery {
 			sqlgraph.From(session.Table, session.FieldID, selector),
 			sqlgraph.To(tokenusage.Table, tokenusage.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, session.TokenUsageTable, session.TokenUsageColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAiLogs chains the current query on the "ai_logs" edge.
+func (_q *SessionQuery) QueryAiLogs() *AILogQuery {
+	query := (&AILogClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(session.Table, session.FieldID, selector),
+			sqlgraph.To(ailog.Table, ailog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, session.AiLogsTable, session.AiLogsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -403,6 +427,7 @@ func (_q *SessionQuery) Clone() *SessionQuery {
 		withRawEvents:  _q.withRawEvents.Clone(),
 		withMindmap:    _q.withMindmap.Clone(),
 		withTokenUsage: _q.withTokenUsage.Clone(),
+		withAiLogs:     _q.withAiLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -472,6 +497,17 @@ func (_q *SessionQuery) WithTokenUsage(opts ...func(*TokenUsageQuery)) *SessionQ
 		opt(query)
 	}
 	_q.withTokenUsage = query
+	return _q
+}
+
+// WithAiLogs tells the query-builder to eager-load the nodes that are connected to
+// the "ai_logs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *SessionQuery) WithAiLogs(opts ...func(*AILogQuery)) *SessionQuery {
+	query := (&AILogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAiLogs = query
 	return _q
 }
 
@@ -554,13 +590,14 @@ func (_q *SessionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sess
 		nodes       = []*Session{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			_q.withUser != nil,
 			_q.withPageVisits != nil,
 			_q.withHighlights != nil,
 			_q.withRawEvents != nil,
 			_q.withMindmap != nil,
 			_q.withTokenUsage != nil,
+			_q.withAiLogs != nil,
 		}
 	)
 	if _q.withUser != nil {
@@ -624,6 +661,13 @@ func (_q *SessionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Sess
 		if err := _q.loadTokenUsage(ctx, query, nodes,
 			func(n *Session) { n.Edges.TokenUsage = []*TokenUsage{} },
 			func(n *Session, e *TokenUsage) { n.Edges.TokenUsage = append(n.Edges.TokenUsage, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAiLogs; query != nil {
+		if err := _q.loadAiLogs(ctx, query, nodes,
+			func(n *Session) { n.Edges.AiLogs = []*AILog{} },
+			func(n *Session, e *AILog) { n.Edges.AiLogs = append(n.Edges.AiLogs, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -809,6 +853,39 @@ func (_q *SessionQuery) loadTokenUsage(ctx context.Context, query *TokenUsageQue
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "session_token_usage" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *SessionQuery) loadAiLogs(ctx context.Context, query *AILogQuery, nodes []*Session, init func(*Session), assign func(*Session, *AILog)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Session)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(ailog.FieldSessionID)
+	}
+	query.Where(predicate.AILog(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(session.AiLogsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.SessionID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "session_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "session_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

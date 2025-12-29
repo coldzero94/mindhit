@@ -6,6 +6,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// AIConfig is the predicate function for aiconfig builders.
+type AIConfig func(*sql.Selector)
+
+// AILog is the predicate function for ailog builders.
+type AILog func(*sql.Selector)
+
 // Highlight is the predicate function for highlight builders.
 type Highlight func(*sql.Selector)
 

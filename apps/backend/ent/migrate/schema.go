@@ -8,6 +8,111 @@ import (
 )
 
 var (
+	// AiConfigsColumns holds the columns for the "ai_configs" table.
+	AiConfigsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "task_type", Type: field.TypeString, Unique: true},
+		{Name: "provider", Type: field.TypeString},
+		{Name: "model", Type: field.TypeString},
+		{Name: "fallback_providers", Type: field.TypeJSON, Nullable: true},
+		{Name: "temperature", Type: field.TypeFloat64, Default: 0.7},
+		{Name: "max_tokens", Type: field.TypeInt, Default: 4096},
+		{Name: "thinking_budget", Type: field.TypeInt, Default: 0},
+		{Name: "json_mode", Type: field.TypeBool, Default: false},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "updated_by", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// AiConfigsTable holds the schema information for the "ai_configs" table.
+	AiConfigsTable = &schema.Table{
+		Name:       "ai_configs",
+		Columns:    AiConfigsColumns,
+		PrimaryKey: []*schema.Column{AiConfigsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "aiconfig_task_type",
+				Unique:  true,
+				Columns: []*schema.Column{AiConfigsColumns[1]},
+			},
+			{
+				Name:    "aiconfig_provider_model",
+				Unique:  false,
+				Columns: []*schema.Column{AiConfigsColumns[2], AiConfigsColumns[3]},
+			},
+		},
+	}
+	// AiLogsColumns holds the columns for the "ai_logs" table.
+	AiLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "task_type", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString},
+		{Name: "model", Type: field.TypeString},
+		{Name: "system_prompt", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "user_prompt", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "thinking", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "content", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "input_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "output_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "thinking_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "total_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "latency_ms", Type: field.TypeInt64, Default: 0},
+		{Name: "request_id", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"success", "error", "timeout"}, Default: "success"},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "estimated_cost_cents", Type: field.TypeInt, Default: 0},
+		{Name: "metadata", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "session_id", Type: field.TypeUUID, Nullable: true},
+		{Name: "user_id", Type: field.TypeUUID, Nullable: true},
+	}
+	// AiLogsTable holds the schema information for the "ai_logs" table.
+	AiLogsTable = &schema.Table{
+		Name:       "ai_logs",
+		Columns:    AiLogsColumns,
+		PrimaryKey: []*schema.Column{AiLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "ai_logs_sessions_ai_logs",
+				Columns:    []*schema.Column{AiLogsColumns[19]},
+				RefColumns: []*schema.Column{SessionsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "ai_logs_users_ai_logs",
+				Columns:    []*schema.Column{AiLogsColumns[20]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ailog_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AiLogsColumns[20], AiLogsColumns[18]},
+			},
+			{
+				Name:    "ailog_session_id",
+				Unique:  false,
+				Columns: []*schema.Column{AiLogsColumns[19]},
+			},
+			{
+				Name:    "ailog_task_type_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AiLogsColumns[1], AiLogsColumns[18]},
+			},
+			{
+				Name:    "ailog_provider_model_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AiLogsColumns[2], AiLogsColumns[3], AiLogsColumns[18]},
+			},
+			{
+				Name:    "ailog_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{AiLogsColumns[14], AiLogsColumns[18]},
+			},
+		},
+	}
 	// HighlightsColumns holds the columns for the "highlights" table.
 	HighlightsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -423,6 +528,8 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AiConfigsTable,
+		AiLogsTable,
 		HighlightsTable,
 		MindmapGraphsTable,
 		PageVisitsTable,
@@ -439,6 +546,8 @@ var (
 )
 
 func init() {
+	AiLogsTable.ForeignKeys[0].RefTable = SessionsTable
+	AiLogsTable.ForeignKeys[1].RefTable = UsersTable
 	HighlightsTable.ForeignKeys[0].RefTable = PageVisitsTable
 	HighlightsTable.ForeignKeys[1].RefTable = SessionsTable
 	MindmapGraphsTable.ForeignKeys[0].RefTable = SessionsTable

@@ -9,6 +9,30 @@ import (
 	"github.com/mindhit/api/ent"
 )
 
+// The AIConfigFunc type is an adapter to allow the use of ordinary
+// function as AIConfig mutator.
+type AIConfigFunc func(context.Context, *ent.AIConfigMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AIConfigFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AIConfigMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AIConfigMutation", m)
+}
+
+// The AILogFunc type is an adapter to allow the use of ordinary
+// function as AILog mutator.
+type AILogFunc func(context.Context, *ent.AILogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AILogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AILogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AILogMutation", m)
+}
+
 // The HighlightFunc type is an adapter to allow the use of ordinary
 // function as Highlight mutator.
 type HighlightFunc func(context.Context, *ent.HighlightMutation) (ent.Value, error)

@@ -60,9 +60,11 @@ type SessionEdges struct {
 	Mindmap *MindmapGraph `json:"mindmap,omitempty"`
 	// TokenUsage holds the value of the token_usage edge.
 	TokenUsage []*TokenUsage `json:"token_usage,omitempty"`
+	// AiLogs holds the value of the ai_logs edge.
+	AiLogs []*AILog `json:"ai_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -121,6 +123,15 @@ func (e SessionEdges) TokenUsageOrErr() ([]*TokenUsage, error) {
 		return e.TokenUsage, nil
 	}
 	return nil, &NotLoadedError{edge: "token_usage"}
+}
+
+// AiLogsOrErr returns the AiLogs value or an error if the edge
+// was not loaded in eager-loading.
+func (e SessionEdges) AiLogsOrErr() ([]*AILog, error) {
+	if e.loadedTypes[6] {
+		return e.AiLogs, nil
+	}
+	return nil, &NotLoadedError{edge: "ai_logs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -263,6 +274,11 @@ func (_m *Session) QueryMindmap() *MindmapGraphQuery {
 // QueryTokenUsage queries the "token_usage" edge of the Session entity.
 func (_m *Session) QueryTokenUsage() *TokenUsageQuery {
 	return NewSessionClient(_m.config).QueryTokenUsage(_m)
+}
+
+// QueryAiLogs queries the "ai_logs" edge of the Session entity.
+func (_m *Session) QueryAiLogs() *AILogQuery {
+	return NewSessionClient(_m.config).QueryAiLogs(_m)
 }
 
 // Update returns a builder for updating this Session.

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/session"
@@ -241,6 +242,21 @@ func (_u *UserUpdate) AddTokenUsage(v ...*TokenUsage) *UserUpdate {
 	return _u.AddTokenUsageIDs(ids...)
 }
 
+// AddAiLogIDs adds the "ai_logs" edge to the AILog entity by IDs.
+func (_u *UserUpdate) AddAiLogIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.AddAiLogIDs(ids...)
+	return _u
+}
+
+// AddAiLogs adds the "ai_logs" edges to the AILog entity.
+func (_u *UserUpdate) AddAiLogs(v ...*AILog) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAiLogIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdate) Mutation() *UserMutation {
 	return _u.mutation
@@ -334,6 +350,27 @@ func (_u *UserUpdate) RemoveTokenUsage(v ...*TokenUsage) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTokenUsageIDs(ids...)
+}
+
+// ClearAiLogs clears all "ai_logs" edges to the AILog entity.
+func (_u *UserUpdate) ClearAiLogs() *UserUpdate {
+	_u.mutation.ClearAiLogs()
+	return _u
+}
+
+// RemoveAiLogIDs removes the "ai_logs" edge to AILog entities by IDs.
+func (_u *UserUpdate) RemoveAiLogIDs(ids ...uuid.UUID) *UserUpdate {
+	_u.mutation.RemoveAiLogIDs(ids...)
+	return _u
+}
+
+// RemoveAiLogs removes "ai_logs" edges to AILog entities.
+func (_u *UserUpdate) RemoveAiLogs(v ...*AILog) *UserUpdate {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAiLogIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -649,6 +686,51 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.AiLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AiLogsTable,
+			Columns: []string{user.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAiLogsIDs(); len(nodes) > 0 && !_u.mutation.AiLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AiLogsTable,
+			Columns: []string{user.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AiLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AiLogsTable,
+			Columns: []string{user.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -876,6 +958,21 @@ func (_u *UserUpdateOne) AddTokenUsage(v ...*TokenUsage) *UserUpdateOne {
 	return _u.AddTokenUsageIDs(ids...)
 }
 
+// AddAiLogIDs adds the "ai_logs" edge to the AILog entity by IDs.
+func (_u *UserUpdateOne) AddAiLogIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.AddAiLogIDs(ids...)
+	return _u
+}
+
+// AddAiLogs adds the "ai_logs" edges to the AILog entity.
+func (_u *UserUpdateOne) AddAiLogs(v ...*AILog) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddAiLogIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (_u *UserUpdateOne) Mutation() *UserMutation {
 	return _u.mutation
@@ -969,6 +1066,27 @@ func (_u *UserUpdateOne) RemoveTokenUsage(v ...*TokenUsage) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTokenUsageIDs(ids...)
+}
+
+// ClearAiLogs clears all "ai_logs" edges to the AILog entity.
+func (_u *UserUpdateOne) ClearAiLogs() *UserUpdateOne {
+	_u.mutation.ClearAiLogs()
+	return _u
+}
+
+// RemoveAiLogIDs removes the "ai_logs" edge to AILog entities by IDs.
+func (_u *UserUpdateOne) RemoveAiLogIDs(ids ...uuid.UUID) *UserUpdateOne {
+	_u.mutation.RemoveAiLogIDs(ids...)
+	return _u
+}
+
+// RemoveAiLogs removes "ai_logs" edges to AILog entities.
+func (_u *UserUpdateOne) RemoveAiLogs(v ...*AILog) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveAiLogIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -1307,6 +1425,51 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.AiLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AiLogsTable,
+			Columns: []string{user.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedAiLogsIDs(); len(nodes) > 0 && !_u.mutation.AiLogsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AiLogsTable,
+			Columns: []string{user.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.AiLogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AiLogsTable,
+			Columns: []string{user.AiLogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(ailog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

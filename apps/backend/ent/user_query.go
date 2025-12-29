@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/session"
@@ -34,6 +35,7 @@ type UserQuery struct {
 	withPasswordResetTokens *PasswordResetTokenQuery
 	withSubscriptions       *SubscriptionQuery
 	withTokenUsage          *TokenUsageQuery
+	withAiLogs              *AILogQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -173,6 +175,28 @@ func (_q *UserQuery) QueryTokenUsage() *TokenUsageQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(tokenusage.Table, tokenusage.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.TokenUsageTable, user.TokenUsageColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAiLogs chains the current query on the "ai_logs" edge.
+func (_q *UserQuery) QueryAiLogs() *AILogQuery {
+	query := (&AILogClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(ailog.Table, ailog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AiLogsTable, user.AiLogsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -377,6 +401,7 @@ func (_q *UserQuery) Clone() *UserQuery {
 		withPasswordResetTokens: _q.withPasswordResetTokens.Clone(),
 		withSubscriptions:       _q.withSubscriptions.Clone(),
 		withTokenUsage:          _q.withTokenUsage.Clone(),
+		withAiLogs:              _q.withAiLogs.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -435,6 +460,17 @@ func (_q *UserQuery) WithTokenUsage(opts ...func(*TokenUsageQuery)) *UserQuery {
 		opt(query)
 	}
 	_q.withTokenUsage = query
+	return _q
+}
+
+// WithAiLogs tells the query-builder to eager-load the nodes that are connected to
+// the "ai_logs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UserQuery) WithAiLogs(opts ...func(*AILogQuery)) *UserQuery {
+	query := (&AILogClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAiLogs = query
 	return _q
 }
 
@@ -516,12 +552,13 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 	var (
 		nodes       = []*User{}
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withSettings != nil,
 			_q.withSessions != nil,
 			_q.withPasswordResetTokens != nil,
 			_q.withSubscriptions != nil,
 			_q.withTokenUsage != nil,
+			_q.withAiLogs != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -575,6 +612,13 @@ func (_q *UserQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*User, e
 		if err := _q.loadTokenUsage(ctx, query, nodes,
 			func(n *User) { n.Edges.TokenUsage = []*TokenUsage{} },
 			func(n *User, e *TokenUsage) { n.Edges.TokenUsage = append(n.Edges.TokenUsage, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAiLogs; query != nil {
+		if err := _q.loadAiLogs(ctx, query, nodes,
+			func(n *User) { n.Edges.AiLogs = []*AILog{} },
+			func(n *User, e *AILog) { n.Edges.AiLogs = append(n.Edges.AiLogs, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -727,6 +771,39 @@ func (_q *UserQuery) loadTokenUsage(ctx context.Context, query *TokenUsageQuery,
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "user_token_usage" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *UserQuery) loadAiLogs(ctx context.Context, query *AILogQuery, nodes []*User, init func(*User), assign func(*User, *AILog)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*User)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(ailog.FieldUserID)
+	}
+	query.Where(predicate.AILog(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(user.AiLogsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.UserID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "user_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "user_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
