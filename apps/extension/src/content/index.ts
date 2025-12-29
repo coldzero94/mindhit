@@ -33,6 +33,7 @@ chrome.runtime.onMessage.addListener((message) => {
 
 function startRecording(): void {
   if (isRecording) return;
+
   isRecording = true;
   pageEnteredAt = Date.now();
   maxScrollDepth = 0;

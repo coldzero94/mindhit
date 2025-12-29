@@ -1,9 +1,11 @@
 import type { BrowsingEvent } from "@/types";
 import { getAuthToken } from "@/lib/auth-utils";
-import { API_BASE_URL } from "@/lib/constants";
+import {
+  API_BASE_URL,
+  EVENT_BATCH_SIZE,
+  EVENT_FLUSH_INTERVAL,
+} from "@/lib/constants";
 
-const BATCH_SIZE = 10;
-const FLUSH_INTERVAL = 30000; // 30 seconds
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 
 interface SessionState {
@@ -80,8 +82,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (state.isRecording && state.sessionId) {
         state.events.push(message.event);
 
-        // Send events every BATCH_SIZE events
-        if (state.events.length >= BATCH_SIZE) {
+        // Send events every EVENT_BATCH_SIZE events
+        if (state.events.length >= EVENT_BATCH_SIZE) {
           flushEvents();
         }
       }
@@ -120,7 +122,7 @@ function startFlushInterval(): void {
     if (state.isRecording && state.events.length > 0) {
       flushEvents();
     }
-  }, FLUSH_INTERVAL);
+  }, EVENT_FLUSH_INTERVAL);
 }
 
 // Stop flush interval when not recording
@@ -164,26 +166,32 @@ async function flushEvents(): Promise<void> {
 
   try {
     const token = await getAuthToken();
-    if (!token) return;
+    if (!token) {
+      console.error("[MindHit] No auth token, cannot send events");
+      return;
+    }
 
-    const response = await fetchWithTimeout(`${API_BASE_URL}/events/batch`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        session_id: state.sessionId,
-        events: eventsToSend,
-      }),
-    });
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/sessions/${state.sessionId}/events`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          events: eventsToSend,
+        }),
+      }
+    );
 
     if (!response.ok) {
+      console.error("[MindHit] Failed to send events:", response.status, response.statusText);
       // Re-add to queue on failure
       state.events = [...eventsToSend, ...state.events];
     }
   } catch (error) {
-    console.error("Failed to send events:", error);
+    console.error("[MindHit] Failed to send events:", error);
     state.events = [...eventsToSend, ...state.events];
   }
 }
@@ -212,21 +220,22 @@ async function retryPendingEvents(): Promise<void> {
         const token = await getAuthToken();
         if (!token) continue;
 
-        const response = await fetchWithTimeout(`${API_BASE_URL}/events/batch`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            session_id: state.sessionId,
-            events,
-          }),
-        });
+        const response = await fetchWithTimeout(
+          `${API_BASE_URL}/sessions/${state.sessionId}/events`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              events,
+            }),
+          }
+        );
 
         if (response.ok) {
           await chrome.storage.local.remove(key);
-          console.log(`Retried ${events.length} pending events`);
         }
       } catch (error) {
         console.error("Failed to retry pending events:", error);

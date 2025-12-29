@@ -7,7 +7,7 @@ import { LoginPrompt } from "./components/LoginPrompt";
 
 export function App() {
   const { isAuthenticated, user, logout } = useAuthStore();
-  const { status, updateElapsedTime } = useSessionStore();
+  const { status, updateElapsedTime, incrementPageCount, incrementHighlightCount } = useSessionStore();
 
   // Update elapsed time
   useEffect(() => {
@@ -16,6 +16,20 @@ export function App() {
       return () => clearInterval(interval);
     }
   }, [status, updateElapsedTime]);
+
+  // Listen for page count and highlight count updates from content scripts
+  useEffect(() => {
+    const handleMessage = (message: { type: string }) => {
+      if (message.type === "INCREMENT_PAGE_COUNT") {
+        incrementPageCount();
+      } else if (message.type === "INCREMENT_HIGHLIGHT_COUNT") {
+        incrementHighlightCount();
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(handleMessage);
+    return () => chrome.runtime.onMessage.removeListener(handleMessage);
+  }, [incrementPageCount, incrementHighlightCount]);
 
   if (!isAuthenticated) {
     return <LoginPrompt />;
