@@ -230,7 +230,7 @@ export default function SessionDetailPage() {
                   <div className="text-sm text-gray-400 ml-4 shrink-0">
                     {visit.duration_ms
                       ? `${Math.floor(visit.duration_ms / 60000)}분 ${Math.floor((visit.duration_ms % 60000) / 1000)}초`
-                      : format(new Date(visit.visited_at), "HH:mm")}
+                      : format(new Date(visit.visited_at), "HH:mm:ss")}
                   </div>
                 </li>
               ))}
