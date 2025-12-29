@@ -17,7 +17,7 @@ export function LoginPrompt() {
     try {
       const response = await api.login(email, password);
       setAuth(response.user, response.token);
-    } catch (err) {
+    } catch {
       setError("Login failed. Please check your email and password.");
     } finally {
       setIsLoading(false);
