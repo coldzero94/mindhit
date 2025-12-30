@@ -3,7 +3,7 @@
   "name": "MindHit",
   "version": "1.0.0",
   "description": "Transform your browsing history into knowledge",
-  "permissions": ["storage", "tabs", "activeTab", "sidePanel", "scripting"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "src/background/index.ts",
@@ -16,11 +16,9 @@
       "run_at": "document_idle"
     }
   ],
-  "side_panel": {
-    "default_path": "src/sidepanel/index.html"
-  },
   "action": {
-    "default_title": "MindHit"
+    "default_title": "MindHit",
+    "default_popup": "src/popup/index.html"
   },
   "icons": {
     "16": "public/icons/icon16.png",

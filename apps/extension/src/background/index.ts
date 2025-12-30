@@ -12,18 +12,39 @@ interface SessionState {
   isRecording: boolean;
   sessionId: string | null;
   events: BrowsingEvent[];
+  pageCount: number;
 }
 
 const state: SessionState = {
   isRecording: false,
   sessionId: null,
   events: [],
+  pageCount: 0,
 };
 
 let flushIntervalId: ReturnType<typeof setInterval> | null = null;
 
-// Open Side Panel when Extension icon is clicked
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+// Badge helper functions
+function updateBadge(): void {
+  if (state.isRecording) {
+    // Show page count when recording
+    const text = state.pageCount > 0 ? String(state.pageCount) : "";
+    chrome.action.setBadgeText({ text });
+    chrome.action.setBadgeBackgroundColor({ color: "#EF4444" }); // Red
+  } else if (state.sessionId) {
+    // Paused state
+    chrome.action.setBadgeText({ text: "||" });
+    chrome.action.setBadgeBackgroundColor({ color: "#F59E0B" }); // Yellow
+  } else {
+    // Idle state - clear badge
+    chrome.action.setBadgeText({ text: "" });
+  }
+}
+
+function resetBadge(): void {
+  state.pageCount = 0;
+  chrome.action.setBadgeText({ text: "" });
+}
 
 // Valid message types from extension
 const VALID_MESSAGE_TYPES = [
@@ -54,20 +75,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       state.isRecording = true;
       state.sessionId = message.sessionId;
       state.events = [];
+      state.pageCount = 0;
       startFlushInterval();
       notifyContentScripts("START_RECORDING");
+      updateBadge();
       break;
 
     case "SESSION_PAUSED":
       state.isRecording = false;
       stopFlushInterval();
       notifyContentScripts("PAUSE_RECORDING");
+      updateBadge();
       break;
 
     case "SESSION_RESUMED":
       state.isRecording = true;
       startFlushInterval();
       notifyContentScripts("RESUME_RECORDING");
+      updateBadge();
       break;
 
     case "SESSION_STOPPED":
@@ -76,6 +101,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       stopFlushInterval();
       flushEvents();
       notifyContentScripts("STOP_RECORDING");
+      resetBadge();
       break;
 
     case "EVENT":
@@ -97,8 +123,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case "INCREMENT_PAGE_COUNT":
+      // Update badge with page count
+      state.pageCount++;
+      updateBadge();
+      break;
+
     case "INCREMENT_HIGHLIGHT_COUNT":
-      // These messages are for Side Panel to handle via store
+      // Pass through for popup to handle via store
       break;
   }
 

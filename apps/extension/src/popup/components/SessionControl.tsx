@@ -94,11 +94,11 @@ export function SessionControl() {
 
   if (status === "idle") {
     return (
-      <div className="bg-white rounded-xl p-6 shadow-sm">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+      <div className="bg-white rounded-lg p-4 shadow-sm">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-blue-600"
+              className="w-6 h-6 text-blue-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -118,26 +118,26 @@ export function SessionControl() {
             </svg>
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">Start New Session</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Record your browsing activity and generate mindmaps
+            <h2 className="font-semibold text-gray-900 text-sm">Start New Session</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Record your browsing activity
             </p>
           </div>
           <button
             onClick={handleStart}
             disabled={isLoading}
-            className="btn btn-primary w-full"
+            className="btn btn-primary w-full text-sm py-2"
           >
             {isLoading ? "Starting..." : "Start Recording"}
           </button>
           {error && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-start gap-2">
                 <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 <div className="flex-1">
-                  <p className="text-sm text-red-700">{error.message}</p>
+                  <p className="text-xs text-red-700">{error.message}</p>
                   <button
                     onClick={clearError}
                     className="text-xs text-red-600 underline mt-1"
@@ -154,30 +154,30 @@ export function SessionControl() {
   }
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-lg p-3 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div
-            className={`w-3 h-3 rounded-full ${
+            className={`w-2.5 h-2.5 rounded-full ${
               status === "recording"
                 ? "bg-red-500 animate-pulse"
                 : "bg-yellow-500"
             }`}
           />
-          <span className="font-medium text-gray-900">
+          <span className="font-medium text-gray-900 text-sm">
             {status === "recording" ? "Recording" : "Paused"}
           </span>
         </div>
       </div>
 
       {error && (
-        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-lg">
           <div className="flex items-start gap-2">
             <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
             <div className="flex-1">
-              <p className="text-sm text-red-700">{error.message}</p>
+              <p className="text-xs text-red-700">{error.message}</p>
               <button
                 onClick={clearError}
                 className="text-xs text-red-600 underline mt-1"
@@ -194,7 +194,7 @@ export function SessionControl() {
           <button
             onClick={handlePause}
             disabled={isLoading}
-            className="btn btn-secondary flex-1"
+            className="btn btn-secondary flex-1 text-sm py-1.5"
           >
             Pause
           </button>
@@ -202,7 +202,7 @@ export function SessionControl() {
           <button
             onClick={handleResume}
             disabled={isLoading}
-            className="btn btn-primary flex-1"
+            className="btn btn-primary flex-1 text-sm py-1.5"
           >
             Resume
           </button>
@@ -210,7 +210,7 @@ export function SessionControl() {
         <button
           onClick={handleStop}
           disabled={isLoading}
-          className="btn btn-danger flex-1"
+          className="btn btn-danger flex-1 text-sm py-1.5"
         >
           Stop
         </button>

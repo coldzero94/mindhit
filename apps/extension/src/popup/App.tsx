@@ -36,12 +36,12 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen p-4 space-y-4">
+    <div className="p-3 space-y-3">
       {/* Header */}
       <header className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-gray-900">MindHit</h1>
+        <h1 className="text-base font-bold text-gray-900">MindHit</h1>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">{user?.email}</span>
+          <span className="text-xs text-gray-500 truncate max-w-[120px]">{user?.email}</span>
           <button
             onClick={logout}
             className="text-xs text-gray-400 hover:text-gray-600"
