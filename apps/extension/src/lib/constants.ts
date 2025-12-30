@@ -19,6 +19,13 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:9000/v1";
 
 /**
+ * Google OAuth Client ID
+ */
+export const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  "103584871302-9il2udcima8pa77aigog7po7asdhdp61.apps.googleusercontent.com";
+
+/**
  * Event batching configuration
  */
 export const EVENT_BATCH_SIZE = import.meta.env.VITE_EVENT_BATCH_SIZE

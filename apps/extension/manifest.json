@@ -3,7 +3,7 @@
   "name": "MindHit",
   "version": "1.0.0",
   "description": "Transform your browsing history into knowledge",
-  "permissions": ["storage", "tabs", "activeTab", "scripting"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting", "identity"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "src/background/index.ts",

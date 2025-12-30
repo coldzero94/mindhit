@@ -63,6 +63,36 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Auth.GoogleAuthRequest'
+  /v1/auth/google/code:
+    post:
+      operationId: Routes_googleAuthCode
+      description: Google OAuth Authorization Code Exchange (Chrome Extension용)
+      parameters: []
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auth.AuthResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ValidationError'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth.GoogleAuthCodeRequest'
   /v1/auth/login:
     post:
       operationId: Routes_login
@@ -826,6 +856,19 @@ components:
           minLength: 1
           description: 이메일 주소
       description: 비밀번호 재설정 요청
+    Auth.GoogleAuthCodeRequest:
+      type: object
+      required:
+        - code
+        - redirect_uri
+      properties:
+        code:
+          type: string
+          description: Google OAuth Authorization Code
+        redirect_uri:
+          type: string
+          description: OAuth redirect_uri (must match the one used in authorization request)
+      description: Google OAuth Authorization Code Exchange 요청 (Chrome Extension용)
     Auth.GoogleAuthRequest:
       type: object
       required:

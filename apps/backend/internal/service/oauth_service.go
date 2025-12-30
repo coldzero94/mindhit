@@ -3,8 +3,13 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
+	"strings"
 
 	"google.golang.org/api/idtoken"
 
@@ -17,6 +22,10 @@ var (
 	ErrInvalidIDToken = errors.New("invalid Google ID token")
 	// ErrEmailNotVerified is returned when the Google account email is not verified.
 	ErrEmailNotVerified = errors.New("email not verified by Google")
+	// ErrCodeExchangeFailed is returned when the authorization code exchange fails.
+	ErrCodeExchangeFailed = errors.New("failed to exchange authorization code")
+	// ErrMissingClientSecret is returned when GOOGLE_CLIENT_SECRET is not configured.
+	ErrMissingClientSecret = errors.New("GOOGLE_CLIENT_SECRET is not configured")
 )
 
 // GoogleUserInfo contains user information from Google ID Token.
@@ -27,17 +36,31 @@ type GoogleUserInfo struct {
 	Picture  string
 }
 
+// googleTokenResponse represents the response from Google's token endpoint.
+type googleTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	IDToken      string `json:"id_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	TokenType    string `json:"token_type"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	Scope        string `json:"scope"`
+	Error        string `json:"error,omitempty"`
+	ErrorDesc    string `json:"error_description,omitempty"`
+}
+
 // OAuthService handles OAuth authentication.
 type OAuthService struct {
-	client   *ent.Client
-	clientID string
+	client       *ent.Client
+	clientID     string
+	clientSecret string
 }
 
 // NewOAuthService creates a new OAuthService instance.
 func NewOAuthService(client *ent.Client) *OAuthService {
 	return &OAuthService{
-		client:   client,
-		clientID: os.Getenv("GOOGLE_CLIENT_ID"),
+		client:       client,
+		clientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		clientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 	}
 }
 
@@ -121,4 +144,49 @@ func (s *OAuthService) FindOrCreateGoogleUser(ctx context.Context, info *GoogleU
 	}
 
 	return newUser, true, nil // isNewUser = true
+}
+
+// ExchangeAuthorizationCode exchanges an authorization code for tokens and returns user info.
+// This is used for the Authorization Code flow (Chrome Extension).
+func (s *OAuthService) ExchangeAuthorizationCode(ctx context.Context, code, redirectURI string) (*GoogleUserInfo, error) {
+	if s.clientSecret == "" {
+		return nil, ErrMissingClientSecret
+	}
+
+	// Exchange authorization code for tokens
+	tokenURL := "https://oauth2.googleapis.com/token"
+	data := url.Values{}
+	data.Set("code", code)
+	data.Set("client_id", s.clientID)
+	data.Set("client_secret", s.clientSecret)
+	data.Set("redirect_uri", redirectURI)
+	data.Set("grant_type", "authorization_code")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrCodeExchangeFailed, err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrCodeExchangeFailed, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var tokenResp googleTokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return nil, fmt.Errorf("%w: failed to decode response", ErrCodeExchangeFailed)
+	}
+
+	if tokenResp.Error != "" {
+		return nil, fmt.Errorf("%w: %s - %s", ErrCodeExchangeFailed, tokenResp.Error, tokenResp.ErrorDesc)
+	}
+
+	if tokenResp.IDToken == "" {
+		return nil, fmt.Errorf("%w: no ID token in response", ErrCodeExchangeFailed)
+	}
+
+	// Validate the ID token and extract user info
+	return s.ValidateGoogleIDToken(ctx, tokenResp.IDToken)
 }

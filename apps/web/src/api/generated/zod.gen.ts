@@ -10,6 +10,14 @@ export const zAuthForgotPasswordRequest = z.object({
 });
 
 /**
+ * Google OAuth Authorization Code Exchange 요청 (Chrome Extension용)
+ */
+export const zAuthGoogleAuthCodeRequest = z.object({
+  code: z.string(),
+  redirect_uri: z.string(),
+});
+
+/**
  * Google OAuth 로그인 요청
  */
 export const zAuthGoogleAuthRequest = z.object({
@@ -303,6 +311,17 @@ export const zRoutesGoogleAuthData = z.object({
  * The request has succeeded.
  */
 export const zRoutesGoogleAuthResponse = zAuthAuthResponse;
+
+export const zRoutesGoogleAuthCodeData = z.object({
+  body: zAuthGoogleAuthCodeRequest,
+  path: z.optional(z.never()),
+  query: z.optional(z.never()),
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zRoutesGoogleAuthCodeResponse = zAuthAuthResponse;
 
 export const zRoutesLoginData = z.object({
   body: zAuthLoginRequest,

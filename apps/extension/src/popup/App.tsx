@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSessionStore } from "@/stores/session-store";
 import { SessionControl } from "./components/SessionControl";
@@ -8,6 +8,23 @@ import { LoginPrompt } from "./components/LoginPrompt";
 export function App() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const { status, updateElapsedTime, incrementPageCount, incrementHighlightCount } = useSessionStore();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Wait for Zustand to hydrate from chrome.storage
+  useEffect(() => {
+    const unsubAuth = useAuthStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    // Check if already hydrated
+    if (useAuthStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+    }
+
+    return () => {
+      unsubAuth();
+    };
+  }, []);
 
   // Update elapsed time
   useEffect(() => {
@@ -30,6 +47,15 @@ export function App() {
     chrome.runtime.onMessage.addListener(handleMessage);
     return () => chrome.runtime.onMessage.removeListener(handleMessage);
   }, [incrementPageCount, incrementHighlightCount]);
+
+  // Show loading while hydrating from storage
+  if (!isHydrated) {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-[200px]">
+        <div className="text-sm text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <LoginPrompt />;

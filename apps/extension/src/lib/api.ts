@@ -42,6 +42,23 @@ export const api = {
     });
   },
 
+  googleAuth: async (credential: string): Promise<AuthResponse> => {
+    return request<AuthResponse>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential }),
+    });
+  },
+
+  googleAuthCode: async (
+    code: string,
+    redirectUri: string
+  ): Promise<AuthResponse> => {
+    return request<AuthResponse>("/auth/google/code", {
+      method: "POST",
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+  },
+
   // Sessions
   startSession: async (token: string): Promise<SessionResponse> => {
     return request<SessionResponse>("/sessions/start", {

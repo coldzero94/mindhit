@@ -11,14 +11,16 @@ import (
 
 // Config holds the application configuration values.
 type Config struct {
-	Port              string
-	Environment       string
-	DatabaseURL       string
-	JWTSecret         string
-	RedisURL          string
-	RedisAddr         string
-	WorkerConcurrency int
-	AI                AIConfig
+	Port               string
+	Environment        string
+	DatabaseURL        string
+	JWTSecret          string
+	RedisURL           string
+	RedisAddr          string
+	WorkerConcurrency  int
+	GoogleClientID     string
+	GoogleClientSecret string
+	AI                 AIConfig
 }
 
 // AIConfig holds API keys for AI providers.
@@ -35,13 +37,15 @@ func Load() *Config {
 	_ = godotenv.Load("../../.env")
 
 	return &Config{
-		Port:              getEnv("PORT", "9000"),
-		Environment:       getEnv("ENVIRONMENT", "development"),
-		DatabaseURL:       getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5433/mindhit?sslmode=disable"),
-		JWTSecret:         getEnv("JWT_SECRET", "your-secret-key"),
-		RedisURL:          getEnv("REDIS_URL", "redis://localhost:6380"),
-		RedisAddr:         getEnv("REDIS_ADDR", "localhost:6380"),
-		WorkerConcurrency: getEnvInt("WORKER_CONCURRENCY", 10),
+		Port:               getEnv("PORT", "9000"),
+		Environment:        getEnv("ENVIRONMENT", "development"),
+		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:password@localhost:5433/mindhit?sslmode=disable"),
+		JWTSecret:          getEnv("JWT_SECRET", "your-secret-key"),
+		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6380"),
+		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6380"),
+		WorkerConcurrency:  getEnvInt("WORKER_CONCURRENCY", 10),
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 		AI: AIConfig{
 			OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
 			GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),

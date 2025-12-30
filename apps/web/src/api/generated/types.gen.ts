@@ -23,6 +23,20 @@ export type AuthForgotPasswordRequest = {
 };
 
 /**
+ * Google OAuth Authorization Code Exchange 요청 (Chrome Extension용)
+ */
+export type AuthGoogleAuthCodeRequest = {
+  /**
+   * Google OAuth Authorization Code
+   */
+  code: string;
+  /**
+   * OAuth redirect_uri (must match the one used in authorization request)
+   */
+  redirect_uri: string;
+};
+
+/**
  * Google OAuth 로그인 요청
  */
 export type AuthGoogleAuthRequest = {
@@ -393,6 +407,37 @@ export type RoutesGoogleAuthResponses = {
 
 export type RoutesGoogleAuthResponse =
   RoutesGoogleAuthResponses[keyof RoutesGoogleAuthResponses];
+
+export type RoutesGoogleAuthCodeData = {
+  body: AuthGoogleAuthCodeRequest;
+  path?: never;
+  query?: never;
+  url: "/v1/auth/google/code";
+};
+
+export type RoutesGoogleAuthCodeErrors = {
+  /**
+   * The server could not understand the request due to invalid syntax.
+   */
+  400: CommonValidationError;
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+};
+
+export type RoutesGoogleAuthCodeError =
+  RoutesGoogleAuthCodeErrors[keyof RoutesGoogleAuthCodeErrors];
+
+export type RoutesGoogleAuthCodeResponses = {
+  /**
+   * The request has succeeded.
+   */
+  200: AuthAuthResponse;
+};
+
+export type RoutesGoogleAuthCodeResponse =
+  RoutesGoogleAuthCodeResponses[keyof RoutesGoogleAuthCodeResponses];
 
 export type RoutesLoginData = {
   body: AuthLoginRequest;

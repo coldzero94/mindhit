@@ -59,6 +59,16 @@ model GoogleAuthRequest {
   credential: string;
 }
 
+@doc("Google OAuth Authorization Code Exchange 요청 (Chrome Extension용)")
+model GoogleAuthCodeRequest {
+  @doc("Google OAuth Authorization Code")
+  code: string;
+
+  @doc("OAuth redirect_uri (must match the one used in authorization request)")
+  @encodedName("application/json", "redirect_uri")
+  redirectUri: string;
+}
+
 @doc("인증 응답")
 model AuthResponse {
   user: User;
@@ -168,6 +178,22 @@ namespace Routes {
   @doc("Google OAuth 로그인")
   op googleAuth(
     @body body: GoogleAuthRequest
+  ): {
+    @statusCode statusCode: 200;
+    @body body: AuthResponse;
+  } | {
+    @statusCode statusCode: 400;
+    @body body: Common.ValidationError;
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/google/code")
+  @doc("Google OAuth Authorization Code Exchange (Chrome Extension용)")
+  op googleAuthCode(
+    @body body: GoogleAuthCodeRequest
   ): {
     @statusCode statusCode: 200;
     @body body: AuthResponse;

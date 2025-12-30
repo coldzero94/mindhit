@@ -18,6 +18,9 @@ import type {
   RoutesGetEventStatsErrors,
   RoutesGetEventStatsResponses,
   RoutesGetResponses,
+  RoutesGoogleAuthCodeData,
+  RoutesGoogleAuthCodeErrors,
+  RoutesGoogleAuthCodeResponses,
   RoutesGoogleAuthData,
   RoutesGoogleAuthErrors,
   RoutesGoogleAuthResponses,
@@ -122,6 +125,25 @@ export const routesGoogleAuth = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: "/v1/auth/google",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
+ * Google OAuth Authorization Code Exchange (Chrome Extension용)
+ */
+export const routesGoogleAuthCode = <ThrowOnError extends boolean = false>(
+  options: Options<RoutesGoogleAuthCodeData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    RoutesGoogleAuthCodeResponses,
+    RoutesGoogleAuthCodeErrors,
+    ThrowOnError
+  >({
+    url: "/v1/auth/google/code",
     ...options,
     headers: {
       "Content-Type": "application/json",
