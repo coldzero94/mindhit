@@ -21,7 +21,7 @@ function LoadingFallback() {
 
 export function MindmapCanvas({ children, className }: MindmapCanvasProps) {
   return (
-    <div className={`w-full h-full min-h-[600px] bg-gray-900 rounded-xl overflow-hidden ${className || ''}`}>
+    <div className={`w-full bg-gray-900 rounded-xl overflow-hidden ${className || 'h-[600px]'}`}>
       <Canvas>
         {/* Camera */}
         <PerspectiveCamera makeDefault position={[0, 0, 500]} fov={60} />

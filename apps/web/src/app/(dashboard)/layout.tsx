@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+
+// Custom hook to check hydration status without triggering lint errors
+function useHydrated() {
+  return useSyncExternalStore(
+    (onStoreChange) => useAuthStore.persist.onFinishHydration(onStoreChange),
+    () => useAuthStore.persist.hasHydrated(),
+    () => false // Server always returns false
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -14,12 +23,23 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuthStore();
+  const isHydrated = useHydrated();
 
+  // Redirect to login only after hydration is complete
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isHydrated && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isHydrated, isAuthenticated, router]);
+
+  // Show loading while hydrating
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return null;

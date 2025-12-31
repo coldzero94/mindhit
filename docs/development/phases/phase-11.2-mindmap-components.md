@@ -15,8 +15,8 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 11.2.1 | Node 및 Edge 컴포넌트 | ⬜ |
-| 11.2.2 | Galaxy 컴포넌트 | ⬜ |
+| 11.2.1 | Node 및 Edge 컴포넌트 | ✅ |
+| 11.2.2 | Galaxy 컴포넌트 | ✅ |
 
 ---
 
@@ -24,8 +24,8 @@
 
 ### 체크리스트
 
-- [ ] **Node 컴포넌트 (행성/위성)**
-  - [ ] `src/components/mindmap/Node.tsx`
+- [x] **Node 컴포넌트 (행성/위성)**
+  - [x] `src/components/mindmap/Node.tsx`
 
     ```tsx
     'use client';
@@ -159,8 +159,8 @@
     }
     ```
 
-- [ ] **Edge 컴포넌트 (연결선)**
-  - [ ] `src/components/mindmap/Edge.tsx`
+- [x] **Edge 컴포넌트 (연결선)**
+  - [x] `src/components/mindmap/Edge.tsx`
 
     ```tsx
     'use client';
@@ -238,8 +238,8 @@
     }
     ```
 
-- [ ] **노드 색상 유틸리티**
-  - [ ] `src/lib/mindmap-utils.ts`
+- [x] **노드 색상 유틸리티**
+  - [x] `src/lib/mindmap-utils.ts`
 
     ```typescript
     import type { MindmapNodeType } from '@/types/mindmap';
@@ -316,8 +316,8 @@ pnpm dev
 
 ### 체크리스트
 
-- [ ] **Galaxy 컴포넌트 (전체 마인드맵)**
-  - [ ] `src/components/mindmap/Galaxy.tsx`
+- [x] **Galaxy 컴포넌트 (전체 마인드맵)**
+  - [x] `src/components/mindmap/Galaxy.tsx`
 
     ```tsx
     'use client';
@@ -456,8 +456,8 @@ pnpm dev
     }
     ```
 
-- [ ] **테스트용 Mock 데이터**
-  - [ ] `src/lib/mock-mindmap-data.ts`
+- [x] **테스트용 Mock 데이터**
+  - [x] `src/lib/mock-mindmap-data.ts`
 
     ```typescript
     import type { MindmapData } from '@/types/mindmap';
@@ -563,8 +563,8 @@ pnpm dev
     };
     ```
 
-- [ ] **테스트 페이지 업데이트**
-  - [ ] `src/app/(dashboard)/test-3d/page.tsx` 수정
+- [x] **테스트 페이지 업데이트**
+  - [x] `src/app/(dashboard)/test-3d/page.tsx` 수정
 
     ```tsx
     'use client';
@@ -701,16 +701,16 @@ pnpm dev
 
 ### 전체 검증 체크리스트
 
-- [ ] Node 컴포넌트 렌더링 (4가지 타입)
-- [ ] Node 호버 애니메이션 (스케일, emissive)
-- [ ] Node 선택 시 링 효과
-- [ ] Node 라벨 표시 (호버/선택/core)
-- [ ] Edge 컴포넌트 (곡선 bezier)
-- [ ] Edge 하이라이트 (색상, 점선)
-- [ ] Galaxy 전체 조합
-- [ ] 노드 선택/해제 로직
-- [ ] 연결 노드 하이라이트
-- [ ] 배경 클릭 선택 해제
+- [x] Node 컴포넌트 렌더링 (4가지 타입)
+- [x] Node 호버 애니메이션 (스케일, emissive)
+- [x] Node 선택 시 링 효과
+- [x] Node 라벨 표시 (호버/선택/core)
+- [x] Edge 컴포넌트 (곡선 bezier)
+- [x] Edge 하이라이트 (색상, 점선)
+- [x] Galaxy 전체 조합
+- [x] 노드 선택/해제 로직
+- [x] 연결 노드 하이라이트
+- [x] 배경 클릭 선택 해제
 
 ### 테스트
 
