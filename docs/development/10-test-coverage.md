@@ -2,11 +2,11 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-31 (Phase 10, 10.1, 10.2 AI 테스트 추가)
+> **Last Updated**: 2025-12-31 (Phase 8.1 Extension UX Enhancement 추가)
 
 ---
 
-## Extension Coverage Summary (Phase 8)
+## Extension Coverage Summary (Phase 8 + 8.1)
 
 ### Test Files
 
@@ -14,20 +14,23 @@
 | ---- | --------- | ---- |
 | `auth-store.test.ts` | 3 | Auth Zustand store |
 | `session-store.test.ts` | 10 | Session Zustand store |
+| `settings-store.test.ts` | 6 | Settings Zustand store (Phase 8.1) |
 | `events.test.ts` | 6 | Event queue logic |
-| `api.test.ts` | 12 | API 클라이언트 (MSW 통합) |
-| **Total** | **31** | - |
+| `api.test.ts` | 18 | API 클라이언트 (MSW 통합, Phase 8.1 +6) |
+| `use-network-status.test.ts` | 7 | Network status hook (Phase 8.1) |
+| **Total** | **50** | - |
 
 ### Test Coverage Details
 
-#### Stores
+#### Extension Stores
 
 | Store | 테스트 항목 |
 | ----- | ----------- |
 | `useAuthStore` | 초기 상태, setAuth, logout |
-| `useSessionStore` | 초기 상태, startSession, pauseSession, resumeSession, stopSession, incrementPageCount, incrementHighlightCount, updateElapsedTime, reset |
+| `useSessionStore` | 초기 상태, startSession, pauseSession, resumeSession, stopSession, incrementPageCount, incrementHighlightCount, updateElapsedTime, reset, setSessionTitle (Phase 8.1) |
+| `useSettingsStore` | 초기 상태, updateSettings (단일/복수), developer 설정, resetSettings |
 
-#### API Client (Integration Tests with MSW)
+#### Extension API Client (Integration Tests with MSW)
 
 | Endpoint | 테스트 항목 |
 | -------- | ----------- |
@@ -37,6 +40,8 @@
 | `resumeSession` | 성공, 세션 없음 |
 | `stopSession` | 성공, 세션 없음 |
 | `sendEvents` | 성공, 인증 없음 |
+| `getSessions` | 성공, limit 파라미터, 인증 없음 (Phase 8.1) |
+| `updateSession` | 성공, 세션 없음, 인증 없음 (Phase 8.1) |
 
 #### Event Queue Logic
 
@@ -49,7 +54,23 @@
 | highlight 이벤트 생성 |
 | scroll 이벤트 생성 |
 
-### Test Infrastructure
+#### Phase 8.1 Components (TODO)
+
+| 컴포넌트 | 테스트 항목 | 상태 |
+| -------- | ----------- | ---- |
+| `SessionList` | 세션 목록 렌더링, 로딩 상태, 에러 상태, 세션 클릭 | ❌ 미작성 |
+| `SessionTitleInput` | 편집 모드 전환, 저장, 취소, 키보드 이벤트 | ❌ 미작성 |
+| `DashboardLink` | 클릭 시 새 탭 열기 | ❌ 미작성 |
+| `NetworkBanner` | 오프라인/온라인 상태 표시 | ❌ 미작성 |
+| `Settings` | 설정 저장/불러오기, 초기화 | ❌ 미작성 |
+
+#### Phase 8.1 Hooks
+
+| Hook | 테스트 항목 |
+| ---- | ----------- |
+| `useNetworkStatus` | 초기 상태, offline 전환, online 복귀, wasOffline 3초 후 리셋, 이미 online일 때 wasOffline 미설정, 이벤트 리스너 정리 |
+
+### Extension Test Infrastructure
 
 | 파일 | 설명 |
 | ---- | ---- |
@@ -766,6 +787,7 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-31 | Phase 8.1 | Extension 테스트 확장: settings-store (6개), api getSessions/updateSession (6개), useNetworkStatus (7개) 추가 → 총 50개 테스트 |
 | 2025-12-31 | Phase 10 | AI 통합 테스트 추가: provider_integration_test.go (7개, build tag: integration), godotenv로 .env 자동 로드 |
 | 2025-12-31 | Phase 10-10.2 | AI 테스트 추가: provider_test.go (10개), aiconfig_service_test.go (9개), ailog_service_test.go (6개), mindmap_test.go (10개), tag_extraction_test.go (5개), mindmap_types_test.go (3개) |
 | 2025-12-28 | Phase 2.1 | Google OAuth 테스트 추가 (oauth_service_test.go 7개, oauth_controller_test.go 8개) |

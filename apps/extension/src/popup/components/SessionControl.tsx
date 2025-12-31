@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSessionStore } from "@/stores/session-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { api } from "@/lib/api";
+import { SessionTitleInput } from "./SessionTitleInput";
 
 interface ErrorState {
   message: string;
@@ -155,7 +156,7 @@ export function SessionControl() {
 
   return (
     <div className="bg-white rounded-lg p-3 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div
             className={`w-2.5 h-2.5 rounded-full ${
@@ -169,6 +170,10 @@ export function SessionControl() {
           </span>
         </div>
       </div>
+
+      {sessionId && (
+        <SessionTitleInput sessionId={sessionId} className="mb-2" />
+      )}
 
       {error && (
         <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-lg">

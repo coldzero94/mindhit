@@ -15,6 +15,7 @@ export type SessionStatus =
 
 interface SessionState {
   sessionId: string | null;
+  sessionTitle: string | null;
   status: SessionStatus;
   startedAt: number | null;
   pageCount: number;
@@ -25,6 +26,7 @@ interface SessionState {
   pauseSession: () => void;
   resumeSession: () => void;
   stopSession: () => void;
+  setSessionTitle: (title: string | null) => void;
   incrementPageCount: () => void;
   incrementHighlightCount: () => void;
   updateElapsedTime: () => void;
@@ -35,6 +37,7 @@ export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
       sessionId: null,
+      sessionTitle: null,
       status: "idle",
       startedAt: null,
       pageCount: 0,
@@ -44,6 +47,7 @@ export const useSessionStore = create<SessionState>()(
       startSession: (sessionId) =>
         set({
           sessionId,
+          sessionTitle: null,
           status: "recording",
           startedAt: Date.now(),
           pageCount: 0,
@@ -58,9 +62,12 @@ export const useSessionStore = create<SessionState>()(
       stopSession: () =>
         set({
           sessionId: null,
+          sessionTitle: null,
           status: "idle",
           startedAt: null,
         }),
+
+      setSessionTitle: (title) => set({ sessionTitle: title }),
 
       incrementPageCount: () =>
         set((state) => ({ pageCount: state.pageCount + 1 })),
@@ -78,6 +85,7 @@ export const useSessionStore = create<SessionState>()(
       reset: () =>
         set({
           sessionId: null,
+          sessionTitle: null,
           status: "idle",
           startedAt: null,
           pageCount: 0,

@@ -54,7 +54,7 @@ phases/
 | 6 | [Worker 및 Job Queue](./phase-6-worker.md) | ✅ 완료 | 3 steps |
 | 7 | [Next.js 웹앱](./phase-7-webapp.md) | ✅ 완료 | 4 steps |
 | 8 | [Chrome Extension](./phase-8-extension.md) | ✅ 완료 | 5 steps |
-| 8.1 | [Extension 기능 보완](./phase-8.1-extension-enhancement.md) | ⬜ 대기 | 3 steps |
+| 8.1 | [Extension 기능 보완](./phase-8.1-extension-enhancement.md) | ✅ 완료 | 3 steps |
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ✅ 완료 | 5 steps |
 | 10 | [AI Provider 인프라](./phase-10-ai.md) | ✅ 완료 | 2 steps |
 | 10.1 | [AI 설정 및 로깅](./phase-10.1-ai-config.md) | ✅ 완료 | 2 steps |

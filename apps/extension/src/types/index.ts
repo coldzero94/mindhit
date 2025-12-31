@@ -54,7 +54,8 @@ export interface User {
 
 export interface Session {
   id: string;
-  session_status: string;
+  title: string | null;
+  session_status: "recording" | "paused" | "processing" | "completed" | "failed";
   started_at: string;
   ended_at?: string;
 }

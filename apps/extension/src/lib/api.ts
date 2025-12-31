@@ -10,6 +10,11 @@ interface SessionResponse {
   session: Session;
 }
 
+interface SessionListResponse {
+  sessions: Session[];
+  total: number;
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -107,6 +112,33 @@ export const api = {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ session_id: sessionId, events }),
+    });
+  },
+
+  // Session List
+  getSessions: async (
+    token: string,
+    limit: number = 5
+  ): Promise<SessionListResponse> => {
+    return request<SessionListResponse>(
+      `/sessions?limit=${limit}&sort=started_at:desc`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+  },
+
+  // Update Session (for title change)
+  updateSession: async (
+    token: string,
+    sessionId: string,
+    data: { title?: string; description?: string }
+  ): Promise<SessionResponse> => {
+    return request<SessionResponse>(`/sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
     });
   },
 };

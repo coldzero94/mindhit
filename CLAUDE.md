@@ -153,6 +153,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 6 | ✅ Done | Worker & Job Queue |
 | Phase 7 | ✅ Done | Next.js Web App |
 | Phase 8 | ✅ Done | Chrome Extension |
+| Phase 8.1 | ✅ Done | Extension UX Enhancement |
 | Phase 9 | ✅ Done | Plan & Usage System |
 | Phase 10 | ✅ Done | AI Provider Infrastructure |
 | Phase 10.1 | ✅ Done | AI Settings & Logging |
@@ -171,6 +172,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-31] Phase 8.1 completed: Extension UX Enhancement - Session list view, web dashboard links, session title editing, network status banner, settings page with auto-start and URL configuration
 - [2025-12-31] Extension Google OAuth: Chrome Extension Google OAuth login with Authorization Code flow (chrome.identity API), sidepanel→popup migration, Zustand hydration pattern for chrome.storage
 - [2025-12-29] Phase 10 refactored: Code quality improvements - Centralized JSON validation, Default model constants, Cache race condition fix (double-check locking), Mindmap conversion functions moved to service layer, Optimized GetCurrentUsage query
 - [2025-12-29] Phase 10.2 completed: Mindmap Generation - Tag extraction worker handler, Mindmap generation handler with relationship graph, UsageService integration for token tracking

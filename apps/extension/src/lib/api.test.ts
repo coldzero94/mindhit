@@ -19,6 +19,49 @@ describe("API Client", () => {
     });
   });
 
+  describe("getSessions", () => {
+    it("should get sessions list successfully", async () => {
+      const result = await api.getSessions("mock-token");
+
+      expect(result.sessions).toBeDefined();
+      expect(result.sessions.length).toBeGreaterThan(0);
+      expect(result.total).toBe(3);
+    });
+
+    it("should respect limit parameter", async () => {
+      const result = await api.getSessions("mock-token", 2);
+
+      expect(result.sessions.length).toBe(2);
+    });
+
+    it("should throw error without auth token", async () => {
+      await expect(api.getSessions("")).rejects.toThrow();
+    });
+  });
+
+  describe("updateSession", () => {
+    it("should update session title successfully", async () => {
+      const result = await api.updateSession("mock-token", "session-1", {
+        title: "New Title",
+      });
+
+      expect(result.session).toBeDefined();
+      expect(result.session.title).toBe("New Title");
+    });
+
+    it("should throw error for non-existent session", async () => {
+      await expect(
+        api.updateSession("mock-token", "not-found", { title: "Test" })
+      ).rejects.toThrow("Session not found");
+    });
+
+    it("should throw error without auth token", async () => {
+      await expect(
+        api.updateSession("", "session-1", { title: "Test" })
+      ).rejects.toThrow();
+    });
+  });
+
   describe("startSession", () => {
     it("should start a session successfully", async () => {
       const result = await api.startSession("mock-token");

@@ -27,6 +27,30 @@ export const mockSession = {
   updated_at: "2025-01-01T10:00:00Z",
 };
 
+export const mockSessions = [
+  {
+    id: "session-1",
+    title: "First Session",
+    session_status: "completed" as const,
+    started_at: "2025-01-01T10:00:00Z",
+    ended_at: "2025-01-01T11:00:00Z",
+  },
+  {
+    id: "session-2",
+    title: "Second Session",
+    session_status: "completed" as const,
+    started_at: "2025-01-02T10:00:00Z",
+    ended_at: "2025-01-02T11:30:00Z",
+  },
+  {
+    id: "session-3",
+    title: null,
+    session_status: "paused" as const,
+    started_at: "2025-01-03T10:00:00Z",
+    ended_at: null,
+  },
+];
+
 export const handlers = [
   // Auth - Login
   http.post(`${API_URL}/auth/login`, async ({ request }) => {
@@ -42,6 +66,53 @@ export const handlers = [
     return HttpResponse.json({
       user: { ...mockUser, email: body.email },
       token: "mock-access-token",
+    });
+  }),
+
+  // Sessions - List
+  http.get(`${API_URL}/sessions`, ({ request }) => {
+    if (!getToken(request)) {
+      return HttpResponse.json(
+        { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
+        { status: 401 }
+      );
+    }
+
+    const url = new URL(request.url);
+    const limit = parseInt(url.searchParams.get("limit") || "5", 10);
+
+    return HttpResponse.json({
+      sessions: mockSessions.slice(0, limit),
+      total: mockSessions.length,
+    });
+  }),
+
+  // Sessions - Update (title)
+  http.patch(`${API_URL}/sessions/:id`, async ({ params, request }) => {
+    if (!getToken(request)) {
+      return HttpResponse.json(
+        { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
+        { status: 401 }
+      );
+    }
+
+    const { id } = params;
+    if (id === "not-found") {
+      return HttpResponse.json(
+        { error: { message: "Session not found", code: "NOT_FOUND" } },
+        { status: 404 }
+      );
+    }
+
+    const body = (await request.json()) as { title?: string };
+
+    return HttpResponse.json({
+      session: {
+        ...mockSession,
+        id,
+        title: body.title ?? mockSession.title,
+        updated_at: new Date().toISOString(),
+      },
     });
   }),
 

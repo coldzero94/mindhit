@@ -4,6 +4,7 @@
 export const STORAGE_KEYS = {
   AUTH: "mindhit-auth",
   SESSION: "mindhit-session",
+  SETTINGS: "mindhit-settings",
 } as const;
 
 /**

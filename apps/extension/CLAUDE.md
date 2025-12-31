@@ -21,8 +21,13 @@ apps/extension/
 │   │   ├── App.tsx
 │   │   ├── styles.css
 │   │   └── components/
-│   │       ├── SessionControl.tsx
-│   │       ├── SessionStats.tsx
+│   │       ├── SessionControl.tsx    # Session start/pause/stop controls
+│   │       ├── SessionStats.tsx      # Elapsed time, page count
+│   │       ├── SessionList.tsx       # Recent sessions list (Phase 8.1)
+│   │       ├── SessionTitleInput.tsx # Inline title editing (Phase 8.1)
+│   │       ├── DashboardLink.tsx     # Web dashboard link (Phase 8.1)
+│   │       ├── NetworkBanner.tsx     # Offline/online status (Phase 8.1)
+│   │       ├── Settings.tsx          # Settings modal (Phase 8.1)
 │   │       ├── LoginPrompt.tsx
 │   │       └── GoogleSignInButton.tsx
 │   ├── lib/                # Shared utilities
@@ -30,10 +35,12 @@ apps/extension/
 │   │   ├── chrome-storage.ts # Chrome storage adapters
 │   │   ├── constants.ts    # Constants (storage keys, client ID)
 │   │   ├── events.ts       # Event queue management
+│   │   ├── use-network-status.ts # Network status hook (Phase 8.1)
 │   │   └── storage.ts      # Chrome storage helpers
 │   ├── stores/             # Zustand stores
 │   │   ├── auth-store.ts   # Auth state (uses session storage)
-│   │   └── session-store.ts
+│   │   ├── session-store.ts
+│   │   └── settings-store.ts # User settings (Phase 8.1)
 │   ├── types/              # TypeScript types
 │   │   └── index.ts
 │   ├── test/               # Test setup
@@ -168,11 +175,13 @@ pnpm lint             # Run ESLint
 The extension communicates with the backend at `VITE_API_URL` (default: `http://localhost:9000/v1`):
 
 - `POST /auth/google/code` - Google OAuth login (Authorization Code)
+- `GET /sessions` - List sessions (Phase 8.1)
 - `POST /sessions/start` - Start recording session
+- `PATCH /sessions/:id` - Update session (title) (Phase 8.1)
 - `PATCH /sessions/:id/pause` - Pause session
 - `PATCH /sessions/:id/resume` - Resume session
 - `POST /sessions/:id/stop` - Stop session
-- `POST /events/batch` - Send collected events
+- `POST /sessions/:id/events` - Send collected events
 
 ## Event Types
 
@@ -189,8 +198,37 @@ The extension communicates with the backend at `VITE_API_URL` (default: `http://
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `VITE_API_URL` | Backend API URL | `http://localhost:9000/v1` |
+| `VITE_WEB_APP_URL` | Web dashboard URL (Phase 8.1) | `http://localhost:3000` |
 | `VITE_EVENT_BATCH_SIZE` | Events per batch | `1` (dev), `10` (prod) |
 | `VITE_EVENT_FLUSH_INTERVAL` | Flush interval (ms) | `5000` (dev), `30000` (prod) |
+
+## Phase 8.1 Features
+
+### Session List & Dashboard Link
+
+- `SessionList` component shows 5 most recent sessions
+- Click session to open in web dashboard
+- `DashboardLink` opens current session or sessions list
+
+### Session Title Editing
+
+- `SessionTitleInput` provides inline editing with save/cancel
+- Auto-saves on blur or Enter, cancels on Escape
+- Updates session title via `PATCH /sessions/:id`
+
+### Network Status
+
+- `useNetworkStatus` hook monitors online/offline state
+- `NetworkBanner` shows red banner when offline
+- Green banner briefly shows when connection restored
+- Background script retries pending events on reconnection
+
+### Settings
+
+- `Settings` component provides full-screen settings modal
+- General settings: auto-start session, collect all tabs
+- Advanced settings: custom API URL, Web App URL
+- Settings persisted via `chrome.storage.local`
 
 ## Known Issues
 
