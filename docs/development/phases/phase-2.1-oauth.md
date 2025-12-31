@@ -5,7 +5,7 @@
 | 항목 | 내용 |
 |-----|------|
 | **목표** | Google Identity Services (GIS) 기반 소셜 로그인 구현 |
-| **선행 조건** | Phase 2, Phase 7 완료 |
+| **선행 조건** | Phase 2, Phase 6 완료 |
 | **예상 소요** | 1 Step |
 | **결과물** | Google 로그인/회원가입 동작 |
 

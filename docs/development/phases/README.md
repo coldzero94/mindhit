@@ -14,17 +14,24 @@ phases/
 ├── phase-1-project-init.md      # 프로젝트 초기화
 ├── phase-1.5-api-spec.md        # API 스펙 공통화
 ├── phase-2-auth.md              # 인증 시스템
+├── phase-2.1-oauth.md           # Google OAuth
 ├── phase-3-sessions.md          # 세션 관리 API
 ├── phase-4-events.md            # 이벤트 수집 API
 ├── phase-5-infra.md             # 모니터링 및 인프라 (기초)
 ├── phase-6-worker.md            # Worker 및 Job Queue
 ├── phase-7-webapp.md            # Next.js 웹앱
 ├── phase-8-extension.md         # Chrome Extension
+├── phase-8.1-extension-enhancement.md  # Extension 기능 보완
 ├── phase-9-plan-usage.md        # 플랜 및 사용량 시스템
-├── phase-10-ai.md               # AI Provider 인프라 (통합 타입, Provider 구현)
-├── phase-10.1-ai-config.md      # AI 설정 및 로깅 (ai_configs, ai_logs, Admin API)
-├── phase-10.2-mindmap.md        # 마인드맵 생성 (태그 추출, 관계도 Worker Handler)
-├── phase-11-dashboard.md        # 웹앱 대시보드
+├── phase-10-ai.md               # AI Provider 인프라
+├── phase-10.1-ai-config.md      # AI 설정 및 로깅
+├── phase-10.2-mindmap.md        # 마인드맵 생성
+├── phase-11-dashboard.md        # 웹앱 대시보드 (레거시, 참고용)
+├── phase-11.1-threejs-setup.md  # React Three Fiber 설정
+├── phase-11.2-mindmap-components.md  # 3D 마인드맵 컴포넌트
+├── phase-11.3-session-detail.md # 세션 상세 페이지 개선
+├── phase-11.4-account-usage.md  # 계정 및 사용량 페이지
+├── phase-11.5-animation.md      # 애니메이션 및 인터랙션
 ├── phase-12-monitoring.md       # 프로덕션 모니터링
 ├── phase-13-deployment.md       # 배포 및 운영
 └── phase-14-billing.md          # Stripe 결제 연동
@@ -47,11 +54,16 @@ phases/
 | 6 | [Worker 및 Job Queue](./phase-6-worker.md) | ✅ 완료 | 3 steps |
 | 7 | [Next.js 웹앱](./phase-7-webapp.md) | ✅ 완료 | 4 steps |
 | 8 | [Chrome Extension](./phase-8-extension.md) | ✅ 완료 | 5 steps |
+| 8.1 | [Extension 기능 보완](./phase-8.1-extension-enhancement.md) | ⬜ 대기 | 3 steps |
 | 9 | [플랜 및 사용량 시스템](./phase-9-plan-usage.md) | ✅ 완료 | 5 steps |
 | 10 | [AI Provider 인프라](./phase-10-ai.md) | ✅ 완료 | 2 steps |
 | 10.1 | [AI 설정 및 로깅](./phase-10.1-ai-config.md) | ✅ 완료 | 2 steps |
 | 10.2 | [마인드맵 생성](./phase-10.2-mindmap.md) | ✅ 완료 | 3 steps |
-| 11 | [웹앱 대시보드](./phase-11-dashboard.md) | ⬜ 대기 | 5 steps |
+| 11.1 | [React Three Fiber 설정](./phase-11.1-threejs-setup.md) | ⬜ 대기 | 1 step |
+| 11.2 | [3D 마인드맵 컴포넌트](./phase-11.2-mindmap-components.md) | ⬜ 대기 | 2 steps |
+| 11.3 | [세션 상세 페이지 개선](./phase-11.3-session-detail.md) | ⬜ 대기 | 2 steps |
+| 11.4 | [계정 및 사용량 페이지](./phase-11.4-account-usage.md) | ⬜ 대기 | 2 steps |
+| 11.5 | [애니메이션 및 인터랙션](./phase-11.5-animation.md) | ⬜ 대기 | 2 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ⬜ 대기 | 4 steps |
 | 13 | [배포 및 운영](./phase-13-deployment.md) | ⬜ 대기 | 4 steps |
 | 14 | [Stripe 결제 연동](./phase-14-billing.md) | ⬜ 대기 | 3 steps |
@@ -89,6 +101,9 @@ flowchart TD
     P2 --> P8[Phase 8<br/>Extension]
     P4 --> P8
 
+    %% Phase 8.1: Extension 보완 (Phase 8 이후)
+    P8 --> P8_1[Phase 8.1<br/>Extension 보완]
+
     %% Phase 9: 플랜/사용량 (AI 전에 필요)
     P8 --> P9[Phase 9<br/>플랜/사용량]
 
@@ -102,12 +117,19 @@ flowchart TD
     P10_1 --> P10_2[Phase 10.2<br/>마인드맵]
     P9 --> P10_2
 
-    %% Phase 11: 대시보드
-    P7 --> P11[Phase 11<br/>대시보드]
-    P10_2 --> P11
+    %% Phase 11 시리즈: 대시보드 (병렬 진행 가능)
+    P7 --> P11_1[Phase 11.1<br/>Three.js 설정]
+    P11_1 --> P11_2[Phase 11.2<br/>마인드맵 컴포넌트]
+    P11_2 --> P11_3[Phase 11.3<br/>세션 상세]
+    P10_2 --> P11_3
+    P7 --> P11_4[Phase 11.4<br/>계정/사용량]
+    P9 --> P11_4
+    P11_2 --> P11_5[Phase 11.5<br/>애니메이션]
 
     %% Phase 12-14: 운영 및 결제
-    P11 --> P12[Phase 12<br/>모니터링]
+    P11_3 --> P12[Phase 12<br/>모니터링]
+    P11_4 --> P12
+    P11_5 --> P12
     P12 --> P13[Phase 13<br/>배포/운영]
     P13 --> P14[Phase 14<br/>Stripe 결제]
 
@@ -122,11 +144,16 @@ flowchart TD
     style P6 fill:#e8f5e9
     style P7 fill:#fce4ec
     style P8 fill:#fce4ec
+    style P8_1 fill:#fce4ec
     style P9 fill:#fff9c4
     style P10 fill:#f3e5f5
     style P10_1 fill:#f3e5f5
     style P10_2 fill:#f3e5f5
-    style P11 fill:#f3e5f5
+    style P11_1 fill:#e1bee7
+    style P11_2 fill:#e1bee7
+    style P11_3 fill:#e1bee7
+    style P11_4 fill:#e1bee7
+    style P11_5 fill:#e1bee7
     style P12 fill:#efebe9
     style P13 fill:#efebe9
     style P14 fill:#fff9c4
@@ -200,16 +227,22 @@ flowchart TD
 
 ### Dashboard & Polish
 
-14. Phase 11 (대시보드) - Phase 7, 10.2 의존
+14. Phase 8.1 (Extension 기능 보완) - Phase 8 이후, 11과 병렬 가능
+15. Phase 11.1 (Three.js 설정) - Phase 7 의존
+16. Phase 11.2 (마인드맵 컴포넌트) - Phase 11.1 의존
+17. Phase 11.4 (계정/사용량 페이지) - Phase 7, 9 의존 (11.1과 병렬 가능)
+18. Phase 11.3 (세션 상세) - Phase 11.2, 10.2 의존
+19. Phase 11.5 (애니메이션) - Phase 11.2 의존
+20. **Dashboard 완료**: 3D 마인드맵 + 계정 페이지
 
 ### 프로덕션 준비
 
-15. Phase 12 (프로덕션 모니터링)
-16. Phase 13 (배포/운영)
+21. Phase 12 (프로덕션 모니터링) - Phase 11.3, 11.4, 11.5 의존
+22. Phase 13 (배포/운영)
 
 ### 수익화
 
-17. Phase 14 (Stripe 결제)
+23. Phase 14 (Stripe 결제)
 
 ---
 
