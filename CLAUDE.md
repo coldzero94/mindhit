@@ -158,7 +158,8 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 10 | ✅ Done | AI Provider Infrastructure |
 | Phase 10.1 | ✅ Done | AI Settings & Logging |
 | Phase 10.2 | ✅ Done | Mindmap Generation |
-| Phase 11 | ⬜ Pending | Web App Dashboard |
+| Phase 11.1 | ✅ Done | React Three Fiber Setup |
+| Phase 11 | 🟡 In Progress | Web App Dashboard |
 | Phase 12 | ⬜ Pending | Production Monitoring |
 | Phase 13 | ⬜ Pending | Deployment & Operations |
 | Phase 14 | ⬜ Pending | Stripe Billing Integration |
@@ -172,6 +173,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-31] Phase 11.1 completed: React Three Fiber Setup - Three.js dependencies, MindmapCanvas component, TestSphere component, test-3d page, Turbopack configuration
 - [2025-12-31] Phase 8.1 completed: Extension UX Enhancement - Session list view, web dashboard links, session title editing, network status banner, settings page with auto-start and URL configuration
 - [2025-12-31] Extension Google OAuth: Chrome Extension Google OAuth login with Authorization Code flow (chrome.identity API), sidepanel→popup migration, Zustand hydration pattern for chrome.storage
 - [2025-12-29] Phase 10 refactored: Code quality improvements - Centralized JSON validation, Default model constants, Cache race condition fix (double-check locking), Mindmap conversion functions moved to service layer, Optimized GetCurrentUsage query

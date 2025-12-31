@@ -15,7 +15,7 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 11.1.1 | 의존성 및 기본 설정 | ⬜ |
+| 11.1.1 | 의존성 및 기본 설정 | ✅ |
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### 체크리스트
 
-- [ ] **의존성 설치**
+- [x] **의존성 설치**
 
   ```bash
   cd apps/web
@@ -32,8 +32,8 @@
   pnpm add framer-motion @react-spring/three
   ```
 
-- [ ] **Three.js 타입 설정**
-  - [ ] `src/types/three.d.ts`
+- [x] **Three.js 타입 설정**
+  - [x] `src/types/three.d.ts`
 
     ```typescript
     import { Object3DNode } from '@react-three/fiber';
@@ -50,8 +50,8 @@
     }
     ```
 
-- [ ] **마인드맵 타입 정의**
-  - [ ] `src/types/mindmap.ts`
+- [x] **마인드맵 타입 정의**
+  - [x] `src/types/mindmap.ts`
 
     ```typescript
     export interface MindmapNodePosition {
@@ -105,8 +105,8 @@
     }
     ```
 
-- [ ] **Canvas Provider 설정**
-  - [ ] `src/components/mindmap/MindmapCanvas.tsx`
+- [x] **Canvas Provider 설정**
+  - [x] `src/components/mindmap/MindmapCanvas.tsx`
 
     ```tsx
     'use client';
@@ -183,8 +183,8 @@
     }
     ```
 
-- [ ] **테스트 컴포넌트**
-  - [ ] `src/components/mindmap/TestSphere.tsx`
+- [x] **테스트 컴포넌트**
+  - [x] `src/components/mindmap/TestSphere.tsx`
 
     ```tsx
     'use client';
@@ -245,8 +245,8 @@
     }
     ```
 
-- [ ] **테스트 페이지**
-  - [ ] `src/app/(dashboard)/test-3d/page.tsx`
+- [x] **테스트 페이지**
+  - [x] `src/app/(dashboard)/test-3d/page.tsx`
 
     ```tsx
     'use client';
@@ -285,8 +285,8 @@
     }
     ```
 
-- [ ] **Next.js 설정 확인**
-  - [ ] `next.config.ts` 에서 Three.js 최적화 확인
+- [x] **Next.js 설정 확인**
+  - [x] `next.config.ts` 에서 Three.js 최적화 확인 (Turbopack 설정 추가)
 
     ```typescript
     // next.config.ts에 추가 (필요한 경우)
@@ -326,14 +326,14 @@ pnpm build
 
 ### 전체 검증 체크리스트
 
-- [ ] Three.js 의존성 설치 완료
-- [ ] 타입 정의 파일 생성 (`three.d.ts`, `mindmap.ts`)
-- [ ] MindmapCanvas 컴포넌트 동작
-- [ ] OrbitControls 동작 (회전, 줌, 이동)
-- [ ] Stars 배경 렌더링
-- [ ] Bloom post-processing 효과
-- [ ] 테스트 페이지 정상 동작
-- [ ] 프로덕션 빌드 성공
+- [x] Three.js 의존성 설치 완료
+- [x] 타입 정의 파일 생성 (`three.d.ts`, `mindmap.ts`)
+- [x] MindmapCanvas 컴포넌트 동작
+- [x] OrbitControls 동작 (회전, 줌, 이동)
+- [x] Stars 배경 렌더링
+- [x] Bloom post-processing 효과
+- [x] 테스트 페이지 정상 동작
+- [x] 프로덕션 빌드 성공
 
 ### 테스트
 

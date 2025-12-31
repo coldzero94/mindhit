@@ -7,6 +7,9 @@ config({ path: resolve(__dirname, "../../.env") });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["three"],
+  // Turbopack config (Next.js 16+ default bundler)
+  turbopack: {},
   async rewrites() {
     return [
       {
