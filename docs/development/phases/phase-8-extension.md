@@ -4,10 +4,10 @@
 
 | 항목 | 내용 |
 |-----|------|
-| **목표** | Side Panel 기반 Chrome Extension으로 브라우징 세션 녹화 |
-| **선행 조건** | Phase 2 (인증), Phase 4 (이벤트 API) 완료 |
+| **목표** | Popup 기반 Chrome Extension으로 브라우징 세션 녹화 |
+| **선행 조건** | Phase 2 (인증), Phase 2.1 (OAuth), Phase 4 (이벤트 API) 완료 |
 | **예상 소요** | 5 Steps |
-| **결과물** | 세션 시작/일시정지/종료, 이벤트 수집 기능 |
+| **결과물** | Google 로그인, 세션 시작/일시정지/종료, 이벤트 수집 기능 |
 
 ---
 
@@ -16,7 +16,7 @@
 ```mermaid
 flowchart TB
     subgraph Chrome Extension
-        SP[Side Panel<br/>React UI]
+        PP[Popup<br/>React UI]
         BG[Service Worker<br/>Background Script]
         CS[Content Script]
     end
@@ -31,11 +31,11 @@ flowchart TB
         EVT[Events API]
     end
 
-    SP <-->|상태 관리| BG
+    PP <-->|상태 관리| BG
     BG <-->|DOM 이벤트| CS
     CS <-->|페이지 모니터링| TAB
 
-    BG -->|로그인/로그아웃| AUTH
+    BG -->|Google OAuth| AUTH
     BG -->|세션 시작/종료| SESS
     BG -->|이벤트 배치 전송| EVT
 ```
@@ -91,20 +91,23 @@ flowchart TB
   │   │   └── index.ts         # Service Worker
   │   ├── content/
   │   │   └── index.ts         # Content Script
-  │   ├── sidepanel/
+  │   ├── popup/               # Popup UI (toolbar click)
   │   │   ├── index.html
   │   │   ├── index.tsx
   │   │   ├── App.tsx
   │   │   └── components/
   │   │       ├── SessionControl.tsx
   │   │       ├── SessionStats.tsx
-  │   │       └── LoginPrompt.tsx
+  │   │       ├── LoginPrompt.tsx
+  │   │       └── GoogleSignInButton.tsx
   │   ├── lib/
   │   │   ├── api.ts
+  │   │   ├── chrome-storage.ts  # Chrome storage adapters
+  │   │   ├── constants.ts       # Storage keys, client ID
   │   │   ├── storage.ts
   │   │   └── events.ts
   │   ├── stores/
-  │   │   ├── auth-store.ts
+  │   │   ├── auth-store.ts    # Uses session storage
   │   │   └── session-store.ts
   │   └── types/
   │       └── index.ts
@@ -131,8 +134,8 @@ flowchart TB
       "storage",
       "tabs",
       "activeTab",
-      "sidePanel",
-      "scripting"
+      "scripting",
+      "identity"
     ],
     "host_permissions": [
       "<all_urls>"
@@ -148,11 +151,9 @@ flowchart TB
         "run_at": "document_idle"
       }
     ],
-    "side_panel": {
-      "default_path": "src/sidepanel/index.html"
-    },
     "action": {
-      "default_title": "MindHit"
+      "default_title": "MindHit",
+      "default_popup": "src/popup/index.html"
     },
     "icons": {
       "16": "public/icons/icon16.png",
@@ -161,6 +162,8 @@ flowchart TB
     }
   }
   ```
+
+  > **Note**: `identity` 권한은 Google OAuth (`chrome.identity.launchWebAuthFlow`) 사용에 필요합니다.
 
 - [x] **vite.config.ts**
 
@@ -182,7 +185,7 @@ flowchart TB
     build: {
       rollupOptions: {
         input: {
-          sidepanel: "src/sidepanel/index.html",
+          popup: "src/popup/index.html",
         },
       },
     },
@@ -295,12 +298,12 @@ pnpm build
 
 ---
 
-## Step 8.2: Side Panel UI
+## Step 8.2: Popup UI
 
 ### 체크리스트
 
-- [x] **Side Panel HTML**
-  - [ ] `src/sidepanel/index.html`
+- [x] **Popup HTML**
+  - [x] `src/popup/index.html`
 
     ```html
     <!DOCTYPE html>
@@ -329,8 +332,8 @@ pnpm build
     </html>
     ```
 
-- [x] **Side Panel Entry**
-  - [ ] `src/sidepanel/index.tsx`
+- [x] **Popup Entry**
+  - [x] `src/popup/index.tsx`
 
     ```tsx
     import { createRoot } from 'react-dom/client';
@@ -344,7 +347,7 @@ pnpm build
     ```
 
 - [x] **스타일**
-  - [x] `src/sidepanel/styles.css`
+  - [x] `src/popup/styles.css`
 
     ```css
     /* Tailwind v4 문법 */
@@ -492,7 +495,7 @@ pnpm build
     ```
 
 - [x] **Main App Component**
-  - [ ] `src/sidepanel/App.tsx`
+  - [x] `src/popup/App.tsx`
 
     ```tsx
     import { useEffect } from 'react';
@@ -537,7 +540,7 @@ pnpm build
     ```
 
 - [x] **Session Control Component**
-  - [ ] `src/sidepanel/components/SessionControl.tsx`
+  - [x] `src/popup/components/SessionControl.tsx`
 
     ```tsx
     import { useState } from 'react';
@@ -679,7 +682,7 @@ pnpm build
     ```
 
 - [x] **Session Stats Component**
-  - [ ] `src/sidepanel/components/SessionStats.tsx`
+  - [x] `src/popup/components/SessionStats.tsx`
 
     ```tsx
     import { useSessionStore } from '../../stores/session-store';
@@ -720,7 +723,7 @@ pnpm build
     ```
 
 - [x] **Login Prompt Component**
-  - [ ] `src/sidepanel/components/LoginPrompt.tsx`
+  - [x] `src/popup/components/LoginPrompt.tsx`
 
     ```tsx
     import { useState } from 'react';
@@ -820,12 +823,12 @@ pnpm build
 ```bash
 pnpm build
 # Chrome Extension 리로드
-# Extension 아이콘 클릭 시 Side Panel 열림 확인
+# Extension 아이콘 클릭 시 Popup 열림 확인
 ```
 
 ---
 
-## Step 8.3: 인증 연동
+## Step 8.3: 인증 연동 (Google OAuth)
 
 > **에러 처리 가이드**: Extension 에러 처리 패턴은
 > [09-error-handling.md#11](../09-error-handling.md#11-extension-에러-처리-chrome-extension)을 참조하세요.
@@ -980,12 +983,15 @@ pnpm build
 ### 검증
 
 ```bash
-# Side Panel에서 로그인 테스트
-# 1. 이메일/비밀번호 입력
-# 2. 로그인 버튼 클릭
-# 3. 세션 컨트롤 UI 표시 확인
-# 4. Extension 새로고침 후 로그인 상태 유지 확인
+# Popup에서 Google 로그인 테스트
+# 1. Extension 아이콘 클릭
+# 2. "Sign in with Google" 버튼 클릭
+# 3. Google 계정 선택
+# 4. 세션 컨트롤 UI 표시 확인
+# 5. Extension 새로고침 후 로그인 상태 유지 확인
 ```
+
+> **Note**: Google OAuth 구현 상세는 [Phase 2.1 OAuth](./phase-2.1-oauth.md#chrome-extension-google-oauth-phase-8-연계) 참조
 
 ---
 
@@ -994,7 +1000,7 @@ pnpm build
 ### 체크리스트
 
 - [x] **이벤트 타입 정의**
-  - [ ] `src/types/index.ts`
+  - [x] `src/types/index.ts`
 
     ```typescript
     export type EventType =
@@ -1048,7 +1054,7 @@ pnpm build
     ```
 
 - [x] **Background Service Worker**
-  - [ ] `src/background/index.ts`
+  - [x] `src/background/index.ts`
 
     ```typescript
     import { BrowsingEvent } from '../types';
@@ -1175,7 +1181,7 @@ pnpm build
     ```
 
 - [x] **Content Script**
-  - [ ] `src/content/index.ts`
+  - [x] `src/content/index.ts`
 
     ```typescript
     import { BrowsingEvent, PageVisitEvent, ScrollEvent, HighlightEvent } from '../types';
@@ -1506,7 +1512,7 @@ pnpm build
     ```
 
 - [x] **오프라인 지원**
-  - [ ] `src/lib/storage.ts`
+  - [x] `src/lib/storage.ts`
 
     ```typescript
     const STORAGE_KEY_PREFIX = 'mindhit';
@@ -1621,16 +1627,16 @@ pnpm build
 
 ### 전체 검증 체크리스트
 
-- [ ] Extension 빌드 성공
-- [ ] Chrome에 로드 성공
-- [ ] Side Panel 열기/닫기
-- [ ] 로그인/로그아웃
-- [ ] 세션 시작/일시정지/재개/종료
-- [ ] 페이지 방문 이벤트 수집
-- [ ] 스크롤 이벤트 수집
-- [ ] 하이라이트 이벤트 수집
-- [ ] 이벤트 배치 전송
-- [ ] 오프라인 이벤트 저장 및 재전송
+- [x] Extension 빌드 성공
+- [x] Chrome에 로드 성공
+- [x] Popup 열기/닫기
+- [x] Google OAuth 로그인/로그아웃
+- [x] 세션 시작/일시정지/재개/종료
+- [x] 페이지 방문 이벤트 수집
+- [x] 스크롤 이벤트 수집
+- [x] 하이라이트 이벤트 수집
+- [x] 이벤트 배치 전송
+- [x] 오프라인 이벤트 저장 및 재전송
 
 ### 테스트 요구사항
 
@@ -1656,7 +1662,9 @@ moonx extension:test
 | Manifest | `manifest.json` |
 | Background Worker | `src/background/index.ts` |
 | Content Script | `src/content/index.ts` |
-| Side Panel | `src/sidepanel/` |
+| Popup UI | `src/popup/` |
+| Google Sign-In | `src/popup/components/GoogleSignInButton.tsx` |
+| Chrome Storage | `src/lib/chrome-storage.ts` |
 | 이벤트 큐 | `src/lib/events.ts` |
 | 테스트 | `src/**/*.test.ts` |
 

@@ -643,6 +643,150 @@ moonx backend:test -- -run "TestOAuth"
 
 ---
 
+---
+
+## Chrome Extension Google OAuth (Phase 8 연계)
+
+Chrome Extension에서는 GIS SDK를 사용할 수 없어 **Authorization Code Flow**를 사용합니다.
+
+### 왜 다른 방식을 사용하나요?
+
+| 항목 | Web App (GIS) | Chrome Extension |
+|------|--------------|------------------|
+| 환경 | 일반 웹 페이지 | Extension popup/sidepanel |
+| SDK | Google Identity Services | `chrome.identity` API |
+| 플로우 | ID Token 직접 수신 | Authorization Code → Backend에서 토큰 교환 |
+| Client Secret | 불필요 | 필요 (Backend에서 토큰 교환 시) |
+
+### 아키텍처
+
+```mermaid
+sequenceDiagram
+    participant E as Extension (Popup)
+    participant G as Google OAuth
+    participant A as API Server
+    participant DB as Database
+
+    Note over E,DB: Chrome Extension OAuth Flow
+
+    E->>E: 1. chrome.identity.getRedirectURL()
+    E->>G: 2. chrome.identity.launchWebAuthFlow()
+    G->>G: 3. Google 계정 선택
+    G-->>E: 4. Authorization Code 반환
+
+    E->>A: 5. POST /v1/auth/google/code {code, redirect_uri}
+    A->>G: 6. 토큰 교환 (code + client_secret)
+    G-->>A: 7. Access Token + ID Token
+    A->>A: 8. ID Token에서 사용자 정보 추출
+
+    A->>DB: 9. 사용자 조회 또는 생성
+    DB-->>A: 10. User
+
+    A-->>E: 11. {token, user}
+    E->>E: 12. chrome.storage.session에 저장
+```
+
+### 구현 체크리스트
+
+#### 1. Google Cloud Console 설정 (추가)
+
+- [x] Credentials > OAuth 2.0 Client ID에서 **Authorized redirect URIs** 추가:
+  - 형식: `https://<extension-id>.chromiumapp.org/`
+  - Extension ID: `chrome://extensions`에서 확인
+
+#### 2. 환경 변수 추가
+
+```bash
+# .env (Backend용)
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+> **Note**: Client Secret은 Authorization Code 교환 시 Backend에서 사용합니다.
+
+#### 3. Backend API 추가
+
+- [x] `POST /v1/auth/google/code` 엔드포인트 추가
+- [x] `OAuthService.ExchangeAuthorizationCode()` 메서드 추가
+
+```go
+// internal/service/oauth_service.go
+func (s *OAuthService) ExchangeAuthorizationCode(ctx context.Context, code, redirectUri string) (*GoogleUserInfo, error) {
+    // 1. Google Token endpoint에 요청
+    data := url.Values{}
+    data.Set("code", code)
+    data.Set("client_id", s.clientID)
+    data.Set("client_secret", s.clientSecret)
+    data.Set("redirect_uri", redirectUri)
+    data.Set("grant_type", "authorization_code")
+
+    resp, err := http.PostForm("https://oauth2.googleapis.com/token", data)
+    // ... ID Token에서 사용자 정보 추출
+}
+```
+
+#### 4. Extension 구현
+
+- [x] `manifest.json`에 `identity` 권한 추가
+- [x] `GoogleSignInButton.tsx` 컴포넌트 구현
+- [x] `api.ts`에 `googleAuthCode()` 메서드 추가
+
+```typescript
+// src/popup/components/GoogleSignInButton.tsx
+const handleGoogleSignIn = async () => {
+  const redirectUri = chrome.identity.getRedirectURL();
+  const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("scope", "openid email profile");
+
+  const responseUrl = await chrome.identity.launchWebAuthFlow({
+    url: authUrl.toString(),
+    interactive: true,
+  });
+
+  const code = new URL(responseUrl).searchParams.get("code");
+  const result = await api.googleAuthCode(code, redirectUri);
+  // ... auth state 저장
+};
+```
+
+#### 5. Zustand Hydration 처리
+
+Chrome Extension에서 Zustand persist는 async이므로 hydration을 기다려야 합니다:
+
+```typescript
+// src/popup/App.tsx
+const [isHydrated, setIsHydrated] = useState(false);
+
+useEffect(() => {
+  const unsub = useAuthStore.persist.onFinishHydration(() => {
+    setIsHydrated(true);
+  });
+  if (useAuthStore.persist.hasHydrated()) {
+    setIsHydrated(true);
+  }
+  return () => unsub();
+}, []);
+```
+
+### 검증
+
+```bash
+# 1. Extension 빌드
+cd apps/extension && pnpm build
+
+# 2. Chrome에서 Extension 로드
+# chrome://extensions > Load unpacked > dist 폴더
+
+# 3. Extension 아이콘 클릭
+# 4. "Sign in with Google" 버튼 클릭
+# 5. Google 계정 선택
+# 6. 로그인 성공 후 세션 컨트롤 UI 표시 확인
+```
+
+---
+
 ## 다음 Phase
 
 Phase 2.1 완료 후 다음 Phase로 진행하세요.

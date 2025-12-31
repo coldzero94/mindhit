@@ -171,6 +171,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2025-12-31] Extension Google OAuth: Chrome Extension Google OAuth login with Authorization Code flow (chrome.identity API), sidepanel→popup migration, Zustand hydration pattern for chrome.storage
 - [2025-12-29] Phase 10 refactored: Code quality improvements - Centralized JSON validation, Default model constants, Cache race condition fix (double-check locking), Mindmap conversion functions moved to service layer, Optimized GetCurrentUsage query
 - [2025-12-29] Phase 10.2 completed: Mindmap Generation - Tag extraction worker handler, Mindmap generation handler with relationship graph, UsageService integration for token tracking
 - [2025-12-29] Phase 10.1 completed: AI Settings & Logging - ai_logs/ai_configs tables, AILogService, AIConfigService (5-min caching), ProviderManager with DB config + fallback support
