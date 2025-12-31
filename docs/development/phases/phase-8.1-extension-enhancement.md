@@ -43,8 +43,8 @@
 
 ### 체크리스트
 
-- [ ] **API 함수 추가**
-  - [ ] `src/lib/api.ts` 업데이트
+- [x] **API 함수 추가**
+  - [x] `src/lib/api.ts` 업데이트
 
     ```typescript
     // 기존 api 객체에 추가
@@ -86,8 +86,8 @@
     };
     ```
 
-- [ ] **세션 목록 컴포넌트**
-  - [ ] `src/popup/components/SessionList.tsx`
+- [x] **세션 목록 컴포넌트**
+  - [x] `src/popup/components/SessionList.tsx`
 
     ```tsx
     import { useState, useEffect } from 'react';
@@ -259,16 +259,16 @@
     }
     ```
 
-- [ ] **상수 파일 업데이트**
-  - [ ] `src/lib/constants.ts`
+- [x] **상수 파일 업데이트**
+  - [x] `src/lib/constants.ts`
 
     ```typescript
     // 기존 내용에 추가
     export const WEB_APP_URL = import.meta.env.VITE_WEB_URL || 'http://localhost:3000';
     ```
 
-- [ ] **대시보드 바로가기 버튼**
-  - [ ] `src/popup/components/DashboardLink.tsx`
+- [x] **대시보드 바로가기 버튼**
+  - [x] `src/popup/components/DashboardLink.tsx`
 
     ```tsx
     import { WEB_APP_URL } from '@/lib/constants';
@@ -310,8 +310,8 @@
     }
     ```
 
-- [ ] **App.tsx 업데이트**
-  - [ ] `src/popup/App.tsx`
+- [x] **App.tsx 업데이트**
+  - [x] `src/popup/App.tsx`
 
     ```tsx
     import { useEffect, useState } from "react";
@@ -426,8 +426,8 @@ moonx extension:build
 
 ### 체크리스트
 
-- [ ] **세션 제목 입력 컴포넌트**
-  - [ ] `src/popup/components/SessionTitleInput.tsx`
+- [x] **세션 제목 입력 컴포넌트**
+  - [x] `src/popup/components/SessionTitleInput.tsx`
 
     ```tsx
     import { useState, useEffect, useRef } from 'react';
@@ -545,8 +545,8 @@ moonx extension:build
     }
     ```
 
-- [ ] **세션 Store 업데이트**
-  - [ ] `src/stores/session-store.ts` 에 title 필드 추가
+- [x] **세션 Store 업데이트**
+  - [x] `src/stores/session-store.ts` 에 title 필드 추가
 
     ```typescript
     // 기존 SessionState interface에 추가
@@ -609,8 +609,8 @@ moonx extension:build
     );
     ```
 
-- [ ] **세션 시작 시 제목 입력 옵션**
-  - [ ] `src/popup/components/SessionControl.tsx` 수정
+- [x] **세션 시작 시 제목 입력 옵션**
+  - [x] `src/popup/components/SessionControl.tsx` 수정
 
     ```tsx
     // handleStart 함수 수정
@@ -641,8 +641,8 @@ moonx extension:build
     };
     ```
 
-- [ ] **API 시작 함수 수정**
-  - [ ] `src/lib/api.ts`
+- [x] **API 시작 함수 수정**
+  - [x] `src/lib/api.ts`
 
     ```typescript
     // startSession 메서드 수정
@@ -655,8 +655,8 @@ moonx extension:build
     },
     ```
 
-- [ ] **SessionControl에 제목 표시 추가**
-  - [ ] `SessionControl.tsx`의 녹화 중 UI에 `SessionTitleInput` 추가
+- [x] **SessionControl에 제목 표시 추가**
+  - [x] `SessionControl.tsx`의 녹화 중 UI에 `SessionTitleInput` 추가
 
     ```tsx
     // return 부분 수정 (녹화 중일 때)
@@ -700,8 +700,8 @@ moonx extension:build
 
 ### 체크리스트
 
-- [ ] **네트워크 상태 Hook**
-  - [ ] `src/lib/use-network-status.ts`
+- [x] **네트워크 상태 Hook**
+  - [x] `src/lib/use-network-status.ts`
 
     ```typescript
     import { useState, useEffect } from 'react';
@@ -747,8 +747,8 @@ moonx extension:build
     }
     ```
 
-- [ ] **네트워크 상태 배너**
-  - [ ] `src/popup/components/NetworkBanner.tsx`
+- [x] **네트워크 상태 배너**
+  - [x] `src/popup/components/NetworkBanner.tsx`
 
     ```tsx
     import { useNetworkStatus } from '@/lib/use-network-status';
@@ -791,8 +791,8 @@ moonx extension:build
     }
     ```
 
-- [ ] **설정 Store**
-  - [ ] `src/stores/settings-store.ts`
+- [x] **설정 Store**
+  - [x] `src/stores/settings-store.ts`
 
     ```typescript
     import { create } from 'zustand';
@@ -852,8 +852,8 @@ moonx extension:build
     );
     ```
 
-- [ ] **설정 페이지 컴포넌트**
-  - [ ] `src/popup/components/Settings.tsx`
+- [x] **설정 페이지 컴포넌트**
+  - [x] `src/popup/components/Settings.tsx`
 
     ```tsx
     import { useState, useEffect } from 'react';
@@ -1019,8 +1019,8 @@ moonx extension:build
     }
     ```
 
-- [ ] **설정 버튼 추가**
-  - [ ] `src/popup/App.tsx` 헤더에 설정 아이콘 추가
+- [x] **설정 버튼 추가**
+  - [x] `src/popup/App.tsx` 헤더에 설정 아이콘 추가
 
     ```tsx
     // App.tsx 수정
@@ -1092,8 +1092,8 @@ moonx extension:build
     }
     ```
 
-- [ ] **Background에서 오프라인 복구 시 재전송**
-  - [ ] `src/background/index.ts` 수정
+- [x] **Background에서 오프라인 복구 시 재전송**
+  - [x] `src/background/index.ts` 수정
 
     ```typescript
     // 기존 코드에 추가
