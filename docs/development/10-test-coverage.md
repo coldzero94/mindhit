@@ -2,7 +2,7 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-28 (Phase 2.1 Google OAuth 테스트 추가)
+> **Last Updated**: 2025-12-31 (Phase 10, 10.1, 10.2 AI 테스트 추가)
 
 ---
 
@@ -165,9 +165,10 @@ pnpm test:coverage
 | 패키지 | 커버리지 | Phase |
 | ------ | -------- | ----- |
 | `internal/infrastructure/queue` | 81.4% | Phase 6 |
-| `internal/worker/handler` | 80.0% | Phase 6 |
-| `internal/service` | 76.0% | Phase 2-4 |
+| `internal/service` | 58.4% | Phase 2-4, 10.1 |
+| `internal/worker/handler` | 48.1% | Phase 6, 10.2 |
 | `internal/controller` | 76.6% | Phase 2-4 |
+| `internal/infrastructure/ai` | 5.3% | Phase 10 |
 | `internal/infrastructure/config` | 0.0% | - |
 | `internal/infrastructure/logger` | 0.0% | - |
 | `internal/infrastructure/middleware` | 0.0% | - |
@@ -351,6 +352,168 @@ pnpm test:coverage
 - `controller/subscription_controller_test.go`: 구독 API 통합 테스트
 - `controller/usage_controller_test.go`: 사용량 API 통합 테스트
 
+### Phase 10: AI Provider Infrastructure
+
+| 파일 | 함수 | 커버리지 | 비고 |
+| ---- | ---- | -------- | ---- |
+| `infrastructure/ai/provider.go` | `validateJSONResponse` | 100.0% | JSON 검증 테스트 |
+| | `buildMessages` | 100.0% | 메시지 빌드 테스트 |
+| | `BaseProvider.Type` | 100.0% | Provider 타입 반환 |
+| | `BaseProvider.Model` | 100.0% | 모델명 반환 |
+| | `BaseProvider.Close` | 100.0% | 리소스 정리 |
+| | `DefaultChatOptions` | 100.0% | 기본 옵션 |
+| `infrastructure/ai/openai.go` | `NewOpenAIProvider` | 0.0% | API 키 필요 |
+| | `Chat` | 0.0% | 실제 API 호출 |
+| `infrastructure/ai/gemini.go` | `NewGeminiProvider` | 0.0% | API 키 필요 |
+| | `Chat` | 0.0% | 실제 API 호출 |
+| `infrastructure/ai/claude.go` | `NewClaudeProvider` | 0.0% | API 키 필요 |
+| | `Chat` | 0.0% | 실제 API 호출 |
+
+#### AI Provider Tests (`provider_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestValidateJSONResponse_ValidJSON` | valid JSON object, array, nested JSON, invalid JSON 처리 |
+| `TestBuildMessages` | system/user prompt 조합, 기존 messages 포함, empty request 처리 |
+| `TestBaseProvider_Type` | Provider 타입 반환 검증 |
+| `TestBaseProvider_Model` | 모델명 반환 검증 |
+| `TestBaseProvider_Close` | Close 에러 없음 검증 |
+| `TestDefaultChatOptions` | 기본 옵션값 검증 (Temperature, MaxTokens, TopP) |
+| `TestProviderType_Constants` | ProviderOpenAI, ProviderGemini, ProviderClaude 상수 검증 |
+| `TestDefaultModels` | DefaultOpenAIModel, DefaultGeminiModel, DefaultClaudeModel 상수 검증 |
+| `TestTaskType_Constants` | TaskTagExtraction, TaskMindmap, TaskGeneral 상수 검증 |
+| `TestRole_Constants` | RoleSystem, RoleUser, RoleAssistant 상수 검증 |
+
+### Phase 10.1: AI Settings & Logging
+
+| 파일 | 함수 | 커버리지 | 비고 |
+| ---- | ---- | -------- | ---- |
+| `service/aiconfig_service.go` | `NewAIConfigService` | 100.0% | 서비스 생성 |
+| | `GetConfigForTask` | 100.0% | 태스크별 설정 조회 (캐싱 포함) |
+| | `GetAll` | 100.0% | 전체 설정 조회 |
+| | `Upsert` | 100.0% | 설정 생성/수정 |
+| | `Delete` | 100.0% | 설정 삭제 |
+| | `InvalidateCache` | 100.0% | 캐시 무효화 |
+| | `SeedDefaultConfigs` | 100.0% | 기본 설정 시드 |
+| `service/ailog_service.go` | `NewAILogService` | 100.0% | 서비스 생성 |
+| | `Log` | 100.0% | AI 요청 로깅 |
+| | `GetBySession` | 100.0% | 세션별 로그 조회 |
+| | `GetUsageStats` | 100.0% | 사용량 통계 조회 |
+| | `estimateCost` | 100.0% | 비용 추정 |
+
+#### AIConfigService Tests (`aiconfig_service_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestAIConfigService_GetConfigForTask` | 특정 태스크 설정 조회 |
+| `TestAIConfigService_GetConfigForTask_FallbackToDefault` | 설정 없을 때 default 폴백 |
+| `TestAIConfigService_GetConfigForTask_Caching` | 캐시 히트 검증 |
+| `TestAIConfigService_InvalidateCache` | 캐시 무효화 검증 |
+| `TestAIConfigService_Upsert_Create` | 새 설정 생성 (fallback providers, thinking budget 포함) |
+| `TestAIConfigService_Upsert_Update` | 기존 설정 업데이트 |
+| `TestAIConfigService_Delete` | 설정 삭제 |
+| `TestAIConfigService_GetAll` | 전체 설정 조회 |
+| `TestAIConfigService_SeedDefaultConfigs` | 기본 설정 시드 (중복 방지 포함) |
+
+#### AILogService Tests (`ailog_service_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestAILogService_Log_Success` | 성공 응답 로깅 (토큰, 비용 계산) |
+| `TestAILogService_Log_Error` | 에러 응답 로깅 |
+| `TestAILogService_Log_WithThinkingTokens` | Thinking 토큰 포함 로깅 |
+| `TestAILogService_GetBySession` | 세션별 로그 조회 |
+| `TestAILogService_GetUsageStats` | Provider별 사용량 통계 조회 |
+| `TestAILogService_EstimateCost` | 비용 추정 (OpenAI, Gemini, Claude) |
+
+### Phase 10.2: Mindmap Generation
+
+| 파일 | 함수 | 커버리지 | 비고 |
+| ---- | ---- | -------- | ---- |
+| `worker/handler/mindmap.go` | `HandleMindmapGenerate` | 60.0% | AI Manager 없이 테스트 가능 부분 |
+| | `buildMindmapFromRelationship` | 100.0% | Mindmap 빌드 로직 |
+| | `getTopicColor` | 100.0% | 토픽 색상 |
+| `worker/handler/tag_extraction.go` | `HandleURLTagExtraction` | 40.0% | AI Manager 없이 테스트 가능 부분 |
+| | `truncateContent` | 100.0% | 콘텐츠 자르기 |
+| `service/mindmap_types.go` | `ConvertNodesToMaps` | 100.0% | 노드 맵 변환 |
+| | `ConvertEdgesToMaps` | 100.0% | 엣지 맵 변환 |
+| | `ConvertLayoutToMap` | 100.0% | 레이아웃 맵 변환 |
+
+#### Mindmap Handler Tests (`mindmap_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestHandleMindmapGenerate_NoAIManager` | AI Manager 없을 때 스킵 |
+| `TestHandleMindmapGenerate_InvalidPayload` | 잘못된 JSON payload |
+| `TestHandleMindmapGenerate_InvalidSessionID` | 잘못된 UUID 형식 |
+| `TestHandleMindmapGenerate_SessionNotFound` | 세션 미존재 (스킵 - AI mock 필요) |
+| `TestHandleMindmapGenerate_WithSession` | 실제 세션으로 테스트 (AI 없이) |
+| `TestBuildMindmapFromRelationship` | Mindmap 빌드: core node, topics, edges, layout |
+| `TestBuildMindmapFromRelationship_EmptyTopics` | 빈 토픽일 때 core node만 생성 |
+| `TestGetTopicColor` | 색상 순환 (8개 색상) |
+| `TestMindmapNodePositioning` | 노드 포지셔닝 (core 중심, topic 반경 200) |
+| `TestConversionFunctions` | 노드/엣지/레이아웃 맵 변환 |
+
+#### Tag Extraction Handler Tests (`tag_extraction_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestHandleURLTagExtraction_NoAIManager` | AI Manager 없을 때 스킵 |
+| `TestHandleURLTagExtraction_InvalidPayload` | 잘못된 JSON payload |
+| `TestHandleURLTagExtraction_InvalidUUID` | 잘못된 UUID 형식 |
+| `TestHandleURLTagExtraction_URLNotFound` | URL 미존재 (스킵 - AI mock 필요) |
+| `TestTruncateContent` | 콘텐츠 truncate (짧은/동일/긴/빈 콘텐츠) |
+
+#### Mindmap Types Tests (`mindmap_types_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestConvertNodesToMaps` | 노드 슬라이스 → map 변환 |
+| `TestConvertEdgesToMaps` | 엣지 슬라이스 → map 변환 |
+| `TestConvertLayoutToMap` | 레이아웃 구조체 → map 변환 |
+
+### AI Integration Tests (Build Tag: `integration`)
+
+실제 AI API를 호출하는 통합 테스트입니다. 비용 통제를 위해 별도 빌드 태그로 분리되어 있습니다.
+
+**실행 방법:**
+
+```bash
+# AI 통합 테스트 실행 (API 키 필요)
+cd apps/backend
+go test ./internal/infrastructure/ai/... -tags=integration -v
+
+# 일반 테스트만 실행 (API 호출 없음)
+go test ./internal/infrastructure/ai/...
+```
+
+**환경 변수:**
+
+테스트는 프로젝트 루트의 `.env` 파일에서 자동으로 API 키를 로드합니다.
+
+| 환경 변수 | 필수 | 설명 |
+| --------- | ---- | ---- |
+| `GEMINI_API_KEY` | 권장 | Google Gemini API 키 |
+| `OPENAI_API_KEY` | 선택 | OpenAI API 키 |
+| `ANTHROPIC_API_KEY` | 선택 | Anthropic Claude API 키 |
+
+#### Gemini Integration Tests (`provider_integration_test.go`)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestGeminiProvider_Integration_Chat` | 기본 채팅, 시스템 프롬프트, JSON 모드 |
+| `TestGeminiProvider_Integration_TagExtraction` | 태그 추출 시뮬레이션 |
+| `TestGeminiProvider_Integration_MindmapGeneration` | 마인드맵 생성 시뮬레이션 |
+| `TestGeminiProvider_Integration_IsHealthy` | 헬스 체크 |
+| `TestGeminiProvider_Integration_Stream` | 스트리밍 응답 |
+
+#### OpenAI/Claude Integration Tests (선택적)
+
+| 테스트 | 설명 |
+| ------ | ---- |
+| `TestOpenAIProvider_Integration_Chat` | OpenAI 기본 채팅 (gpt-4o-mini) |
+| `TestClaudeProvider_Integration_Chat` | Claude 기본 채팅 (claude-3-haiku) |
+
 ---
 
 ## 미테스트 영역 (0% Coverage)
@@ -393,8 +556,15 @@ pnpm test:coverage
 | `internal/service/jwt_service_test.go` | JWT 서비스 테스트 | Phase 2 |
 | `internal/service/subscription_service_test.go` | Subscription 서비스 테스트 | Phase 9 (TODO) |
 | `internal/service/usage_service_test.go` | Usage 서비스 테스트 | Phase 9 (TODO) |
+| `internal/service/aiconfig_service_test.go` | AI Config 서비스 테스트 | Phase 10.1 |
+| `internal/service/ailog_service_test.go` | AI Log 서비스 테스트 | Phase 10.1 |
+| `internal/service/mindmap_types_test.go` | Mindmap 타입 변환 테스트 | Phase 10.2 |
+| `internal/infrastructure/ai/provider_test.go` | AI Provider 테스트 | Phase 10 |
+| `internal/infrastructure/ai/provider_integration_test.go` | AI 통합 테스트 (build tag: integration) | Phase 10 |
 | `internal/infrastructure/queue/*_test.go` | Queue 테스트 | Phase 6 |
 | `internal/worker/handler/handler_test.go` | Worker 핸들러 테스트 | Phase 6 |
+| `internal/worker/handler/mindmap_test.go` | Mindmap 핸들러 테스트 | Phase 10.2 |
+| `internal/worker/handler/tag_extraction_test.go` | Tag Extraction 핸들러 테스트 | Phase 10.2 |
 
 ---
 
@@ -596,6 +766,8 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2025-12-31 | Phase 10 | AI 통합 테스트 추가: provider_integration_test.go (7개, build tag: integration), godotenv로 .env 자동 로드 |
+| 2025-12-31 | Phase 10-10.2 | AI 테스트 추가: provider_test.go (10개), aiconfig_service_test.go (9개), ailog_service_test.go (6개), mindmap_test.go (10개), tag_extraction_test.go (5개), mindmap_types_test.go (3개) |
 | 2025-12-28 | Phase 2.1 | Google OAuth 테스트 추가 (oauth_service_test.go 7개, oauth_controller_test.go 8개) |
 | 2025-12-28 | Phase 9 | Plan & Usage 서비스/컨트롤러 추가 (테스트 미작성, 향후 작성 예정) |
 | 2025-12-28 | - | url_service.go 버그 수정: GetURLsWithoutSummary에 빈 content 제외 조건 추가 |

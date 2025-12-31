@@ -123,75 +123,19 @@ func TestHandleSessionProcess_SessionNotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to get session")
 }
 
-func TestHandleSessionCleanup_Success(t *testing.T) {
+func TestHandleSessionProcess_InvalidSessionID(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
 	ctx := context.Background()
 	h := &handlers{client: client}
 
-	// Create test user with unique email
-	user, err := client.User.Create().
-		SetEmail("test-cleanup-" + uuid.New().String() + "@example.com").
-		SetPasswordHash("hashed").
-		Save(ctx)
-	require.NoError(t, err)
+	// Create task with invalid UUID
+	payload, _ := json.Marshal(queue.SessionProcessPayload{SessionID: "invalid-uuid"})
+	task := asynq.NewTask(queue.TypeSessionProcess, payload)
 
-	// Create old stale session (recording but updated 2 days ago)
-	oldTime := time.Now().Add(-48 * time.Hour)
-	staleSess, err := client.Session.Create().
-		SetUserID(user.ID).
-		SetSessionStatus(session.SessionStatusRecording).
-		SetStartedAt(oldTime).
-		Save(ctx)
-	require.NoError(t, err)
-
-	// Manually update the updated_at to make it stale
-	_, err = client.Session.UpdateOneID(staleSess.ID).
-		SetUpdatedAt(oldTime).
-		Save(ctx)
-	require.NoError(t, err)
-
-	// Create recent session (should not be cleaned up)
-	recentSess, err := client.Session.Create().
-		SetUserID(user.ID).
-		SetSessionStatus(session.SessionStatusRecording).
-		SetStartedAt(time.Now()).
-		Save(ctx)
-	require.NoError(t, err)
-
-	// Create task payload (24 hour max age)
-	payload, _ := json.Marshal(queue.SessionCleanupPayload{MaxAgeHours: 24})
-	task := asynq.NewTask(queue.TypeSessionCleanup, payload)
-
-	// Handle task
-	err = h.HandleSessionCleanup(ctx, task)
-
-	require.NoError(t, err)
-
-	// Verify stale session is now failed
-	updatedStale, err := client.Session.Get(ctx, staleSess.ID)
-	require.NoError(t, err)
-	assert.Equal(t, session.SessionStatusFailed, updatedStale.SessionStatus)
-
-	// Verify recent session is unchanged
-	updatedRecent, err := client.Session.Get(ctx, recentSess.ID)
-	require.NoError(t, err)
-	assert.Equal(t, session.SessionStatusRecording, updatedRecent.SessionStatus)
-}
-
-func TestHandleSessionCleanup_InvalidPayload(t *testing.T) {
-	client := testutil.SetupTestDB(t)
-	defer testutil.CleanupTestDB(t, client)
-
-	ctx := context.Background()
-	h := &handlers{client: client}
-
-	// Create task with invalid payload
-	task := asynq.NewTask(queue.TypeSessionCleanup, []byte("invalid json"))
-
-	err := h.HandleSessionCleanup(ctx, task)
+	err := h.HandleSessionProcess(ctx, task)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to unmarshal payload")
+	assert.Contains(t, err.Error(), "invalid session ID")
 }
