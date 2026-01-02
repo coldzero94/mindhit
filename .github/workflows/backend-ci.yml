@@ -34,6 +34,7 @@ jobs:
         run: go generate ./internal/generated/...
 
       - name: Check for uncommitted changes
+        working-directory: .
         run: |
           if [ -n "$(git status --porcelain apps/backend/internal/generated/)" ]; then
             echo "Error: Generated Go code is out of sync with OpenAPI spec."
@@ -91,7 +92,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('apps/backend/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -109,27 +110,3 @@ jobs:
           file: apps/backend/coverage.out
           flags: backend
         continue-on-error: true
-
-  build:
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Build API
-        run: CGO_ENABLED=0 GOOS=linux go build -o bin/api ./cmd/api
-
-      - name: Build Worker
-        run: CGO_ENABLED=0 GOOS=linux go build -o bin/worker ./cmd/worker
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-binaries
-          path: apps/backend/bin/
-          retention-days: 7
