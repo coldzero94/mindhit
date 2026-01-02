@@ -75,8 +75,8 @@ describe("useMindmap", () => {
     // Verify mindmap data
     expect(result.current.data).toBeDefined();
     expect(result.current.data?.session_id).toBe("session-1");
-    expect(result.current.data?.nodes).toHaveLength(mockMindmapNodes.length);
-    expect(result.current.data?.edges).toHaveLength(mockMindmapEdges.length);
+    expect(result.current.data?.data?.nodes).toHaveLength(mockMindmapNodes.length);
+    expect(result.current.data?.data?.edges).toHaveLength(mockMindmapEdges.length);
   });
 
   it("should include node details", async () => {
@@ -89,12 +89,12 @@ describe("useMindmap", () => {
     });
 
     // Check core node
-    const coreNode = result.current.data?.nodes.find((n) => n.type === "core");
+    const coreNode = result.current.data?.data?.nodes.find((n) => n.type === "core");
     expect(coreNode).toBeDefined();
     expect(coreNode?.label).toBe("Test Session");
 
     // Check topic nodes
-    const topicNodes = result.current.data?.nodes.filter((n) => n.type === "topic");
+    const topicNodes = result.current.data?.data?.nodes.filter((n) => n.type === "topic");
     expect(topicNodes).toHaveLength(2);
   });
 

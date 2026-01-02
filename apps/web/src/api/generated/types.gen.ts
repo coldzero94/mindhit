@@ -598,6 +598,42 @@ export type RoutesLogoutResponses = {
 export type RoutesLogoutResponse =
   RoutesLogoutResponses[keyof RoutesLogoutResponses];
 
+export type RoutesDeleteMeData = {
+  body?: never;
+  headers: {
+    authorization: string;
+  };
+  path?: never;
+  query?: {
+    hard?: boolean;
+  };
+  url: "/v1/auth/me";
+};
+
+export type RoutesDeleteMeErrors = {
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+  /**
+   * Access is forbidden.
+   */
+  403: CommonErrorResponse;
+};
+
+export type RoutesDeleteMeError =
+  RoutesDeleteMeErrors[keyof RoutesDeleteMeErrors];
+
+export type RoutesDeleteMeResponses = {
+  /**
+   * There is no content to send for this request, but the headers may be useful.
+   */
+  204: void;
+};
+
+export type RoutesDeleteMeResponse =
+  RoutesDeleteMeResponses[keyof RoutesDeleteMeResponses];
+
 export type RoutesMeData = {
   body?: never;
   headers: {

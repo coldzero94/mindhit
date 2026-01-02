@@ -14,6 +14,9 @@ import type {
   RoutesBatchEventsResponses,
   RoutesDeleteData,
   RoutesDeleteErrors,
+  RoutesDeleteMeData,
+  RoutesDeleteMeErrors,
+  RoutesDeleteMeResponses,
   RoutesDeleteResponses,
   RoutesForgotPasswordData,
   RoutesForgotPasswordErrors,
@@ -187,6 +190,18 @@ export const routesLogout = <ThrowOnError extends boolean = false>(
     RoutesLogoutErrors,
     ThrowOnError
   >({ url: "/v1/auth/logout", ...options });
+
+/**
+ * 계정 삭제. hard=true인 경우 DB에서 완전 삭제 (테스트 환경에서만 허용)
+ */
+export const routesDeleteMe = <ThrowOnError extends boolean = false>(
+  options: Options<RoutesDeleteMeData, ThrowOnError>,
+) =>
+  (options.client ?? client).delete<
+    RoutesDeleteMeResponses,
+    RoutesDeleteMeErrors,
+    ThrowOnError
+  >({ url: "/v1/auth/me", ...options });
 
 /**
  * 현재 사용자 정보 조회

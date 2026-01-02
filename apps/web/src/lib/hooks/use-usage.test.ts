@@ -136,8 +136,8 @@ describe("useUsageHistory", () => {
     });
 
     const firstMonth = result.current.data?.history[0];
-    expect(firstMonth?.month).toBe(mockUsageHistory[0].month);
-    expect(firstMonth?.used_tokens).toBe(mockUsageHistory[0].used_tokens);
+    expect(firstMonth?.period_start).toBe(mockUsageHistory[0].period_start);
+    expect(firstMonth?.tokens_used).toBe(mockUsageHistory[0].tokens_used);
     expect(firstMonth?.token_limit).toBe(mockUsageHistory[0].token_limit);
   });
 

@@ -446,6 +446,24 @@ export const zRoutesLogoutResponse = z.object({
   message: z.string(),
 });
 
+export const zRoutesDeleteMeData = z.object({
+  body: z.optional(z.never()),
+  path: z.optional(z.never()),
+  query: z.optional(
+    z.object({
+      hard: z.optional(z.boolean()),
+    }),
+  ),
+  headers: z.object({
+    authorization: z.string(),
+  }),
+});
+
+/**
+ * There is no content to send for this request, but the headers may be useful.
+ */
+export const zRoutesDeleteMeResponse = z.void();
+
 export const zRoutesMeData = z.object({
   body: z.optional(z.never()),
   path: z.optional(z.never()),
