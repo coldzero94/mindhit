@@ -62,7 +62,7 @@ phases/
 | 11.1 | [React Three Fiber 설정](./phase-11.1-threejs-setup.md) | ✅ 완료 | 1 step |
 | 11.2 | [3D 마인드맵 컴포넌트](./phase-11.2-mindmap-components.md) | ✅ 완료 | 2 steps |
 | 11.3 | [세션 상세 페이지 개선](./phase-11.3-session-detail.md) | ✅ 완료 | 2 steps |
-| 11.4 | [계정 및 사용량 페이지](./phase-11.4-account-usage.md) | ⬜ 대기 | 2 steps |
+| 11.4 | [계정 및 사용량 페이지](./phase-11.4-account-usage.md) | ✅ 완료 | 2 steps |
 | 11.5 | [애니메이션 및 인터랙션](./phase-11.5-animation.md) | ⬜ 대기 | 2 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ⬜ 대기 | 4 steps |
 | 13 | [배포 및 운영](./phase-13-deployment.md) | ⬜ 대기 | 4 steps |

@@ -15,8 +15,8 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 11.4.1 | API 연동 | ⬜ |
-| 11.4.2 | 계정 페이지 UI | ⬜ |
+| 11.4.1 | API 연동 | ✅ |
+| 11.4.2 | 계정 페이지 UI | ✅ |
 
 ---
 
@@ -24,8 +24,8 @@
 
 ### 체크리스트
 
-- [ ] **구독 API 래퍼**
-  - [ ] `src/lib/api/subscription.ts`
+- [x] **구독 API 래퍼**
+  - [x] `src/lib/api/subscription.ts`
 
     ```typescript
     import { apiClient } from './client';
@@ -49,8 +49,8 @@
     }
     ```
 
-- [ ] **사용량 API 래퍼**
-  - [ ] `src/lib/api/usage.ts`
+- [x] **사용량 API 래퍼**
+  - [x] `src/lib/api/usage.ts`
 
     ```typescript
     import { apiClient } from './client';
@@ -82,8 +82,8 @@
     }
     ```
 
-- [ ] **구독 React Query Hook**
-  - [ ] `src/lib/hooks/use-subscription.ts`
+- [x] **구독 React Query Hook**
+  - [x] `src/lib/hooks/use-subscription.ts`
 
     ```typescript
     import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -122,8 +122,8 @@
     }
     ```
 
-- [ ] **사용량 React Query Hook**
-  - [ ] `src/lib/hooks/use-usage.ts`
+- [x] **사용량 React Query Hook**
+  - [x] `src/lib/hooks/use-usage.ts`
 
     ```typescript
     import { useQuery } from '@tanstack/react-query';
@@ -168,8 +168,8 @@ pnpm dev
 
 ### 체크리스트
 
-- [ ] **Progress 컴포넌트 (없는 경우)**
-  - [ ] `src/components/ui/Progress.tsx`
+- [x] **Progress 컴포넌트**
+  - [x] `src/components/ui/progress.tsx`
 
     ```tsx
     import { cn } from '@/lib/utils';
@@ -213,8 +213,8 @@ pnpm dev
     }
     ```
 
-- [ ] **구독 정보 카드 컴포넌트**
-  - [ ] `src/components/account/SubscriptionCard.tsx`
+- [x] **구독 정보 카드 컴포넌트**
+  - [x] `src/components/account/SubscriptionCard.tsx`
 
     ```tsx
     'use client';
@@ -315,8 +315,8 @@ pnpm dev
     }
     ```
 
-- [ ] **사용량 카드 컴포넌트**
-  - [ ] `src/components/account/UsageCard.tsx`
+- [x] **사용량 카드 컴포넌트**
+  - [x] `src/components/account/UsageCard.tsx`
 
     ```tsx
     'use client';
@@ -397,8 +397,8 @@ pnpm dev
     }
     ```
 
-- [ ] **사용량 히스토리 컴포넌트**
-  - [ ] `src/components/account/UsageHistory.tsx`
+- [x] **사용량 히스토리 컴포넌트**
+  - [x] `src/components/account/UsageHistory.tsx`
 
     ```tsx
     'use client';
@@ -491,8 +491,8 @@ pnpm dev
     }
     ```
 
-- [ ] **계정 페이지**
-  - [ ] `src/app/(dashboard)/account/page.tsx`
+- [x] **계정 페이지**
+  - [x] `src/app/(dashboard)/account/page.tsx`
 
     ```tsx
     'use client';
@@ -579,8 +579,8 @@ pnpm dev
     }
     ```
 
-- [ ] **사이드바 업데이트**
-  - [ ] `src/components/layout/Sidebar.tsx` (계정 메뉴 추가)
+- [x] **헤더 계정 링크 추가** (사이드바 없는 레이아웃)
+  - [x] `src/app/(dashboard)/layout.tsx` - 헤더에 계정 링크 추가
 
     ```tsx
     // 기존 Sidebar.tsx에 메뉴 항목 추가
@@ -594,8 +594,8 @@ pnpm dev
     ];
     ```
 
-- [ ] **헤더 사용량 배지 (선택사항)**
-  - [ ] `src/components/layout/HeaderUsageBadge.tsx`
+- [x] **헤더 사용량 배지**
+  - [x] `src/components/layout/HeaderUsageBadge.tsx`
 
     ```tsx
     'use client';
@@ -663,14 +663,14 @@ pnpm dev
 
 ### 전체 검증 체크리스트
 
-- [ ] 구독 API 연동
-- [ ] 사용량 API 연동
-- [ ] 계정 페이지 렌더링
-- [ ] 구독 정보 표시
-- [ ] 사용량 Progress 바
-- [ ] 사용량 히스토리
-- [ ] 사이드바 메뉴
-- [ ] 헤더 사용량 배지 (80% 이상)
+- [x] 구독 API 연동
+- [x] 사용량 API 연동
+- [x] 계정 페이지 렌더링
+- [x] 구독 정보 표시
+- [x] 사용량 Progress 바
+- [x] 사용량 히스토리
+- [x] 헤더 계정 링크
+- [x] 헤더 사용량 배지 (80% 이상)
 
 ### 테스트
 
@@ -688,12 +688,33 @@ moonx web:build
 | 사용량 API | `src/lib/api/usage.ts` |
 | 구독 Hook | `src/lib/hooks/use-subscription.ts` |
 | 사용량 Hook | `src/lib/hooks/use-usage.ts` |
-| Progress 컴포넌트 | `src/components/ui/Progress.tsx` |
+| Progress 컴포넌트 | `src/components/ui/progress.tsx` |
 | 구독 카드 | `src/components/account/SubscriptionCard.tsx` |
 | 사용량 카드 | `src/components/account/UsageCard.tsx` |
 | 사용량 히스토리 | `src/components/account/UsageHistory.tsx` |
 | 계정 페이지 | `src/app/(dashboard)/account/page.tsx` |
 | 헤더 배지 | `src/components/layout/HeaderUsageBadge.tsx` |
+
+---
+
+## 구현 노트 (2026-01-02)
+
+### 문서 예시 코드와 실제 구현의 차이점
+
+| 항목 | 문서 예시 | 실제 구현 |
+| ---- | --------- | --------- |
+| **API 타입** | 커스텀 인터페이스 (`Subscription`, `UsageData`) | OpenAPI 생성 타입 (`SubscriptionSubscriptionResponse`, `UsageUsageResponse`) |
+| **로딩 UI** | `animate-pulse` div | `Skeleton` 컴포넌트 (shadcn/ui) |
+| **무제한 사용량** | 미지원 | `is_unlimited` 필드 처리 추가 |
+| **로그아웃** | 없음 | `AlertDialog` 확인 모달 추가 |
+| **updateSubscription** | 포함 | Phase 14 (Stripe)로 이관 |
+
+### 추가 구현 사항
+
+- **Subscription API**: `/subscription`, `/subscription/plans` (updateSubscription은 Phase 14에서 Stripe 연동 시 구현)
+- **Usage API**: `/usage`, `/usage/history?months=N`
+- **무제한 사용자 처리**: UsageCard, UsageHistory에서 `is_unlimited` 체크 후 progress bar 숨김
+- **계정 페이지 로그아웃**: AlertDialog를 통한 확인 후 로그아웃 처리
 
 ---
 

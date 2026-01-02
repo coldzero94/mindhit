@@ -22,6 +22,7 @@ apps/web/
 │   │   │   ├── sessions/
 │   │   │   │   ├── page.tsx       # Session list
 │   │   │   │   └── [id]/page.tsx  # Session detail with Mindmap tab
+│   │   │   ├── account/page.tsx   # Account & usage page
 │   │   │   ├── test-3d/page.tsx   # 3D test page
 │   │   │   └── layout.tsx         # Dashboard layout with auth guard
 │   │   ├── layout.tsx          # Root layout with Providers
@@ -31,7 +32,13 @@ apps/web/
 │   │   ├── ui/                 # shadcn/ui components (tabs, card, etc.)
 │   │   ├── auth/               # Auth components (login-form, signup-form)
 │   │   ├── sessions/           # Session components
-│   │   │   ├── SessionTitleEdit.tsx  # Inline title editing
+│   │   │   └── SessionTitleEdit.tsx  # Inline title editing
+│   │   ├── account/            # Account page components
+│   │   │   ├── SubscriptionCard.tsx  # Subscription info card
+│   │   │   ├── UsageCard.tsx         # Token usage card with progress
+│   │   │   └── UsageHistory.tsx      # Usage history chart
+│   │   ├── layout/             # Layout components
+│   │   │   └── HeaderUsageBadge.tsx  # Header usage warning badge
 │   │   └── mindmap/            # 3D mindmap components
 │   │       ├── MindmapCanvas.tsx   # R3F Canvas wrapper
 │   │       ├── MindmapViewer.tsx   # Mindmap viewer with API integration
@@ -43,10 +50,14 @@ apps/web/
 │   │   │   ├── client.ts       # Axios client with interceptors
 │   │   │   ├── auth.ts         # Auth API functions
 │   │   │   ├── sessions.ts     # Sessions API functions
-│   │   │   └── mindmap.ts      # Mindmap API functions
+│   │   │   ├── mindmap.ts      # Mindmap API functions
+│   │   │   ├── subscription.ts # Subscription API functions
+│   │   │   └── usage.ts        # Usage API functions
 │   │   ├── hooks/              # React Query hooks
 │   │   │   ├── use-sessions.ts # Sessions query/mutation hooks
-│   │   │   └── use-mindmap.ts  # Mindmap query/mutation hooks
+│   │   │   ├── use-mindmap.ts  # Mindmap query/mutation hooks
+│   │   │   ├── use-subscription.ts  # Subscription hooks
+│   │   │   └── use-usage.ts    # Usage hooks (with auto-refresh)
 │   │   ├── utils/              # Utility functions
 │   │   │   └── mindmap-transform.ts  # API to frontend type transform
 │   │   └── utils.ts            # Utility functions (cn)
@@ -103,6 +114,14 @@ await updateSession.mutateAsync({ id, data: { title: newTitle } });
 const { data: mindmap } = useMindmap(sessionId);
 const generateMindmap = useGenerateMindmap();
 await generateMindmap.mutateAsync({ sessionId, options: { force: true } });
+
+// Subscription hooks
+const { data: subscription } = useSubscription();
+const { data: plans } = usePlans();
+
+// Usage hooks (auto-refresh every 5 minutes)
+const { data: usage } = useUsage();
+const { data: history } = useUsageHistory(6); // Last 6 months
 ```
 
 ### Form Validation with Zod v4
@@ -143,7 +162,13 @@ moonx web:generate   # Generate API client from OpenAPI
 | `src/lib/hooks/use-sessions.ts` | React Query hooks for sessions (CRUD) |
 | `src/components/sessions/SessionTitleEdit.tsx` | Inline session title editing |
 | `src/lib/hooks/use-mindmap.ts` | React Query hooks for mindmap API |
+| `src/lib/hooks/use-subscription.ts` | Subscription query hooks |
+| `src/lib/hooks/use-usage.ts` | Usage query hooks with auto-refresh |
 | `src/components/mindmap/MindmapViewer.tsx` | Mindmap viewer with API integration |
+| `src/components/account/SubscriptionCard.tsx` | Subscription info display |
+| `src/components/account/UsageCard.tsx` | Token usage with progress bar |
+| `src/components/layout/HeaderUsageBadge.tsx` | Header badge for 80%+ usage |
+| `src/app/(dashboard)/account/page.tsx` | Account & usage page |
 | `src/app/providers.tsx` | QueryClient + Toaster setup |
 | `eslint.config.mjs` | ESLint config (ignores generated files) |
 | `openapi-ts.config.ts` | Hey API generation config |

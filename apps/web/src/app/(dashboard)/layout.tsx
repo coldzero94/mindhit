@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, User } from "lucide-react";
+import { HeaderUsageBadge } from "@/components/layout/HeaderUsageBadge";
 
 // Custom hook to check hydration status without triggering lint errors
 function useHydrated() {
@@ -63,7 +64,14 @@ export default function DashboardLayout({
               MindHit
             </Link>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">{user?.email}</span>
+              <HeaderUsageBadge />
+              <Link
+                href="/account"
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                <User className="h-4 w-4" />
+                <span>{user?.email}</span>
+              </Link>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 로그아웃

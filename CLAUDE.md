@@ -161,6 +161,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 11.1 | ✅ Done | React Three Fiber Setup |
 | Phase 11.2 | ✅ Done | 3D Mindmap Components |
 | Phase 11.3 | ✅ Done | Session Detail Page (Mindmap API) |
+| Phase 11.4 | ✅ Done | Account & Usage Page |
 | Phase 11 | 🟡 In Progress | Web App Dashboard |
 | Phase 12 | ⬜ Pending | Production Monitoring |
 | Phase 13 | ⬜ Pending | Deployment & Operations |
@@ -175,6 +176,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2026-01-02] Phase 11.4 completed: Account & Usage Page - subscription/usage API wrappers, useSubscription/useUsage hooks, SubscriptionCard, UsageCard, UsageHistory components, account page, HeaderUsageBadge
 - [2026-01-02] Phase 11.3 updated: Session title editing - SessionTitleEdit component, useUpdateSession hook integration, inline edit with Enter/Escape support
 - [2025-12-31] Phase 11.3 completed: Session Detail Page Enhancement - Mindmap API (TypeSpec + Go backend), MindmapViewer component, useMindmap hook, mindmap-transform util, Tabs UI with Events/Mindmap views, seed data for testing
 - [2025-12-31] Phase 11.2 completed: 3D Mindmap Components - Node, Edge, Galaxy components with hover/select animations, mindmap-utils, mock data
