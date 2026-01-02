@@ -21,22 +21,34 @@ apps/web/
 │   │   ├── (dashboard)/        # Protected routes (requires auth)
 │   │   │   ├── sessions/
 │   │   │   │   ├── page.tsx       # Session list
-│   │   │   │   └── [id]/page.tsx  # Session detail
+│   │   │   │   └── [id]/page.tsx  # Session detail with Mindmap tab
+│   │   │   ├── test-3d/page.tsx   # 3D test page
 │   │   │   └── layout.tsx         # Dashboard layout with auth guard
 │   │   ├── layout.tsx          # Root layout with Providers
 │   │   ├── page.tsx            # Home (redirects to /login or /sessions)
 │   │   └── providers.tsx       # React Query + Toaster
 │   ├── components/
-│   │   ├── ui/                 # shadcn/ui components
+│   │   ├── ui/                 # shadcn/ui components (tabs, card, etc.)
 │   │   ├── auth/               # Auth components (login-form, signup-form)
-│   │   └── sessions/           # Session components (session-card, session-list)
+│   │   ├── sessions/           # Session components
+│   │   │   ├── SessionTitleEdit.tsx  # Inline title editing
+│   │   └── mindmap/            # 3D mindmap components
+│   │       ├── MindmapCanvas.tsx   # R3F Canvas wrapper
+│   │       ├── MindmapViewer.tsx   # Mindmap viewer with API integration
+│   │       ├── Galaxy.tsx          # Main 3D scene
+│   │       ├── Node.tsx            # 3D node component
+│   │       └── Edge.tsx            # 3D edge component
 │   ├── lib/
 │   │   ├── api/                # API client wrappers
 │   │   │   ├── client.ts       # Axios client with interceptors
 │   │   │   ├── auth.ts         # Auth API functions
-│   │   │   └── sessions.ts     # Sessions API functions
+│   │   │   ├── sessions.ts     # Sessions API functions
+│   │   │   └── mindmap.ts      # Mindmap API functions
 │   │   ├── hooks/              # React Query hooks
-│   │   │   └── use-sessions.ts # Sessions query/mutation hooks
+│   │   │   ├── use-sessions.ts # Sessions query/mutation hooks
+│   │   │   └── use-mindmap.ts  # Mindmap query/mutation hooks
+│   │   ├── utils/              # Utility functions
+│   │   │   └── mindmap-transform.ts  # API to frontend type transform
 │   │   └── utils.ts            # Utility functions (cn)
 │   └── stores/
 │       └── auth-store.ts       # Zustand auth store with persist
@@ -55,6 +67,7 @@ apps/web/
 - **API Client**: Axios + @hey-api/openapi-ts (types)
 - **Validation**: Zod v4
 - **Toast**: Sonner
+- **3D Visualization**: React Three Fiber, @react-three/drei, @react-three/postprocessing
 
 ## Key Patterns
 
@@ -78,13 +91,18 @@ Source: `packages/protocol/tsp-output/openapi/openapi.yaml`
 ### React Query Hooks
 
 ```typescript
-// Query hooks
+// Session hooks
 const { data, isLoading } = useSessions(limit, offset);
 const { data: session } = useSession(id);
-
-// Mutation hooks
 const deleteSession = useDeleteSession();
 await deleteSession.mutateAsync(sessionId);
+const updateSession = useUpdateSession();
+await updateSession.mutateAsync({ id, data: { title: newTitle } });
+
+// Mindmap hooks
+const { data: mindmap } = useMindmap(sessionId);
+const generateMindmap = useGenerateMindmap();
+await generateMindmap.mutateAsync({ sessionId, options: { force: true } });
 ```
 
 ### Form Validation with Zod v4
@@ -122,7 +140,10 @@ moonx web:generate   # Generate API client from OpenAPI
 |------|---------|
 | `src/stores/auth-store.ts` | Zustand auth state (user, tokens) |
 | `src/lib/api/client.ts` | Axios client with auth interceptor |
-| `src/lib/hooks/use-sessions.ts` | React Query hooks for sessions |
+| `src/lib/hooks/use-sessions.ts` | React Query hooks for sessions (CRUD) |
+| `src/components/sessions/SessionTitleEdit.tsx` | Inline session title editing |
+| `src/lib/hooks/use-mindmap.ts` | React Query hooks for mindmap API |
+| `src/components/mindmap/MindmapViewer.tsx` | Mindmap viewer with API integration |
 | `src/app/providers.tsx` | QueryClient + Toaster setup |
 | `eslint.config.mjs` | ESLint config (ignores generated files) |
 | `openapi-ts.config.ts` | Hey API generation config |

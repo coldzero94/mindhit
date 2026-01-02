@@ -3744,11 +3744,13 @@ type MindmapGraphMutation struct {
 	id                *uuid.UUID
 	created_at        *time.Time
 	updated_at        *time.Time
+	status            *mindmapgraph.Status
 	nodes             *[]map[string]interface{}
 	appendnodes       []map[string]interface{}
 	graph_edges       *[]map[string]interface{}
 	appendgraph_edges []map[string]interface{}
 	layout            *map[string]interface{}
+	error_message     *string
 	generated_at      *time.Time
 	version           *int
 	addversion        *int
@@ -3936,6 +3938,42 @@ func (m *MindmapGraphMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// SetStatus sets the "status" field.
+func (m *MindmapGraphMutation) SetStatus(value mindmapgraph.Status) {
+	m.status = &value
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *MindmapGraphMutation) Status() (r mindmapgraph.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the MindmapGraph entity.
+// If the MindmapGraph object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MindmapGraphMutation) OldStatus(ctx context.Context) (v mindmapgraph.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *MindmapGraphMutation) ResetStatus() {
+	m.status = nil
+}
+
 // SetNodes sets the "nodes" field.
 func (m *MindmapGraphMutation) SetNodes(value []map[string]interface{}) {
 	m.nodes = &value
@@ -4115,6 +4153,55 @@ func (m *MindmapGraphMutation) ResetLayout() {
 	delete(m.clearedFields, mindmapgraph.FieldLayout)
 }
 
+// SetErrorMessage sets the "error_message" field.
+func (m *MindmapGraphMutation) SetErrorMessage(s string) {
+	m.error_message = &s
+}
+
+// ErrorMessage returns the value of the "error_message" field in the mutation.
+func (m *MindmapGraphMutation) ErrorMessage() (r string, exists bool) {
+	v := m.error_message
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldErrorMessage returns the old "error_message" field's value of the MindmapGraph entity.
+// If the MindmapGraph object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MindmapGraphMutation) OldErrorMessage(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldErrorMessage is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldErrorMessage requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldErrorMessage: %w", err)
+	}
+	return oldValue.ErrorMessage, nil
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (m *MindmapGraphMutation) ClearErrorMessage() {
+	m.error_message = nil
+	m.clearedFields[mindmapgraph.FieldErrorMessage] = struct{}{}
+}
+
+// ErrorMessageCleared returns if the "error_message" field was cleared in this mutation.
+func (m *MindmapGraphMutation) ErrorMessageCleared() bool {
+	_, ok := m.clearedFields[mindmapgraph.FieldErrorMessage]
+	return ok
+}
+
+// ResetErrorMessage resets all changes to the "error_message" field.
+func (m *MindmapGraphMutation) ResetErrorMessage() {
+	m.error_message = nil
+	delete(m.clearedFields, mindmapgraph.FieldErrorMessage)
+}
+
 // SetGeneratedAt sets the "generated_at" field.
 func (m *MindmapGraphMutation) SetGeneratedAt(t time.Time) {
 	m.generated_at = &t
@@ -4280,12 +4367,15 @@ func (m *MindmapGraphMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MindmapGraphMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 9)
 	if m.created_at != nil {
 		fields = append(fields, mindmapgraph.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, mindmapgraph.FieldUpdatedAt)
+	}
+	if m.status != nil {
+		fields = append(fields, mindmapgraph.FieldStatus)
 	}
 	if m.nodes != nil {
 		fields = append(fields, mindmapgraph.FieldNodes)
@@ -4295,6 +4385,9 @@ func (m *MindmapGraphMutation) Fields() []string {
 	}
 	if m.layout != nil {
 		fields = append(fields, mindmapgraph.FieldLayout)
+	}
+	if m.error_message != nil {
+		fields = append(fields, mindmapgraph.FieldErrorMessage)
 	}
 	if m.generated_at != nil {
 		fields = append(fields, mindmapgraph.FieldGeneratedAt)
@@ -4314,12 +4407,16 @@ func (m *MindmapGraphMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case mindmapgraph.FieldUpdatedAt:
 		return m.UpdatedAt()
+	case mindmapgraph.FieldStatus:
+		return m.Status()
 	case mindmapgraph.FieldNodes:
 		return m.Nodes()
 	case mindmapgraph.FieldGraphEdges:
 		return m.GraphEdges()
 	case mindmapgraph.FieldLayout:
 		return m.Layout()
+	case mindmapgraph.FieldErrorMessage:
+		return m.ErrorMessage()
 	case mindmapgraph.FieldGeneratedAt:
 		return m.GeneratedAt()
 	case mindmapgraph.FieldVersion:
@@ -4337,12 +4434,16 @@ func (m *MindmapGraphMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldCreatedAt(ctx)
 	case mindmapgraph.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
+	case mindmapgraph.FieldStatus:
+		return m.OldStatus(ctx)
 	case mindmapgraph.FieldNodes:
 		return m.OldNodes(ctx)
 	case mindmapgraph.FieldGraphEdges:
 		return m.OldGraphEdges(ctx)
 	case mindmapgraph.FieldLayout:
 		return m.OldLayout(ctx)
+	case mindmapgraph.FieldErrorMessage:
+		return m.OldErrorMessage(ctx)
 	case mindmapgraph.FieldGeneratedAt:
 		return m.OldGeneratedAt(ctx)
 	case mindmapgraph.FieldVersion:
@@ -4370,6 +4471,13 @@ func (m *MindmapGraphMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUpdatedAt(v)
 		return nil
+	case mindmapgraph.FieldStatus:
+		v, ok := value.(mindmapgraph.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
 	case mindmapgraph.FieldNodes:
 		v, ok := value.([]map[string]interface{})
 		if !ok {
@@ -4390,6 +4498,13 @@ func (m *MindmapGraphMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLayout(v)
+		return nil
+	case mindmapgraph.FieldErrorMessage:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetErrorMessage(v)
 		return nil
 	case mindmapgraph.FieldGeneratedAt:
 		v, ok := value.(time.Time)
@@ -4459,6 +4574,9 @@ func (m *MindmapGraphMutation) ClearedFields() []string {
 	if m.FieldCleared(mindmapgraph.FieldLayout) {
 		fields = append(fields, mindmapgraph.FieldLayout)
 	}
+	if m.FieldCleared(mindmapgraph.FieldErrorMessage) {
+		fields = append(fields, mindmapgraph.FieldErrorMessage)
+	}
 	return fields
 }
 
@@ -4482,6 +4600,9 @@ func (m *MindmapGraphMutation) ClearField(name string) error {
 	case mindmapgraph.FieldLayout:
 		m.ClearLayout()
 		return nil
+	case mindmapgraph.FieldErrorMessage:
+		m.ClearErrorMessage()
+		return nil
 	}
 	return fmt.Errorf("unknown MindmapGraph nullable field %s", name)
 }
@@ -4496,6 +4617,9 @@ func (m *MindmapGraphMutation) ResetField(name string) error {
 	case mindmapgraph.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
+	case mindmapgraph.FieldStatus:
+		m.ResetStatus()
+		return nil
 	case mindmapgraph.FieldNodes:
 		m.ResetNodes()
 		return nil
@@ -4504,6 +4628,9 @@ func (m *MindmapGraphMutation) ResetField(name string) error {
 		return nil
 	case mindmapgraph.FieldLayout:
 		m.ResetLayout()
+		return nil
+	case mindmapgraph.FieldErrorMessage:
+		m.ResetErrorMessage()
 		return nil
 	case mindmapgraph.FieldGeneratedAt:
 		m.ResetGeneratedAt()

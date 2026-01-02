@@ -174,6 +174,102 @@ export const zEventsEventListResponse = z.object({
 });
 
 /**
+ * 마인드맵 생성 요청
+ */
+export const zMindmapGenerateMindmapRequest = z.object({
+  force: z.optional(z.boolean()).default(false),
+});
+
+/**
+ * 마인드맵 레이아웃 타입
+ */
+export const zMindmapLayoutType = z.enum(["galaxy", "tree", "radial"]);
+
+/**
+ * 마인드맵 엣지
+ */
+export const zMindmapMindmapEdge = z.object({
+  source: z.string(),
+  target: z.string(),
+  weight: z.number(),
+  label: z.optional(z.string()),
+});
+
+/**
+ * 마인드맵 레이아웃 설정
+ */
+export const zMindmapMindmapLayout = z.object({
+  type: z.string(),
+  params: z.optional(z.record(z.string(), z.unknown())),
+});
+
+/**
+ * 마인드맵 상태
+ */
+export const zMindmapMindmapStatus = z.enum([
+  "pending",
+  "generating",
+  "completed",
+  "failed",
+]);
+
+/**
+ * 마인드맵 노드 타입
+ */
+export const zMindmapNodeType = z.enum(["core", "topic", "subtopic", "page"]);
+
+/**
+ * 3D 좌표
+ */
+export const zMindmapPosition = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number(),
+});
+
+/**
+ * 마인드맵 노드
+ */
+export const zMindmapMindmapNode = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.string(),
+  size: z.number(),
+  color: z.string(),
+  position: z.optional(zMindmapPosition),
+  data: z.optional(z.record(z.string(), z.unknown())),
+});
+
+/**
+ * 마인드맵 데이터
+ */
+export const zMindmapMindmapData = z.object({
+  nodes: z.array(zMindmapMindmapNode),
+  edges: z.array(zMindmapMindmapEdge),
+  layout: zMindmapMindmapLayout,
+});
+
+/**
+ * 마인드맵 정보
+ */
+export const zMindmapMindmap = z.object({
+  id: z.string(),
+  session_id: z.string(),
+  status: zMindmapMindmapStatus,
+  data: z.optional(zMindmapMindmapData),
+  error_message: z.optional(z.string()),
+  created_at: z.iso.datetime(),
+  updated_at: z.iso.datetime(),
+});
+
+/**
+ * 마인드맵 응답
+ */
+export const zMindmapMindmapResponse = z.object({
+  mindmap: zMindmapMindmap,
+});
+
+/**
  * 세션 상태
  */
 export const zSessionSessionStatus = z.enum([
@@ -540,6 +636,38 @@ export const zRoutesGetEventStatsData = z.object({
  * The request has succeeded.
  */
 export const zRoutesGetEventStatsResponse = zEventsEventStatsResponse;
+
+export const zMindmapRoutesGetMindmapData = z.object({
+  body: z.optional(z.never()),
+  path: z.object({
+    id: z.string(),
+  }),
+  query: z.optional(z.never()),
+  headers: z.object({
+    authorization: z.string(),
+  }),
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zMindmapRoutesGetMindmapResponse = zMindmapMindmapResponse;
+
+export const zMindmapRoutesGenerateMindmapData = z.object({
+  body: zMindmapGenerateMindmapRequest,
+  path: z.object({
+    id: z.string(),
+  }),
+  query: z.optional(z.never()),
+  headers: z.object({
+    authorization: z.string(),
+  }),
+});
+
+/**
+ * The request has been accepted for processing, but processing has not yet completed.
+ */
+export const zMindmapRoutesGenerateMindmapResponse = zMindmapMindmapResponse;
 
 export const zRoutesPauseData = z.object({
   body: z.optional(z.never()),

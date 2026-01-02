@@ -150,9 +150,11 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "generating", "completed", "failed"}, Default: "pending"},
 		{Name: "nodes", Type: field.TypeJSON, Nullable: true},
 		{Name: "graph_edges", Type: field.TypeJSON, Nullable: true},
 		{Name: "layout", Type: field.TypeJSON, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true},
 		{Name: "generated_at", Type: field.TypeTime},
 		{Name: "version", Type: field.TypeInt, Default: 1},
 		{Name: "session_mindmap", Type: field.TypeUUID, Unique: true},
@@ -165,7 +167,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "mindmap_graphs_sessions_mindmap",
-				Columns:    []*schema.Column{MindmapGraphsColumns[8]},
+				Columns:    []*schema.Column{MindmapGraphsColumns[10]},
 				RefColumns: []*schema.Column{SessionsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},

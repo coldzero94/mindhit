@@ -50,6 +50,20 @@ func (_c *MindmapGraphCreate) SetNillableUpdatedAt(v *time.Time) *MindmapGraphCr
 	return _c
 }
 
+// SetStatus sets the "status" field.
+func (_c *MindmapGraphCreate) SetStatus(v mindmapgraph.Status) *MindmapGraphCreate {
+	_c.mutation.SetStatus(v)
+	return _c
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_c *MindmapGraphCreate) SetNillableStatus(v *mindmapgraph.Status) *MindmapGraphCreate {
+	if v != nil {
+		_c.SetStatus(*v)
+	}
+	return _c
+}
+
 // SetNodes sets the "nodes" field.
 func (_c *MindmapGraphCreate) SetNodes(v []map[string]interface{}) *MindmapGraphCreate {
 	_c.mutation.SetNodes(v)
@@ -65,6 +79,20 @@ func (_c *MindmapGraphCreate) SetGraphEdges(v []map[string]interface{}) *Mindmap
 // SetLayout sets the "layout" field.
 func (_c *MindmapGraphCreate) SetLayout(v map[string]interface{}) *MindmapGraphCreate {
 	_c.mutation.SetLayout(v)
+	return _c
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (_c *MindmapGraphCreate) SetErrorMessage(v string) *MindmapGraphCreate {
+	_c.mutation.SetErrorMessage(v)
+	return _c
+}
+
+// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
+func (_c *MindmapGraphCreate) SetNillableErrorMessage(v *string) *MindmapGraphCreate {
+	if v != nil {
+		_c.SetErrorMessage(*v)
+	}
 	return _c
 }
 
@@ -164,6 +192,10 @@ func (_c *MindmapGraphCreate) defaults() {
 		v := mindmapgraph.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.Status(); !ok {
+		v := mindmapgraph.DefaultStatus
+		_c.mutation.SetStatus(v)
+	}
 	if _, ok := _c.mutation.GeneratedAt(); !ok {
 		v := mindmapgraph.DefaultGeneratedAt()
 		_c.mutation.SetGeneratedAt(v)
@@ -185,6 +217,14 @@ func (_c *MindmapGraphCreate) check() error {
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "MindmapGraph.updated_at"`)}
+	}
+	if _, ok := _c.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "MindmapGraph.status"`)}
+	}
+	if v, ok := _c.mutation.Status(); ok {
+		if err := mindmapgraph.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "MindmapGraph.status": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.GeneratedAt(); !ok {
 		return &ValidationError{Name: "generated_at", err: errors.New(`ent: missing required field "MindmapGraph.generated_at"`)}
@@ -238,6 +278,10 @@ func (_c *MindmapGraphCreate) createSpec() (*MindmapGraph, *sqlgraph.CreateSpec)
 		_spec.SetField(mindmapgraph.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
+	if value, ok := _c.mutation.Status(); ok {
+		_spec.SetField(mindmapgraph.FieldStatus, field.TypeEnum, value)
+		_node.Status = value
+	}
 	if value, ok := _c.mutation.Nodes(); ok {
 		_spec.SetField(mindmapgraph.FieldNodes, field.TypeJSON, value)
 		_node.Nodes = value
@@ -249,6 +293,10 @@ func (_c *MindmapGraphCreate) createSpec() (*MindmapGraph, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.Layout(); ok {
 		_spec.SetField(mindmapgraph.FieldLayout, field.TypeJSON, value)
 		_node.Layout = value
+	}
+	if value, ok := _c.mutation.ErrorMessage(); ok {
+		_spec.SetField(mindmapgraph.FieldErrorMessage, field.TypeString, value)
+		_node.ErrorMessage = &value
 	}
 	if value, ok := _c.mutation.GeneratedAt(); ok {
 		_spec.SetField(mindmapgraph.FieldGeneratedAt, field.TypeTime, value)

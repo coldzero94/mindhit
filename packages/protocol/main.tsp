@@ -8,6 +8,7 @@ import "./src/session/session.tsp";
 import "./src/events/events.tsp";
 import "./src/subscription/subscription.tsp";
 import "./src/usage/usage.tsp";
+import "./src/mindmap/mindmap.tsp";
 
 using TypeSpec.Http;
 using TypeSpec.Rest;

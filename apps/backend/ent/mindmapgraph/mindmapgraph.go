@@ -3,6 +3,7 @@
 package mindmapgraph
 
 import (
+	"fmt"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -19,12 +20,16 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
+	// FieldStatus holds the string denoting the status field in the database.
+	FieldStatus = "status"
 	// FieldNodes holds the string denoting the nodes field in the database.
 	FieldNodes = "nodes"
 	// FieldGraphEdges holds the string denoting the graph_edges field in the database.
 	FieldGraphEdges = "graph_edges"
 	// FieldLayout holds the string denoting the layout field in the database.
 	FieldLayout = "layout"
+	// FieldErrorMessage holds the string denoting the error_message field in the database.
+	FieldErrorMessage = "error_message"
 	// FieldGeneratedAt holds the string denoting the generated_at field in the database.
 	FieldGeneratedAt = "generated_at"
 	// FieldVersion holds the string denoting the version field in the database.
@@ -47,9 +52,11 @@ var Columns = []string{
 	FieldID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
+	FieldStatus,
 	FieldNodes,
 	FieldGraphEdges,
 	FieldLayout,
+	FieldErrorMessage,
 	FieldGeneratedAt,
 	FieldVersion,
 }
@@ -90,6 +97,34 @@ var (
 	DefaultID func() uuid.UUID
 )
 
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending    Status = "pending"
+	StatusGenerating Status = "generating"
+	StatusCompleted  Status = "completed"
+	StatusFailed     Status = "failed"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusGenerating, StatusCompleted, StatusFailed:
+		return nil
+	default:
+		return fmt.Errorf("mindmapgraph: invalid enum value for status field: %q", s)
+	}
+}
+
 // OrderOption defines the ordering options for the MindmapGraph queries.
 type OrderOption func(*sql.Selector)
 
@@ -106,6 +141,16 @@ func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByUpdatedAt orders the results by the updated_at field.
 func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByErrorMessage orders the results by the error_message field.
+func ByErrorMessage(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldErrorMessage, opts...).ToFunc()
 }
 
 // ByGeneratedAt orders the results by the generated_at field.

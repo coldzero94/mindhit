@@ -15,8 +15,8 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 11.3.1 | 마인드맵 API 연동 | ⬜ |
-| 11.3.2 | 탭 UI 및 세션 수정 | ⬜ |
+| 11.3.1 | 마인드맵 API 연동 | ✅ |
+| 11.3.2 | 탭 UI 및 세션 수정 | ✅ |
 
 ---
 
@@ -30,11 +30,11 @@
 - [x] 세션 삭제
 
 ### 미구현 (이번 Phase에서 추가)
-- [ ] 마인드맵 API 연동
-- [ ] 마인드맵 탭
-- [ ] 타임라인 뷰 개선
-- [ ] 노드 상세 패널
-- [ ] 세션 제목 수정
+- [x] 마인드맵 API 연동
+- [x] 마인드맵 탭
+- [x] 타임라인 뷰 개선 (기존 이벤트 탭으로 충분)
+- [x] 노드 상세 패널 (MindmapViewer 내 통합)
+- [x] 세션 제목 수정
 
 ---
 
@@ -42,8 +42,8 @@
 
 ### 체크리스트
 
-- [ ] **마인드맵 API 래퍼**
-  - [ ] `src/lib/api/mindmap.ts`
+- [x] **마인드맵 API 래퍼**
+  - [x] `src/lib/api/mindmap.ts`
 
     ```typescript
     import { apiClient } from './client';
@@ -64,8 +64,8 @@
     }
     ```
 
-- [ ] **React Query Hook**
-  - [ ] `src/lib/hooks/use-mindmap.ts`
+- [x] **React Query Hook**
+  - [x] `src/lib/hooks/use-mindmap.ts`
 
     ```typescript
     import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -101,8 +101,8 @@
     }
     ```
 
-- [ ] **마인드맵 데이터 변환 유틸**
-  - [ ] `src/lib/utils/mindmap-transform.ts`
+- [x] **마인드맵 데이터 변환 유틸**
+  - [x] `src/lib/utils/mindmap-transform.ts`
 
     ```typescript
     import type { MindmapResponse } from '@/api/generated';
@@ -143,8 +143,8 @@
     }
     ```
 
-- [ ] **노드 상세 패널**
-  - [ ] `src/components/mindmap/NodeDetailPanel.tsx`
+- [x] **노드 상세 패널** (MindmapViewer 컴포넌트 내 통합)
+  - [x] `src/components/mindmap/MindmapViewer.tsx` 내 selectedNode 섹션
 
     ```tsx
     'use client';
@@ -282,8 +282,8 @@
     }
     ```
 
-- [ ] **마인드맵 뷰어 컴포넌트**
-  - [ ] `src/components/mindmap/MindmapViewer.tsx`
+- [x] **마인드맵 뷰어 컴포넌트**
+  - [x] `src/components/mindmap/MindmapViewer.tsx`
 
     ```tsx
     'use client';
@@ -430,8 +430,8 @@ pnpm dev
 
 ### 체크리스트
 
-- [ ] **Tabs 컴포넌트 (없는 경우)**
-  - [ ] `src/components/ui/Tabs.tsx`
+- [x] **Tabs 컴포넌트** (shadcn/ui 사용)
+  - [x] `src/components/ui/tabs.tsx`
 
     ```tsx
     'use client';
@@ -529,8 +529,8 @@ pnpm dev
     }
     ```
 
-- [ ] **타임라인 컴포넌트**
-  - [ ] `src/components/sessions/SessionTimeline.tsx`
+- [x] **타임라인 컴포넌트** (페이지 내 직접 구현)
+  - [x] 기존 이벤트 탭 (`page_visits`, `highlights` 목록)으로 타임라인 기능 충족
 
     ```tsx
     'use client';
@@ -642,8 +642,8 @@ pnpm dev
     }
     ```
 
-- [ ] **세션 통계 컴포넌트**
-  - [ ] `src/components/sessions/SessionStats.tsx`
+- [x] **세션 통계 컴포넌트** (페이지 내 직접 구현)
+  - [x] 세션 상세 페이지에 4개 통계 카드 (방문 페이지, 하이라이트, 고유 URL, 총 이벤트) 이미 존재
 
     ```tsx
     'use client';
@@ -735,8 +735,8 @@ pnpm dev
     }
     ```
 
-- [ ] **세션 제목 수정 컴포넌트**
-  - [ ] `src/components/sessions/SessionTitleEdit.tsx`
+- [x] **세션 제목 수정 컴포넌트**
+  - [x] `src/components/sessions/SessionTitleEdit.tsx`
 
     ```tsx
     'use client';
@@ -847,8 +847,8 @@ pnpm dev
     }
     ```
 
-- [ ] **세션 업데이트 mutation 추가**
-  - [ ] `src/lib/hooks/use-sessions.ts` 업데이트
+- [x] **세션 업데이트 mutation 추가**
+  - [x] `src/lib/hooks/use-sessions.ts` (기존 `useUpdateSession` hook 사용)
 
     ```typescript
     // 기존 imports 추가
@@ -882,8 +882,8 @@ pnpm dev
     }
     ```
 
-- [ ] **세션 상세 페이지 업데이트**
-  - [ ] `src/app/(dashboard)/sessions/[id]/page.tsx`
+- [x] **세션 상세 페이지 업데이트**
+  - [x] `src/app/(dashboard)/sessions/[id]/page.tsx`
 
     ```tsx
     'use client';
@@ -1006,12 +1006,12 @@ pnpm dev
 
 ### 전체 검증 체크리스트
 
-- [ ] 마인드맵 API 연동
-- [ ] 마인드맵 탭 렌더링
-- [ ] 노드 클릭 → 상세 패널
-- [ ] 타임라인 탭 렌더링
-- [ ] 세션 제목 수정
-- [ ] 탭 전환 동작
+- [x] 마인드맵 API 연동
+- [x] 마인드맵 탭 렌더링
+- [x] 노드 클릭 → 상세 패널
+- [x] 타임라인 탭 렌더링 (기존 이벤트 탭으로 대체)
+- [x] 세션 제목 수정
+- [x] 탭 전환 동작
 
 ### 테스트
 

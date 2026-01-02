@@ -595,6 +595,98 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/sessions/{id}/mindmap:
+    get:
+      operationId: MindmapRoutes_getMindmap
+      description: 세션의 마인드맵 조회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mindmap.MindmapResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/sessions/{id}/mindmap/generate:
+    post:
+      operationId: MindmapRoutes_generateMindmap
+      description: 마인드맵 생성 요청
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: The request has been accepted for processing, but processing has not yet completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mindmap.MindmapResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mindmap.GenerateMindmapRequest'
   /v1/sessions/{id}/pause:
     patch:
       operationId: Routes_pause
@@ -1133,6 +1225,160 @@ components:
           type: integer
           format: int32
       description: 페이지 방문 정보
+    Mindmap.GenerateMindmapRequest:
+      type: object
+      properties:
+        force:
+          type: boolean
+          description: 강제 재생성 여부
+          default: false
+      description: 마인드맵 생성 요청
+    Mindmap.LayoutType:
+      type: string
+      enum:
+        - galaxy
+        - tree
+        - radial
+      description: 마인드맵 레이아웃 타입
+    Mindmap.Mindmap:
+      type: object
+      required:
+        - id
+        - session_id
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+        session_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/Mindmap.MindmapStatus'
+        data:
+          $ref: '#/components/schemas/Mindmap.MindmapData'
+        error_message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      description: 마인드맵 정보
+    Mindmap.MindmapData:
+      type: object
+      required:
+        - nodes
+        - edges
+        - layout
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mindmap.MindmapNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mindmap.MindmapEdge'
+        layout:
+          $ref: '#/components/schemas/Mindmap.MindmapLayout'
+      description: 마인드맵 데이터
+    Mindmap.MindmapEdge:
+      type: object
+      required:
+        - source
+        - target
+        - weight
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        weight:
+          type: number
+          format: double
+        label:
+          type: string
+      description: 마인드맵 엣지
+    Mindmap.MindmapLayout:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+        params:
+          type: object
+          additionalProperties: {}
+      description: 마인드맵 레이아웃 설정
+    Mindmap.MindmapNode:
+      type: object
+      required:
+        - id
+        - label
+        - type
+        - size
+        - color
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+        size:
+          type: number
+          format: double
+        color:
+          type: string
+        position:
+          $ref: '#/components/schemas/Mindmap.Position'
+        data:
+          type: object
+          additionalProperties: {}
+      description: 마인드맵 노드
+    Mindmap.MindmapResponse:
+      type: object
+      required:
+        - mindmap
+      properties:
+        mindmap:
+          $ref: '#/components/schemas/Mindmap.Mindmap'
+      description: 마인드맵 응답
+    Mindmap.MindmapStatus:
+      type: string
+      enum:
+        - pending
+        - generating
+        - completed
+        - failed
+      description: 마인드맵 상태
+    Mindmap.NodeType:
+      type: string
+      enum:
+        - core
+        - topic
+        - subtopic
+        - page
+      description: 마인드맵 노드 타입
+    Mindmap.Position:
+      type: object
+      required:
+        - x
+        - y
+        - z
+      properties:
+        x:
+          type: number
+          format: double
+        y:
+          type: number
+          format: double
+        z:
+          type: number
+          format: double
+      description: 3D 좌표
     Session.Session:
       type: object
       required:

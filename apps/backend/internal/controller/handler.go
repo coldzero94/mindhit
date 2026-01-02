@@ -6,7 +6,7 @@ import (
 	"github.com/mindhit/api/internal/generated"
 )
 
-// Handler combines all controllers to implement StrictServerInterface
+// Handler combines all controllers to implement StrictServerInterface.
 type Handler struct {
 	*AuthController
 	*SessionController
@@ -14,9 +14,10 @@ type Handler struct {
 	*SubscriptionController
 	*UsageController
 	*OAuthController
+	*MindmapController
 }
 
-// NewHandler creates a new Handler with all controllers
+// NewHandler creates a new Handler with all controllers.
 func NewHandler(
 	auth *AuthController,
 	session *SessionController,
@@ -24,6 +25,7 @@ func NewHandler(
 	subscription *SubscriptionController,
 	usage *UsageController,
 	oauth *OAuthController,
+	mindmap *MindmapController,
 ) *Handler {
 	return &Handler{
 		AuthController:         auth,
@@ -32,6 +34,7 @@ func NewHandler(
 		SubscriptionController: subscription,
 		UsageController:        usage,
 		OAuthController:        oauth,
+		MindmapController:      mindmap,
 	}
 }
 
@@ -155,4 +158,14 @@ func (h *Handler) UsageRoutesGetUsageHistory(ctx context.Context, request genera
 // RoutesGoogleAuth delegates to OAuthController
 func (h *Handler) RoutesGoogleAuth(ctx context.Context, request generated.RoutesGoogleAuthRequestObject) (generated.RoutesGoogleAuthResponseObject, error) {
 	return h.OAuthController.RoutesGoogleAuth(ctx, request)
+}
+
+// MindmapRoutesGetMindmap delegates to MindmapController
+func (h *Handler) MindmapRoutesGetMindmap(ctx context.Context, request generated.MindmapRoutesGetMindmapRequestObject) (generated.MindmapRoutesGetMindmapResponseObject, error) {
+	return h.MindmapController.MindmapRoutesGetMindmap(ctx, request)
+}
+
+// MindmapRoutesGenerateMindmap delegates to MindmapController
+func (h *Handler) MindmapRoutesGenerateMindmap(ctx context.Context, request generated.MindmapRoutesGenerateMindmapRequestObject) (generated.MindmapRoutesGenerateMindmapResponseObject, error) {
+	return h.MindmapController.MindmapRoutesGenerateMindmap(ctx, request)
 }

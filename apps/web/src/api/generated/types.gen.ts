@@ -231,6 +231,108 @@ export type EventsPageVisit = {
 };
 
 /**
+ * 마인드맵 생성 요청
+ */
+export type MindmapGenerateMindmapRequest = {
+  /**
+   * 강제 재생성 여부
+   */
+  force?: boolean;
+};
+
+/**
+ * 마인드맵 레이아웃 타입
+ */
+export type MindmapLayoutType = "galaxy" | "tree" | "radial";
+
+/**
+ * 마인드맵 정보
+ */
+export type MindmapMindmap = {
+  id: string;
+  session_id: string;
+  status: MindmapMindmapStatus;
+  data?: MindmapMindmapData;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/**
+ * 마인드맵 데이터
+ */
+export type MindmapMindmapData = {
+  nodes: Array<MindmapMindmapNode>;
+  edges: Array<MindmapMindmapEdge>;
+  layout: MindmapMindmapLayout;
+};
+
+/**
+ * 마인드맵 엣지
+ */
+export type MindmapMindmapEdge = {
+  source: string;
+  target: string;
+  weight: number;
+  label?: string;
+};
+
+/**
+ * 마인드맵 레이아웃 설정
+ */
+export type MindmapMindmapLayout = {
+  type: string;
+  params?: {
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * 마인드맵 노드
+ */
+export type MindmapMindmapNode = {
+  id: string;
+  label: string;
+  type: string;
+  size: number;
+  color: string;
+  position?: MindmapPosition;
+  data?: {
+    [key: string]: unknown;
+  };
+};
+
+/**
+ * 마인드맵 응답
+ */
+export type MindmapMindmapResponse = {
+  mindmap: MindmapMindmap;
+};
+
+/**
+ * 마인드맵 상태
+ */
+export type MindmapMindmapStatus =
+  | "pending"
+  | "generating"
+  | "completed"
+  | "failed";
+
+/**
+ * 마인드맵 노드 타입
+ */
+export type MindmapNodeType = "core" | "topic" | "subtopic" | "page";
+
+/**
+ * 3D 좌표
+ */
+export type MindmapPosition = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+/**
  * 세션 정보
  */
 export type SessionSession = {
@@ -919,6 +1021,90 @@ export type RoutesGetEventStatsResponses = {
 
 export type RoutesGetEventStatsResponse =
   RoutesGetEventStatsResponses[keyof RoutesGetEventStatsResponses];
+
+export type MindmapRoutesGetMindmapData = {
+  body?: never;
+  headers: {
+    authorization: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: "/v1/sessions/{id}/mindmap";
+};
+
+export type MindmapRoutesGetMindmapErrors = {
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+  /**
+   * Access is forbidden.
+   */
+  403: CommonErrorResponse;
+  /**
+   * The server cannot find the requested resource.
+   */
+  404: CommonErrorResponse;
+};
+
+export type MindmapRoutesGetMindmapError =
+  MindmapRoutesGetMindmapErrors[keyof MindmapRoutesGetMindmapErrors];
+
+export type MindmapRoutesGetMindmapResponses = {
+  /**
+   * The request has succeeded.
+   */
+  200: MindmapMindmapResponse;
+};
+
+export type MindmapRoutesGetMindmapResponse =
+  MindmapRoutesGetMindmapResponses[keyof MindmapRoutesGetMindmapResponses];
+
+export type MindmapRoutesGenerateMindmapData = {
+  body: MindmapGenerateMindmapRequest;
+  headers: {
+    authorization: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: "/v1/sessions/{id}/mindmap/generate";
+};
+
+export type MindmapRoutesGenerateMindmapErrors = {
+  /**
+   * The server could not understand the request due to invalid syntax.
+   */
+  400: CommonErrorResponse;
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+  /**
+   * Access is forbidden.
+   */
+  403: CommonErrorResponse;
+  /**
+   * The server cannot find the requested resource.
+   */
+  404: CommonErrorResponse;
+};
+
+export type MindmapRoutesGenerateMindmapError =
+  MindmapRoutesGenerateMindmapErrors[keyof MindmapRoutesGenerateMindmapErrors];
+
+export type MindmapRoutesGenerateMindmapResponses = {
+  /**
+   * The request has been accepted for processing, but processing has not yet completed.
+   */
+  202: MindmapMindmapResponse;
+};
+
+export type MindmapRoutesGenerateMindmapResponse =
+  MindmapRoutesGenerateMindmapResponses[keyof MindmapRoutesGenerateMindmapResponses];
 
 export type RoutesPauseData = {
   body?: never;

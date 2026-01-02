@@ -8,18 +8,25 @@ import (
 	"entgo.io/ent/schema/field"
 )
 
+// MindmapGraph represents a mindmap visualization for a session.
 type MindmapGraph struct {
 	ent.Schema
 }
 
+// Mixin returns the mixins for MindmapGraph.
 func (MindmapGraph) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		BaseMixin{},
 	}
 }
 
+// Fields returns the fields for MindmapGraph.
 func (MindmapGraph) Fields() []ent.Field {
 	return []ent.Field{
+		field.Enum("status").
+			Values("pending", "generating", "completed", "failed").
+			Default("pending").
+			Comment("Mindmap generation status"),
 		field.JSON("nodes", []map[string]interface{}{}).
 			Optional().
 			Comment("Mindmap node data"),
@@ -29,6 +36,10 @@ func (MindmapGraph) Fields() []ent.Field {
 		field.JSON("layout", map[string]interface{}{}).
 			Optional().
 			Comment("Layout configuration"),
+		field.String("error_message").
+			Optional().
+			Nillable().
+			Comment("Error message if generation failed"),
 		field.Time("generated_at").
 			Default(time.Now).
 			Comment("AI generation timestamp"),
@@ -38,6 +49,7 @@ func (MindmapGraph) Fields() []ent.Field {
 	}
 }
 
+// Edges returns the edges for MindmapGraph.
 func (MindmapGraph) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("session", Session.Type).

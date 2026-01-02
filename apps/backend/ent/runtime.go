@@ -160,11 +160,11 @@ func init() {
 	// mindmapgraph.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	mindmapgraph.UpdateDefaultUpdatedAt = mindmapgraphDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// mindmapgraphDescGeneratedAt is the schema descriptor for generated_at field.
-	mindmapgraphDescGeneratedAt := mindmapgraphFields[3].Descriptor()
+	mindmapgraphDescGeneratedAt := mindmapgraphFields[5].Descriptor()
 	// mindmapgraph.DefaultGeneratedAt holds the default value on creation for the generated_at field.
 	mindmapgraph.DefaultGeneratedAt = mindmapgraphDescGeneratedAt.Default.(func() time.Time)
 	// mindmapgraphDescVersion is the schema descriptor for version field.
-	mindmapgraphDescVersion := mindmapgraphFields[4].Descriptor()
+	mindmapgraphDescVersion := mindmapgraphFields[6].Descriptor()
 	// mindmapgraph.DefaultVersion holds the default value on creation for the version field.
 	mindmapgraph.DefaultVersion = mindmapgraphDescVersion.Default.(int)
 	// mindmapgraphDescID is the schema descriptor for id field.

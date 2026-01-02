@@ -37,6 +37,20 @@ func (_u *MindmapGraphUpdate) SetUpdatedAt(v time.Time) *MindmapGraphUpdate {
 	return _u
 }
 
+// SetStatus sets the "status" field.
+func (_u *MindmapGraphUpdate) SetStatus(v mindmapgraph.Status) *MindmapGraphUpdate {
+	_u.mutation.SetStatus(v)
+	return _u
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_u *MindmapGraphUpdate) SetNillableStatus(v *mindmapgraph.Status) *MindmapGraphUpdate {
+	if v != nil {
+		_u.SetStatus(*v)
+	}
+	return _u
+}
+
 // SetNodes sets the "nodes" field.
 func (_u *MindmapGraphUpdate) SetNodes(v []map[string]interface{}) *MindmapGraphUpdate {
 	_u.mutation.SetNodes(v)
@@ -82,6 +96,26 @@ func (_u *MindmapGraphUpdate) SetLayout(v map[string]interface{}) *MindmapGraphU
 // ClearLayout clears the value of the "layout" field.
 func (_u *MindmapGraphUpdate) ClearLayout() *MindmapGraphUpdate {
 	_u.mutation.ClearLayout()
+	return _u
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (_u *MindmapGraphUpdate) SetErrorMessage(v string) *MindmapGraphUpdate {
+	_u.mutation.SetErrorMessage(v)
+	return _u
+}
+
+// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
+func (_u *MindmapGraphUpdate) SetNillableErrorMessage(v *string) *MindmapGraphUpdate {
+	if v != nil {
+		_u.SetErrorMessage(*v)
+	}
+	return _u
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (_u *MindmapGraphUpdate) ClearErrorMessage() *MindmapGraphUpdate {
+	_u.mutation.ClearErrorMessage()
 	return _u
 }
 
@@ -180,6 +214,11 @@ func (_u *MindmapGraphUpdate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *MindmapGraphUpdate) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := mindmapgraph.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "MindmapGraph.status": %w`, err)}
+		}
+	}
 	if _u.mutation.SessionCleared() && len(_u.mutation.SessionIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "MindmapGraph.session"`)
 	}
@@ -200,6 +239,9 @@ func (_u *MindmapGraphUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(mindmapgraph.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.Status(); ok {
+		_spec.SetField(mindmapgraph.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := _u.mutation.Nodes(); ok {
 		_spec.SetField(mindmapgraph.FieldNodes, field.TypeJSON, value)
@@ -228,6 +270,12 @@ func (_u *MindmapGraphUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.LayoutCleared() {
 		_spec.ClearField(mindmapgraph.FieldLayout, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ErrorMessage(); ok {
+		_spec.SetField(mindmapgraph.FieldErrorMessage, field.TypeString, value)
+	}
+	if _u.mutation.ErrorMessageCleared() {
+		_spec.ClearField(mindmapgraph.FieldErrorMessage, field.TypeString)
 	}
 	if value, ok := _u.mutation.GeneratedAt(); ok {
 		_spec.SetField(mindmapgraph.FieldGeneratedAt, field.TypeTime, value)
@@ -293,6 +341,20 @@ func (_u *MindmapGraphUpdateOne) SetUpdatedAt(v time.Time) *MindmapGraphUpdateOn
 	return _u
 }
 
+// SetStatus sets the "status" field.
+func (_u *MindmapGraphUpdateOne) SetStatus(v mindmapgraph.Status) *MindmapGraphUpdateOne {
+	_u.mutation.SetStatus(v)
+	return _u
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (_u *MindmapGraphUpdateOne) SetNillableStatus(v *mindmapgraph.Status) *MindmapGraphUpdateOne {
+	if v != nil {
+		_u.SetStatus(*v)
+	}
+	return _u
+}
+
 // SetNodes sets the "nodes" field.
 func (_u *MindmapGraphUpdateOne) SetNodes(v []map[string]interface{}) *MindmapGraphUpdateOne {
 	_u.mutation.SetNodes(v)
@@ -338,6 +400,26 @@ func (_u *MindmapGraphUpdateOne) SetLayout(v map[string]interface{}) *MindmapGra
 // ClearLayout clears the value of the "layout" field.
 func (_u *MindmapGraphUpdateOne) ClearLayout() *MindmapGraphUpdateOne {
 	_u.mutation.ClearLayout()
+	return _u
+}
+
+// SetErrorMessage sets the "error_message" field.
+func (_u *MindmapGraphUpdateOne) SetErrorMessage(v string) *MindmapGraphUpdateOne {
+	_u.mutation.SetErrorMessage(v)
+	return _u
+}
+
+// SetNillableErrorMessage sets the "error_message" field if the given value is not nil.
+func (_u *MindmapGraphUpdateOne) SetNillableErrorMessage(v *string) *MindmapGraphUpdateOne {
+	if v != nil {
+		_u.SetErrorMessage(*v)
+	}
+	return _u
+}
+
+// ClearErrorMessage clears the value of the "error_message" field.
+func (_u *MindmapGraphUpdateOne) ClearErrorMessage() *MindmapGraphUpdateOne {
+	_u.mutation.ClearErrorMessage()
 	return _u
 }
 
@@ -449,6 +531,11 @@ func (_u *MindmapGraphUpdateOne) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *MindmapGraphUpdateOne) check() error {
+	if v, ok := _u.mutation.Status(); ok {
+		if err := mindmapgraph.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "MindmapGraph.status": %w`, err)}
+		}
+	}
 	if _u.mutation.SessionCleared() && len(_u.mutation.SessionIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "MindmapGraph.session"`)
 	}
@@ -487,6 +574,9 @@ func (_u *MindmapGraphUpdateOne) sqlSave(ctx context.Context) (_node *MindmapGra
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(mindmapgraph.FieldUpdatedAt, field.TypeTime, value)
 	}
+	if value, ok := _u.mutation.Status(); ok {
+		_spec.SetField(mindmapgraph.FieldStatus, field.TypeEnum, value)
+	}
 	if value, ok := _u.mutation.Nodes(); ok {
 		_spec.SetField(mindmapgraph.FieldNodes, field.TypeJSON, value)
 	}
@@ -514,6 +604,12 @@ func (_u *MindmapGraphUpdateOne) sqlSave(ctx context.Context) (_node *MindmapGra
 	}
 	if _u.mutation.LayoutCleared() {
 		_spec.ClearField(mindmapgraph.FieldLayout, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ErrorMessage(); ok {
+		_spec.SetField(mindmapgraph.FieldErrorMessage, field.TypeString, value)
+	}
+	if _u.mutation.ErrorMessageCleared() {
+		_spec.ClearField(mindmapgraph.FieldErrorMessage, field.TypeString)
 	}
 	if value, ok := _u.mutation.GeneratedAt(); ok {
 		_spec.SetField(mindmapgraph.FieldGeneratedAt, field.TypeTime, value)

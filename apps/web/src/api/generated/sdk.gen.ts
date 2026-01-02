@@ -3,6 +3,12 @@
 import type { Client, Options as Options2, TDataShape } from "./client";
 import { client } from "./client.gen";
 import type {
+  MindmapRoutesGenerateMindmapData,
+  MindmapRoutesGenerateMindmapErrors,
+  MindmapRoutesGenerateMindmapResponses,
+  MindmapRoutesGetMindmapData,
+  MindmapRoutesGetMindmapErrors,
+  MindmapRoutesGetMindmapResponses,
   RoutesBatchEventsData,
   RoutesBatchEventsErrors,
   RoutesBatchEventsResponses,
@@ -353,6 +359,39 @@ export const routesGetEventStats = <ThrowOnError extends boolean = false>(
     RoutesGetEventStatsErrors,
     ThrowOnError
   >({ url: "/v1/sessions/{id}/events/stats", ...options });
+
+/**
+ * 세션의 마인드맵 조회
+ */
+export const mindmapRoutesGetMindmap = <ThrowOnError extends boolean = false>(
+  options: Options<MindmapRoutesGetMindmapData, ThrowOnError>,
+) =>
+  (options.client ?? client).get<
+    MindmapRoutesGetMindmapResponses,
+    MindmapRoutesGetMindmapErrors,
+    ThrowOnError
+  >({ url: "/v1/sessions/{id}/mindmap", ...options });
+
+/**
+ * 마인드맵 생성 요청
+ */
+export const mindmapRoutesGenerateMindmap = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<MindmapRoutesGenerateMindmapData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    MindmapRoutesGenerateMindmapResponses,
+    MindmapRoutesGenerateMindmapErrors,
+    ThrowOnError
+  >({
+    url: "/v1/sessions/{id}/mindmap/generate",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
 
 /**
  * 세션 일시정지

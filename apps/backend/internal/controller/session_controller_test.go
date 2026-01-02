@@ -66,7 +66,7 @@ func TestSessionController_RoutesStart(t *testing.T) {
 		successResp, ok := resp.(generated.RoutesStart201JSONResponse)
 		require.True(t, ok, "expected 201 response")
 		assert.NotEmpty(t, successResp.Session.Id)
-		assert.Equal(t, generated.Recording, successResp.Session.SessionStatus)
+		assert.Equal(t, generated.SessionSessionStatusRecording, successResp.Session.SessionStatus)
 	})
 
 	t.Run("missing authorization returns 401", func(t *testing.T) {
@@ -299,7 +299,7 @@ func TestSessionController_RoutesPause(t *testing.T) {
 
 		successResp, ok := resp.(generated.RoutesPause200JSONResponse)
 		require.True(t, ok, "expected 200 response")
-		assert.Equal(t, generated.Paused, successResp.Session.SessionStatus)
+		assert.Equal(t, generated.SessionSessionStatusPaused, successResp.Session.SessionStatus)
 	})
 
 	t.Run("pause already paused returns 400", func(t *testing.T) {
@@ -374,7 +374,7 @@ func TestSessionController_RoutesResume(t *testing.T) {
 
 		successResp, ok := resp.(generated.RoutesResume200JSONResponse)
 		require.True(t, ok, "expected 200 response")
-		assert.Equal(t, generated.Recording, successResp.Session.SessionStatus)
+		assert.Equal(t, generated.SessionSessionStatusRecording, successResp.Session.SessionStatus)
 	})
 
 	t.Run("resume recording session returns 400", func(t *testing.T) {
@@ -440,7 +440,7 @@ func TestSessionController_RoutesStop(t *testing.T) {
 
 		successResp, ok := resp.(generated.RoutesStop200JSONResponse)
 		require.True(t, ok, "expected 200 response")
-		assert.Equal(t, generated.Processing, successResp.Session.SessionStatus)
+		assert.Equal(t, generated.SessionSessionStatusProcessing, successResp.Session.SessionStatus)
 		assert.NotNil(t, successResp.Session.EndedAt)
 	})
 

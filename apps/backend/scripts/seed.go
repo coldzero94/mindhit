@@ -12,7 +12,9 @@ import (
 
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/aiconfig"
+	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/plan"
+	"github.com/mindhit/api/ent/session"
 	"github.com/mindhit/api/ent/subscription"
 	"github.com/mindhit/api/ent/user"
 
@@ -40,6 +42,7 @@ func run() error {
 		fmt.Println("  test-user     Create or update test user")
 		fmt.Println("  subscriptions Create or update test user subscription")
 		fmt.Println("  ai-configs    Create or update AI configs")
+		fmt.Println("  mindmaps      Create or update example mindmaps")
 		fmt.Println("  all           Run all seeds")
 		return fmt.Errorf("no command specified")
 	}
@@ -74,6 +77,10 @@ func run() error {
 		if err := seedAIConfigs(ctx, client); err != nil {
 			return fmt.Errorf("failed to seed ai configs: %w", err)
 		}
+	case "mindmaps":
+		if err := seedMindmaps(ctx, client); err != nil {
+			return fmt.Errorf("failed to seed mindmaps: %w", err)
+		}
 	case "all":
 		if err := seedAll(ctx, client); err != nil {
 			return fmt.Errorf("failed to seed: %w", err)
@@ -96,6 +103,9 @@ func seedAll(ctx context.Context, client *ent.Client) error {
 		return err
 	}
 	if err := seedAIConfigs(ctx, client); err != nil {
+		return err
+	}
+	if err := seedMindmaps(ctx, client); err != nil {
 		return err
 	}
 	return nil
@@ -410,6 +420,209 @@ func seedAIConfigs(ctx context.Context, client *ent.Client) error {
 			}
 			fmt.Printf("✓ AI config created: %s\n", cfg.TaskType)
 		}
+	}
+
+	return nil
+}
+
+func seedMindmaps(ctx context.Context, client *ent.Client) error {
+	// Get test user
+	testUser, err := client.User.Query().
+		Where(user.EmailEQ(TestUserEmail)).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to find test user: %w", err)
+	}
+
+	// Get or create a session for the test user
+	sessions, err := client.Session.Query().
+		Where(session.HasUserWith(user.IDEQ(testUser.ID))).
+		Limit(1).
+		All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query sessions: %w", err)
+	}
+
+	var sess *ent.Session
+	if len(sessions) == 0 {
+		// Create a new session
+		sess, err = client.Session.Create().
+			SetUserID(testUser.ID).
+			SetTitle("Sample Browsing Session").
+			SetDescription("A sample session with example mindmap data").
+			SetSessionStatus(session.SessionStatusCompleted).
+			SetStartedAt(time.Now().Add(-time.Hour)).
+			SetEndedAt(time.Now()).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create session: %w", err)
+		}
+		fmt.Printf("✓ Session created: %s\n", sess.ID)
+	} else {
+		sess = sessions[0]
+		fmt.Printf("✓ Using existing session: %s\n", sess.ID)
+	}
+
+	// Check if mindmap already exists for this session
+	exists, err := client.MindmapGraph.Query().
+		Where(mindmapgraph.HasSessionWith(session.IDEQ(sess.ID))).
+		Exist(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check mindmap: %w", err)
+	}
+
+	// Example mindmap data - a galaxy-style mindmap about web development
+	nodes := []map[string]interface{}{
+		{
+			"id":    "core",
+			"label": "Web Development",
+			"type":  "core",
+			"size":  30.0,
+			"color": "#3B82F6",
+			"position": map[string]interface{}{
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0,
+			},
+			"data": map[string]interface{}{
+				"description": "Core topic of the browsing session",
+			},
+		},
+		{
+			"id":    "frontend",
+			"label": "Frontend",
+			"type":  "topic",
+			"size":  20.0,
+			"color": "#10B981",
+			"position": map[string]interface{}{
+				"x": 100.0,
+				"y": 50.0,
+				"z": 30.0,
+			},
+			"data": map[string]interface{}{},
+		},
+		{
+			"id":    "backend",
+			"label": "Backend",
+			"type":  "topic",
+			"size":  20.0,
+			"color": "#F59E0B",
+			"position": map[string]interface{}{
+				"x": -80.0,
+				"y": 70.0,
+				"z": -20.0,
+			},
+			"data": map[string]interface{}{},
+		},
+		{
+			"id":    "react",
+			"label": "React",
+			"type":  "subtopic",
+			"size":  15.0,
+			"color": "#61DAFB",
+			"position": map[string]interface{}{
+				"x": 150.0,
+				"y": 100.0,
+				"z": 50.0,
+			},
+			"data": map[string]interface{}{
+				"url": "https://react.dev",
+			},
+		},
+		{
+			"id":    "nextjs",
+			"label": "Next.js",
+			"type":  "subtopic",
+			"size":  15.0,
+			"color": "#000000",
+			"position": map[string]interface{}{
+				"x": 180.0,
+				"y": 30.0,
+				"z": 80.0,
+			},
+			"data": map[string]interface{}{
+				"url": "https://nextjs.org",
+			},
+		},
+		{
+			"id":    "golang",
+			"label": "Go",
+			"type":  "subtopic",
+			"size":  15.0,
+			"color": "#00ADD8",
+			"position": map[string]interface{}{
+				"x": -120.0,
+				"y": 120.0,
+				"z": -40.0,
+			},
+			"data": map[string]interface{}{
+				"url": "https://go.dev",
+			},
+		},
+		{
+			"id":    "postgres",
+			"label": "PostgreSQL",
+			"type":  "subtopic",
+			"size":  12.0,
+			"color": "#336791",
+			"position": map[string]interface{}{
+				"x": -60.0,
+				"y": 150.0,
+				"z": -80.0,
+			},
+			"data": map[string]interface{}{
+				"url": "https://postgresql.org",
+			},
+		},
+	}
+
+	edges := []map[string]interface{}{
+		{"source": "core", "target": "frontend", "weight": 1.0},
+		{"source": "core", "target": "backend", "weight": 1.0},
+		{"source": "frontend", "target": "react", "weight": 0.8},
+		{"source": "frontend", "target": "nextjs", "weight": 0.8},
+		{"source": "backend", "target": "golang", "weight": 0.8},
+		{"source": "backend", "target": "postgres", "weight": 0.6},
+		{"source": "react", "target": "nextjs", "weight": 0.5, "label": "uses"},
+	}
+
+	layout := map[string]interface{}{
+		"type": "galaxy",
+		"params": map[string]interface{}{
+			"spread":  150.0,
+			"depth":   100.0,
+			"gravity": 0.1,
+		},
+	}
+
+	if exists {
+		// Update existing mindmap
+		_, err = client.MindmapGraph.Update().
+			Where(mindmapgraph.HasSessionWith(session.IDEQ(sess.ID))).
+			SetStatus(mindmapgraph.StatusCompleted).
+			SetNodes(nodes).
+			SetGraphEdges(edges).
+			SetLayout(layout).
+			SetGeneratedAt(time.Now()).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to update mindmap: %w", err)
+		}
+		fmt.Printf("✓ Mindmap updated for session: %s\n", sess.ID)
+	} else {
+		// Create new mindmap
+		_, err = client.MindmapGraph.Create().
+			SetSessionID(sess.ID).
+			SetStatus(mindmapgraph.StatusCompleted).
+			SetNodes(nodes).
+			SetGraphEdges(edges).
+			SetLayout(layout).
+			SetGeneratedAt(time.Now()).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create mindmap: %w", err)
+		}
+		fmt.Printf("✓ Mindmap created for session: %s\n", sess.ID)
 	}
 
 	return nil

@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ArrowLeft, Trash2, Clock, Globe, FileText } from "lucide-react";
+import { ArrowLeft, Trash2, Clock, Globe, FileText, Network } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -11,11 +12,13 @@ import {
   useSessionEvents,
   useSessionStats,
   useDeleteSession,
+  useUpdateSession,
 } from "@/lib/hooks/use-sessions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +30,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { MindmapViewer } from "@/components/mindmap/MindmapViewer";
+import { SessionTitleEdit } from "@/components/sessions/SessionTitleEdit";
 import type { SessionSessionStatus } from "@/api/generated/types.gen";
 
 const statusLabels: Record<SessionSessionStatus, string> = {
@@ -41,11 +46,13 @@ export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
+  const [activeTab, setActiveTab] = useState<string>("events");
 
   const { data: session, isLoading, error } = useSession(sessionId);
   const { data: events } = useSessionEvents(sessionId);
   const { data: stats } = useSessionStats(sessionId);
   const deleteSession = useDeleteSession();
+  const updateSession = useUpdateSession();
 
   const handleDelete = async () => {
     try {
@@ -55,6 +62,14 @@ export default function SessionDetailPage() {
     } catch {
       toast.error("세션을 삭제하는데 실패했습니다.");
     }
+  };
+
+  const handleTitleUpdate = async (newTitle: string) => {
+    await updateSession.mutateAsync({
+      id: sessionId,
+      data: { title: newTitle },
+    });
+    toast.success("제목이 수정되었습니다.");
   };
 
   if (isLoading) {
@@ -95,10 +110,11 @@ export default function SessionDetailPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {session.title || "제목 없음"}
-            </h1>
-            <p className="text-sm text-gray-500">
+            <SessionTitleEdit
+              title={session.title || "제목 없음"}
+              onSave={handleTitleUpdate}
+            />
+            <p className="text-sm text-gray-500 ml-2">
               {format(new Date(session.started_at), "yyyy년 MM월 dd일 HH:mm", {
                 locale: ko,
               })}
@@ -202,69 +218,91 @@ export default function SessionDetailPage() {
         </Card>
       </div>
 
-      {/* Page Visits */}
-      <Card>
-        <CardHeader>
-          <CardTitle>방문한 페이지</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!events?.page_visits.length ? (
-            <p className="text-gray-500 text-center py-4">
-              방문한 페이지가 없습니다.
-            </p>
-          ) : (
-            <ul className="divide-y">
-              {events.page_visits.map((visit) => (
-                <li
-                  key={visit.id}
-                  className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
-                      {visit.title || visit.url}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {visit.url}
-                    </p>
-                  </div>
-                  <div className="text-sm text-gray-400 ml-4 shrink-0">
-                    {visit.duration_ms
-                      ? `${Math.floor(visit.duration_ms / 60000)}분 ${Math.floor((visit.duration_ms % 60000) / 1000)}초`
-                      : format(new Date(visit.visited_at), "HH:mm:ss")}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {/* Tabs: Events / Mindmap */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="events" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            이벤트
+          </TabsTrigger>
+          <TabsTrigger value="mindmap" className="flex items-center gap-2">
+            <Network className="h-4 w-4" />
+            마인드맵
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Highlights */}
-      {events?.highlights && events.highlights.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>하이라이트</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {events.highlights.map((highlight) => (
-                <li
-                  key={highlight.id}
-                  className="p-3 rounded-lg bg-gray-50 border-l-4"
-                  style={{ borderColor: highlight.color || "#3b82f6" }}
-                >
-                  <p className="text-sm">{highlight.text}</p>
-                  {highlight.note && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {highlight.note}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+        {/* Events Tab */}
+        <TabsContent value="events" className="space-y-6">
+          {/* Page Visits */}
+          <Card>
+            <CardHeader>
+              <CardTitle>방문한 페이지</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!events?.page_visits.length ? (
+                <p className="text-gray-500 text-center py-4">
+                  방문한 페이지가 없습니다.
+                </p>
+              ) : (
+                <ul className="divide-y">
+                  {events.page_visits.map((visit) => (
+                    <li
+                      key={visit.id}
+                      className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          {visit.title || visit.url}
+                        </p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {visit.url}
+                        </p>
+                      </div>
+                      <div className="text-sm text-gray-400 ml-4 shrink-0">
+                        {visit.duration_ms
+                          ? `${Math.floor(visit.duration_ms / 60000)}분 ${Math.floor((visit.duration_ms % 60000) / 1000)}초`
+                          : format(new Date(visit.visited_at), "HH:mm:ss")}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Highlights */}
+          {events?.highlights && events.highlights.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>하이라이트</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {events.highlights.map((highlight) => (
+                    <li
+                      key={highlight.id}
+                      className="p-3 rounded-lg bg-gray-50 border-l-4"
+                      style={{ borderColor: highlight.color || "#3b82f6" }}
+                    >
+                      <p className="text-sm">{highlight.text}</p>
+                      {highlight.note && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {highlight.note}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Mindmap Tab */}
+        <TabsContent value="mindmap">
+          <MindmapViewer sessionId={sessionId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

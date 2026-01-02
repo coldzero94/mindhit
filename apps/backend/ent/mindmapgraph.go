@@ -25,12 +25,16 @@ type MindmapGraph struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Record last update timestamp
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Mindmap generation status
+	Status mindmapgraph.Status `json:"status,omitempty"`
 	// Mindmap node data
 	Nodes []map[string]interface{} `json:"nodes,omitempty"`
 	// Mindmap edge data
 	GraphEdges []map[string]interface{} `json:"graph_edges,omitempty"`
 	// Layout configuration
 	Layout map[string]interface{} `json:"layout,omitempty"`
+	// Error message if generation failed
+	ErrorMessage *string `json:"error_message,omitempty"`
 	// AI generation timestamp
 	GeneratedAt time.Time `json:"generated_at,omitempty"`
 	// Mindmap version for regeneration tracking
@@ -71,6 +75,8 @@ func (*MindmapGraph) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case mindmapgraph.FieldVersion:
 			values[i] = new(sql.NullInt64)
+		case mindmapgraph.FieldStatus, mindmapgraph.FieldErrorMessage:
+			values[i] = new(sql.NullString)
 		case mindmapgraph.FieldCreatedAt, mindmapgraph.FieldUpdatedAt, mindmapgraph.FieldGeneratedAt:
 			values[i] = new(sql.NullTime)
 		case mindmapgraph.FieldID:
@@ -110,6 +116,12 @@ func (_m *MindmapGraph) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.Time
 			}
+		case mindmapgraph.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				_m.Status = mindmapgraph.Status(value.String)
+			}
 		case mindmapgraph.FieldNodes:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field nodes", values[i])
@@ -133,6 +145,13 @@ func (_m *MindmapGraph) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.Layout); err != nil {
 					return fmt.Errorf("unmarshal field layout: %w", err)
 				}
+			}
+		case mindmapgraph.FieldErrorMessage:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field error_message", values[i])
+			} else if value.Valid {
+				_m.ErrorMessage = new(string)
+				*_m.ErrorMessage = value.String
 			}
 		case mindmapgraph.FieldGeneratedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -200,6 +219,9 @@ func (_m *MindmapGraph) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
 	builder.WriteString("nodes=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Nodes))
 	builder.WriteString(", ")
@@ -208,6 +230,11 @@ func (_m *MindmapGraph) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("layout=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Layout))
+	builder.WriteString(", ")
+	if v := _m.ErrorMessage; v != nil {
+		builder.WriteString("error_message=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("generated_at=")
 	builder.WriteString(_m.GeneratedAt.Format(time.ANSIC))

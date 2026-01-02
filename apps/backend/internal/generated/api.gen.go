@@ -22,13 +22,21 @@ import (
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
 )
 
+// Defines values for MindmapMindmapStatus.
+const (
+	MindmapMindmapStatusCompleted  MindmapMindmapStatus = "completed"
+	MindmapMindmapStatusFailed     MindmapMindmapStatus = "failed"
+	MindmapMindmapStatusGenerating MindmapMindmapStatus = "generating"
+	MindmapMindmapStatusPending    MindmapMindmapStatus = "pending"
+)
+
 // Defines values for SessionSessionStatus.
 const (
-	Completed  SessionSessionStatus = "completed"
-	Failed     SessionSessionStatus = "failed"
-	Paused     SessionSessionStatus = "paused"
-	Processing SessionSessionStatus = "processing"
-	Recording  SessionSessionStatus = "recording"
+	SessionSessionStatusCompleted  SessionSessionStatus = "completed"
+	SessionSessionStatusFailed     SessionSessionStatus = "failed"
+	SessionSessionStatusPaused     SessionSessionStatus = "paused"
+	SessionSessionStatusProcessing SessionSessionStatus = "processing"
+	SessionSessionStatusRecording  SessionSessionStatus = "recording"
 )
 
 // AuthAuthResponse 인증 응답
@@ -193,6 +201,79 @@ type EventsPageVisit struct {
 	VisitedAt  time.Time `json:"visited_at"`
 }
 
+// MindmapGenerateMindmapRequest 마인드맵 생성 요청
+type MindmapGenerateMindmapRequest struct {
+	// Force 강제 재생성 여부
+	Force *bool `json:"force,omitempty"`
+}
+
+// MindmapMindmap 마인드맵 정보
+type MindmapMindmap struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// Data 마인드맵 데이터
+	Data         *MindmapMindmapData `json:"data,omitempty"`
+	ErrorMessage *string             `json:"error_message,omitempty"`
+	Id           string              `json:"id"`
+	SessionId    string              `json:"session_id"`
+
+	// Status 마인드맵 상태
+	Status    MindmapMindmapStatus `json:"status"`
+	UpdatedAt time.Time            `json:"updated_at"`
+}
+
+// MindmapMindmapData 마인드맵 데이터
+type MindmapMindmapData struct {
+	Edges []MindmapMindmapEdge `json:"edges"`
+
+	// Layout 마인드맵 레이아웃 설정
+	Layout MindmapMindmapLayout `json:"layout"`
+	Nodes  []MindmapMindmapNode `json:"nodes"`
+}
+
+// MindmapMindmapEdge 마인드맵 엣지
+type MindmapMindmapEdge struct {
+	Label  *string `json:"label,omitempty"`
+	Source string  `json:"source"`
+	Target string  `json:"target"`
+	Weight float64 `json:"weight"`
+}
+
+// MindmapMindmapLayout 마인드맵 레이아웃 설정
+type MindmapMindmapLayout struct {
+	Params *map[string]interface{} `json:"params,omitempty"`
+	Type   string                  `json:"type"`
+}
+
+// MindmapMindmapNode 마인드맵 노드
+type MindmapMindmapNode struct {
+	Color string                  `json:"color"`
+	Data  *map[string]interface{} `json:"data,omitempty"`
+	Id    string                  `json:"id"`
+	Label string                  `json:"label"`
+
+	// Position 3D 좌표
+	Position *MindmapPosition `json:"position,omitempty"`
+	Size     float64          `json:"size"`
+	Type     string           `json:"type"`
+}
+
+// MindmapMindmapResponse 마인드맵 응답
+type MindmapMindmapResponse struct {
+	// Mindmap 마인드맵 정보
+	Mindmap MindmapMindmap `json:"mindmap"`
+}
+
+// MindmapMindmapStatus 마인드맵 상태
+type MindmapMindmapStatus string
+
+// MindmapPosition 3D 좌표
+type MindmapPosition struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	Z float64 `json:"z"`
+}
+
 // SessionSession 세션 정보
 type SessionSession struct {
 	CreatedAt   time.Time  `json:"created_at"`
@@ -345,6 +426,16 @@ type RoutesGetEventStatsParams struct {
 	Authorization string `json:"authorization"`
 }
 
+// MindmapRoutesGetMindmapParams defines parameters for MindmapRoutesGetMindmap.
+type MindmapRoutesGetMindmapParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// MindmapRoutesGenerateMindmapParams defines parameters for MindmapRoutesGenerateMindmap.
+type MindmapRoutesGenerateMindmapParams struct {
+	Authorization string `json:"authorization"`
+}
+
 // RoutesPauseParams defines parameters for RoutesPause.
 type RoutesPauseParams struct {
 	Authorization string `json:"authorization"`
@@ -405,6 +496,9 @@ type RoutesUpdateJSONRequestBody = SessionUpdateSessionRequest
 // RoutesBatchEventsJSONRequestBody defines body for RoutesBatchEvents for application/json ContentType.
 type RoutesBatchEventsJSONRequestBody = EventsBatchEventsRequest
 
+// MindmapRoutesGenerateMindmapJSONRequestBody defines body for MindmapRoutesGenerateMindmap for application/json ContentType.
+type MindmapRoutesGenerateMindmapJSONRequestBody = MindmapGenerateMindmapRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
@@ -458,6 +552,12 @@ type ServerInterface interface {
 
 	// (GET /v1/sessions/{id}/events/stats)
 	RoutesGetEventStats(c *gin.Context, id string, params RoutesGetEventStatsParams)
+
+	// (GET /v1/sessions/{id}/mindmap)
+	MindmapRoutesGetMindmap(c *gin.Context, id string, params MindmapRoutesGetMindmapParams)
+
+	// (POST /v1/sessions/{id}/mindmap/generate)
+	MindmapRoutesGenerateMindmap(c *gin.Context, id string, params MindmapRoutesGenerateMindmapParams)
 
 	// (PATCH /v1/sessions/{id}/pause)
 	RoutesPause(c *gin.Context, id string, params RoutesPauseParams)
@@ -1124,6 +1224,108 @@ func (siw *ServerInterfaceWrapper) RoutesGetEventStats(c *gin.Context) {
 	siw.Handler.RoutesGetEventStats(c, id, params)
 }
 
+// MindmapRoutesGetMindmap operation middleware
+func (siw *ServerInterfaceWrapper) MindmapRoutesGetMindmap(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MindmapRoutesGetMindmapParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.MindmapRoutesGetMindmap(c, id, params)
+}
+
+// MindmapRoutesGenerateMindmap operation middleware
+func (siw *ServerInterfaceWrapper) MindmapRoutesGenerateMindmap(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Param("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter id: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MindmapRoutesGenerateMindmapParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.MindmapRoutesGenerateMindmap(c, id, params)
+}
+
 // RoutesPause operation middleware
 func (siw *ServerInterfaceWrapper) RoutesPause(c *gin.Context) {
 
@@ -1497,6 +1699,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/v1/sessions/:id/events", wrapper.RoutesListEvents)
 	router.POST(options.BaseURL+"/v1/sessions/:id/events", wrapper.RoutesBatchEvents)
 	router.GET(options.BaseURL+"/v1/sessions/:id/events/stats", wrapper.RoutesGetEventStats)
+	router.GET(options.BaseURL+"/v1/sessions/:id/mindmap", wrapper.MindmapRoutesGetMindmap)
+	router.POST(options.BaseURL+"/v1/sessions/:id/mindmap/generate", wrapper.MindmapRoutesGenerateMindmap)
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/pause", wrapper.RoutesPause)
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/resume", wrapper.RoutesResume)
 	router.POST(options.BaseURL+"/v1/sessions/:id/stop", wrapper.RoutesStop)
@@ -2110,6 +2314,106 @@ func (response RoutesGetEventStats404JSONResponse) VisitRoutesGetEventStatsRespo
 	return json.NewEncoder(w).Encode(response)
 }
 
+type MindmapRoutesGetMindmapRequestObject struct {
+	Id     string `json:"id"`
+	Params MindmapRoutesGetMindmapParams
+}
+
+type MindmapRoutesGetMindmapResponseObject interface {
+	VisitMindmapRoutesGetMindmapResponse(w http.ResponseWriter) error
+}
+
+type MindmapRoutesGetMindmap200JSONResponse MindmapMindmapResponse
+
+func (response MindmapRoutesGetMindmap200JSONResponse) VisitMindmapRoutesGetMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGetMindmap401JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGetMindmap401JSONResponse) VisitMindmapRoutesGetMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGetMindmap403JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGetMindmap403JSONResponse) VisitMindmapRoutesGetMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGetMindmap404JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGetMindmap404JSONResponse) VisitMindmapRoutesGetMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGenerateMindmapRequestObject struct {
+	Id     string `json:"id"`
+	Params MindmapRoutesGenerateMindmapParams
+	Body   *MindmapRoutesGenerateMindmapJSONRequestBody
+}
+
+type MindmapRoutesGenerateMindmapResponseObject interface {
+	VisitMindmapRoutesGenerateMindmapResponse(w http.ResponseWriter) error
+}
+
+type MindmapRoutesGenerateMindmap202JSONResponse MindmapMindmapResponse
+
+func (response MindmapRoutesGenerateMindmap202JSONResponse) VisitMindmapRoutesGenerateMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGenerateMindmap400JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGenerateMindmap400JSONResponse) VisitMindmapRoutesGenerateMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGenerateMindmap401JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGenerateMindmap401JSONResponse) VisitMindmapRoutesGenerateMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGenerateMindmap403JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGenerateMindmap403JSONResponse) VisitMindmapRoutesGenerateMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type MindmapRoutesGenerateMindmap404JSONResponse CommonErrorResponse
+
+func (response MindmapRoutesGenerateMindmap404JSONResponse) VisitMindmapRoutesGenerateMindmapResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type RoutesPauseRequestObject struct {
 	Id     string `json:"id"`
 	Params RoutesPauseParams
@@ -2429,6 +2733,12 @@ type StrictServerInterface interface {
 
 	// (GET /v1/sessions/{id}/events/stats)
 	RoutesGetEventStats(ctx context.Context, request RoutesGetEventStatsRequestObject) (RoutesGetEventStatsResponseObject, error)
+
+	// (GET /v1/sessions/{id}/mindmap)
+	MindmapRoutesGetMindmap(ctx context.Context, request MindmapRoutesGetMindmapRequestObject) (MindmapRoutesGetMindmapResponseObject, error)
+
+	// (POST /v1/sessions/{id}/mindmap/generate)
+	MindmapRoutesGenerateMindmap(ctx context.Context, request MindmapRoutesGenerateMindmapRequestObject) (MindmapRoutesGenerateMindmapResponseObject, error)
 
 	// (PATCH /v1/sessions/{id}/pause)
 	RoutesPause(ctx context.Context, request RoutesPauseRequestObject) (RoutesPauseResponseObject, error)
@@ -2981,6 +3291,70 @@ func (sh *strictHandler) RoutesGetEventStats(ctx *gin.Context, id string, params
 	}
 }
 
+// MindmapRoutesGetMindmap operation middleware
+func (sh *strictHandler) MindmapRoutesGetMindmap(ctx *gin.Context, id string, params MindmapRoutesGetMindmapParams) {
+	var request MindmapRoutesGetMindmapRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.MindmapRoutesGetMindmap(ctx, request.(MindmapRoutesGetMindmapRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MindmapRoutesGetMindmap")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(MindmapRoutesGetMindmapResponseObject); ok {
+		if err := validResponse.VisitMindmapRoutesGetMindmapResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MindmapRoutesGenerateMindmap operation middleware
+func (sh *strictHandler) MindmapRoutesGenerateMindmap(ctx *gin.Context, id string, params MindmapRoutesGenerateMindmapParams) {
+	var request MindmapRoutesGenerateMindmapRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body MindmapRoutesGenerateMindmapJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.MindmapRoutesGenerateMindmap(ctx, request.(MindmapRoutesGenerateMindmapRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MindmapRoutesGenerateMindmap")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(MindmapRoutesGenerateMindmapResponseObject); ok {
+		if err := validResponse.VisitMindmapRoutesGenerateMindmapResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RoutesPause operation middleware
 func (sh *strictHandler) RoutesPause(ctx *gin.Context, id string, params RoutesPauseParams) {
 	var request RoutesPauseRequestObject
@@ -3176,60 +3550,68 @@ func (sh *strictHandler) UsageRoutesGetUsageHistory(ctx *gin.Context, params Usa
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

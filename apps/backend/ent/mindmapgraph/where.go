@@ -66,6 +66,11 @@ func UpdatedAt(v time.Time) predicate.MindmapGraph {
 	return predicate.MindmapGraph(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
+// ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
+func ErrorMessage(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldEQ(FieldErrorMessage, v))
+}
+
 // GeneratedAt applies equality check predicate on the "generated_at" field. It's identical to GeneratedAtEQ.
 func GeneratedAt(v time.Time) predicate.MindmapGraph {
 	return predicate.MindmapGraph(sql.FieldEQ(FieldGeneratedAt, v))
@@ -156,6 +161,26 @@ func UpdatedAtLTE(v time.Time) predicate.MindmapGraph {
 	return predicate.MindmapGraph(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v Status) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v Status) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...Status) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...Status) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldNotIn(FieldStatus, vs...))
+}
+
 // NodesIsNil applies the IsNil predicate on the "nodes" field.
 func NodesIsNil() predicate.MindmapGraph {
 	return predicate.MindmapGraph(sql.FieldIsNull(FieldNodes))
@@ -184,6 +209,81 @@ func LayoutIsNil() predicate.MindmapGraph {
 // LayoutNotNil applies the NotNil predicate on the "layout" field.
 func LayoutNotNil() predicate.MindmapGraph {
 	return predicate.MindmapGraph(sql.FieldNotNull(FieldLayout))
+}
+
+// ErrorMessageEQ applies the EQ predicate on the "error_message" field.
+func ErrorMessageEQ(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldEQ(FieldErrorMessage, v))
+}
+
+// ErrorMessageNEQ applies the NEQ predicate on the "error_message" field.
+func ErrorMessageNEQ(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldNEQ(FieldErrorMessage, v))
+}
+
+// ErrorMessageIn applies the In predicate on the "error_message" field.
+func ErrorMessageIn(vs ...string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldIn(FieldErrorMessage, vs...))
+}
+
+// ErrorMessageNotIn applies the NotIn predicate on the "error_message" field.
+func ErrorMessageNotIn(vs ...string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldNotIn(FieldErrorMessage, vs...))
+}
+
+// ErrorMessageGT applies the GT predicate on the "error_message" field.
+func ErrorMessageGT(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldGT(FieldErrorMessage, v))
+}
+
+// ErrorMessageGTE applies the GTE predicate on the "error_message" field.
+func ErrorMessageGTE(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldGTE(FieldErrorMessage, v))
+}
+
+// ErrorMessageLT applies the LT predicate on the "error_message" field.
+func ErrorMessageLT(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldLT(FieldErrorMessage, v))
+}
+
+// ErrorMessageLTE applies the LTE predicate on the "error_message" field.
+func ErrorMessageLTE(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldLTE(FieldErrorMessage, v))
+}
+
+// ErrorMessageContains applies the Contains predicate on the "error_message" field.
+func ErrorMessageContains(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldContains(FieldErrorMessage, v))
+}
+
+// ErrorMessageHasPrefix applies the HasPrefix predicate on the "error_message" field.
+func ErrorMessageHasPrefix(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldHasPrefix(FieldErrorMessage, v))
+}
+
+// ErrorMessageHasSuffix applies the HasSuffix predicate on the "error_message" field.
+func ErrorMessageHasSuffix(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldHasSuffix(FieldErrorMessage, v))
+}
+
+// ErrorMessageIsNil applies the IsNil predicate on the "error_message" field.
+func ErrorMessageIsNil() predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldIsNull(FieldErrorMessage))
+}
+
+// ErrorMessageNotNil applies the NotNil predicate on the "error_message" field.
+func ErrorMessageNotNil() predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldNotNull(FieldErrorMessage))
+}
+
+// ErrorMessageEqualFold applies the EqualFold predicate on the "error_message" field.
+func ErrorMessageEqualFold(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldEqualFold(FieldErrorMessage, v))
+}
+
+// ErrorMessageContainsFold applies the ContainsFold predicate on the "error_message" field.
+func ErrorMessageContainsFold(v string) predicate.MindmapGraph {
+	return predicate.MindmapGraph(sql.FieldContainsFold(FieldErrorMessage, v))
 }
 
 // GeneratedAtEQ applies the EQ predicate on the "generated_at" field.
