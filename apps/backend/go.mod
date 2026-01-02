@@ -1,6 +1,6 @@
 module github.com/mindhit/api
 
-go 1.25.4
+go 1.24.11
 
 require (
 	entgo.io/ent v0.14.5

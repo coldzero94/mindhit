@@ -296,6 +296,39 @@ moonx :build           # Build all projects
 
 ---
 
+## CI/CD
+
+### GitHub Actions Workflows
+
+| Workflow             | Trigger Paths                        | Jobs                                       |
+| -------------------- | ------------------------------------ | ------------------------------------------ |
+| `backend-ci.yml`     | `apps/backend/**`                    | lint, test (w/ PostgreSQL & Redis), build  |
+| `web-ci.yml`         | `apps/web/**`, `packages/**`         | lint, typecheck, build, test               |
+| `extension-ci.yml`   | `apps/extension/**`, `packages/**`   | lint, typecheck, build, test               |
+| `protocol-ci.yml`    | `packages/protocol/**`               | validate (OpenAPI sync check)              |
+
+All workflows trigger on:
+
+- Push to `main` or `develop` branches
+- Pull requests to `main`
+
+### Docker Images
+
+| Image            | Dockerfile                       | Description          |
+| ---------------- | -------------------------------- | -------------------- |
+| `mindhit-api`    | `apps/backend/Dockerfile.api`    | API server (Go 1.24) |
+| `mindhit-worker` | `apps/backend/Dockerfile.worker` | Worker (Go 1.24)     |
+
+Build locally:
+
+```bash
+cd apps/backend
+docker build -f Dockerfile.api -t mindhit-api .
+docker build -f Dockerfile.worker -t mindhit-worker .
+```
+
+---
+
 ## Code Quality
 
 ### Linting Rules

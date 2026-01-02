@@ -1,0 +1,42 @@
+name: Protocol CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "packages/protocol/**"
+      - ".github/workflows/protocol-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/protocol/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate OpenAPI spec
+        run: pnpm run generate:protocol
+
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain packages/protocol/tsp-output/)" ]; then
+            echo "Error: OpenAPI spec is out of sync. Run 'pnpm run generate:protocol' and commit the changes."
+            git diff packages/protocol/tsp-output/
+            exit 1
+          fi
