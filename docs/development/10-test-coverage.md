@@ -2,7 +2,7 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2025-12-31 (Phase 8.1 Extension UX Enhancement 추가)
+> **Last Updated**: 2026-01-02 (Phase 11 Dashboard 테스트 추가)
 
 ---
 
@@ -91,21 +91,28 @@ pnpm test:watch
 
 ---
 
-## Frontend Coverage Summary (Phase 7)
+## Frontend Coverage Summary (Phase 7 + 11)
 
 ### Test Files
 
-| 파일 | 테스트 수 | 설명 |
-| ---- | --------- | ---- |
-| `auth-store.test.ts` | 7 | Auth Zustand store |
-| `use-sessions.test.ts` | 11 | Session hooks (React Query) |
-| `auth.test.ts` | 6 | Auth API 클라이언트 |
-| `sessions.test.ts` | 6 | Sessions API 클라이언트 |
-| `login-form.test.tsx` | 5 | 로그인 폼 컴포넌트 |
-| `signup-form.test.tsx` | 5 | 회원가입 폼 컴포넌트 |
-| `session-card.test.tsx` | 11 | 세션 카드 컴포넌트 |
-| `session-list.test.tsx` | 6 | 세션 목록 컴포넌트 |
-| **Total** | **57** | - |
+| 파일 | 테스트 수 | 설명 | Phase |
+| ---- | --------- | ---- | ----- |
+| `auth-store.test.ts` | 7 | Auth Zustand store | Phase 7 |
+| `use-sessions.test.ts` | 11 | Session hooks (React Query) | Phase 7 |
+| `auth.test.ts` | 6 | Auth API 클라이언트 | Phase 7 |
+| `sessions.test.ts` | 6 | Sessions API 클라이언트 | Phase 7 |
+| `login-form.test.tsx` | 5 | 로그인 폼 컴포넌트 | Phase 7 |
+| `signup-form.test.tsx` | 5 | 회원가입 폼 컴포넌트 | Phase 7 |
+| `session-card.test.tsx` | 11 | 세션 카드 컴포넌트 | Phase 7 |
+| `session-list.test.tsx` | 6 | 세션 목록 컴포넌트 | Phase 7 |
+| `use-subscription.test.ts` | 5 | Subscription hooks (React Query) | Phase 11 |
+| `use-usage.test.ts` | 7 | Usage hooks (React Query) | Phase 11 |
+| `use-mindmap.test.ts` | 11 | Mindmap hooks (React Query) | Phase 11 |
+| `use-mindmap-interaction.test.ts` | 22 | Mindmap interaction hook | Phase 11 |
+| `SubscriptionCard.test.tsx` | 9 | 구독 카드 컴포넌트 | Phase 11 |
+| `UsageCard.test.tsx` | 12 | 사용량 카드 컴포넌트 | Phase 11 |
+| `HeaderUsageBadge.test.tsx` | 6 | 헤더 사용량 배지 컴포넌트 | Phase 11 |
+| **Total** | **136** | - | - |
 
 ### Test Coverage Details
 
@@ -117,11 +124,19 @@ pnpm test:watch
 
 #### Hooks
 
-| Hook | 테스트 항목 |
-| ---- | ----------- |
-| `sessionKeys` | 쿼리 키 생성 (all, lists, list, detail, events, stats) |
-| `useSessions` | 세션 목록 fetch, 페이지네이션 |
-| `useSession` | 단일 세션 fetch, empty id 처리 |
+| Hook | 테스트 항목 | Phase |
+| ---- | ----------- | ----- |
+| `sessionKeys` | 쿼리 키 생성 (all, lists, list, detail, events, stats) | Phase 7 |
+| `useSessions` | 세션 목록 fetch, 페이지네이션 | Phase 7 |
+| `useSession` | 단일 세션 fetch, empty id 처리 | Phase 7 |
+| `usePlans` | 구독 플랜 목록 fetch | Phase 11 |
+| `useSubscription` | 사용자 구독 정보 fetch, 에러 처리 | Phase 11 |
+| `useUsage` | 사용량 데이터 fetch, 에러 처리, 캐싱 | Phase 11 |
+| `useUsageHistory` | 사용량 히스토리 fetch (TODO - 아직 핸들러 없음) | Phase 11 |
+| `mindmapKeys` | 쿼리 키 생성 | Phase 11 |
+| `useMindmap` | Mindmap 데이터 fetch, 404 처리, no-mindmap 처리, 빈 sessionId 처리 | Phase 11 |
+| `useGenerateMindmap` | Mindmap 생성, force 옵션, 캐시 업데이트, 에러 처리 | Phase 11 |
+| `useMindmapInteraction` | 노드 선택/해제, 호버, 배경 클릭, idle 감지, 커스텀 딜레이 | Phase 11 |
 
 #### API Clients
 
@@ -143,6 +158,24 @@ pnpm test:watch
 | -------- | ----------- |
 | `SessionCard` | 렌더링, 상태별 배지(active/paused/completed), 날짜 포맷, 설명 표시/숨김, 링크 생성, 이벤트 수 표시 |
 | `SessionList` | 로딩 상태, 세션 카드 렌더링, 빈 상태, 페이지네이션, 이전 버튼 클릭, 첫 페이지 비활성화 |
+
+#### Account Components (Phase 11)
+
+| 컴포넌트 | 테스트 항목 |
+| -------- | ----------- |
+| `SubscriptionCard` | 로딩 스켈레톤, 플랜명/상태 표시, 결제일 표시, 무료/유료 플랜 구분, Pro/Team 플랜 렌더링, 취소된 구독 처리 |
+| `UsageCard` | 로딩 스켈레톤, 토큰 사용량 표시, 사용량 퍼센티지, 일반 상태 파란 아이콘, 80% 경고 배지/노란 아이콘, 100%+ 한도 초과 배지/빨간 배지, 무제한 사용 시 프로그레스 바 숨김, 숫자 포맷 (K/M) |
+| `HeaderUsageBadge` | 로딩 시 hidden, 80% 미만 hidden, 80%+ 경고 표시, 100%+ 한도 초과 표시, 무제한 시 hidden |
+
+#### Mindmap Interaction (Phase 11)
+
+| 기능 | 테스트 항목 |
+| ---- | ----------- |
+| 초기 상태 | 선택/호버 노드 없음, isIdle true |
+| 노드 클릭 | 노드 선택, 동일 노드 재클릭 해제, 다른 노드 클릭 시 전환, onNodeSelect 콜백 |
+| 노드 호버 | 호버 상태 설정/해제 |
+| 배경 클릭 | 선택 해제, onNodeSelect null 호출 |
+| Idle 감지 | 기본 5초 후 idle, 커스텀 딜레이, 선택/호버 중 idle 아님, 새 인터랙션으로 타이머 리셋 |
 
 ### Test Infrastructure
 
@@ -787,6 +820,7 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2026-01-02 | Phase 11 | Frontend Dashboard 테스트 추가: use-subscription (5개), use-usage (7개), use-mindmap (11개), use-mindmap-interaction (22개), SubscriptionCard (9개), UsageCard (12개), HeaderUsageBadge (6개) → 총 136개 테스트 |
 | 2025-12-31 | Phase 8.1 | Extension 테스트 확장: settings-store (6개), api getSessions/updateSession (6개), useNetworkStatus (7개) 추가 → 총 50개 테스트 |
 | 2025-12-31 | Phase 10 | AI 통합 테스트 추가: provider_integration_test.go (7개, build tag: integration), godotenv로 .env 자동 로드 |
 | 2025-12-31 | Phase 10-10.2 | AI 테스트 추가: provider_test.go (10개), aiconfig_service_test.go (9개), ailog_service_test.go (6개), mindmap_test.go (10개), tag_extraction_test.go (5개), mindmap_types_test.go (3개) |
