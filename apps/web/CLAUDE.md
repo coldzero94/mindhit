@@ -40,11 +40,17 @@ apps/web/
 │   │   ├── layout/             # Layout components
 │   │   │   └── HeaderUsageBadge.tsx  # Header usage warning badge
 │   │   └── mindmap/            # 3D mindmap components
-│   │       ├── MindmapCanvas.tsx   # R3F Canvas wrapper
-│   │       ├── MindmapViewer.tsx   # Mindmap viewer with API integration
-│   │       ├── Galaxy.tsx          # Main 3D scene
-│   │       ├── Node.tsx            # 3D node component
-│   │       └── Edge.tsx            # 3D edge component
+│   │       ├── MindmapCanvas.tsx     # R3F Canvas wrapper
+│   │       ├── MindmapViewer.tsx     # Mindmap viewer with API integration
+│   │       ├── Galaxy.tsx            # Main 3D scene (with animations)
+│   │       ├── Node.tsx              # 3D node with spring animations
+│   │       ├── Edge.tsx              # 3D edge component
+│   │       ├── BigBangAnimation.tsx  # Initial expansion animation
+│   │       ├── ParticleField.tsx     # Background particle stars
+│   │       ├── NebulaEffect.tsx      # Spiral nebula effect
+│   │       ├── PostProcessing.tsx    # Bloom + Vignette effects
+│   │       ├── CameraController.tsx  # Focus camera on selected node
+│   │       └── AutoRotateCamera.tsx  # Idle auto-rotation
 │   ├── lib/
 │   │   ├── api/                # API client wrappers
 │   │   │   ├── client.ts       # Axios client with interceptors

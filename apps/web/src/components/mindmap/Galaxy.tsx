@@ -1,20 +1,47 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { ThreeEvent } from '@react-three/fiber';
+import type { MindmapData, MindmapNode } from '@/types/mindmap';
 import { Node } from './Node';
 import { Edge } from './Edge';
-import type { MindmapData, MindmapNode } from '@/types/mindmap';
+import { BigBangAnimation } from './BigBangAnimation';
+import { ParticleField } from './ParticleField';
+import { NebulaEffect } from './NebulaEffect';
+import { CameraController } from './CameraController';
+import { AutoRotateCamera } from './AutoRotateCamera';
+import { PostProcessing } from './PostProcessing';
+import { useMindmapInteraction } from '@/lib/hooks/use-mindmap-interaction';
+import { getOptimalParticleCount } from '@/lib/utils/three-performance';
 
 interface GalaxyProps {
   data: MindmapData;
   onNodeSelect: (node: MindmapNode | null) => void;
+  enableAnimation?: boolean;
+  enableAutoRotate?: boolean;
+  enablePostProcessing?: boolean;
 }
 
-export function Galaxy({ data, onNodeSelect }: GalaxyProps) {
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const { controls } = useThree();
+export function Galaxy({
+  data,
+  onNodeSelect,
+  enableAnimation = true,
+  enableAutoRotate = true,
+  enablePostProcessing = true,
+}: GalaxyProps) {
+  const [isAnimationReady, setIsAnimationReady] = useState(!enableAnimation);
+  const [animationComplete, setAnimationComplete] = useState(!enableAnimation);
+
+  const {
+    selectedNode,
+    hoveredNode,
+    isIdle,
+    handleNodeClick,
+    handleNodeHover,
+    handleBackgroundClick,
+  } = useMindmapInteraction({
+    onNodeSelect,
+  });
 
   // Create node map for edge lookup
   const nodeMap = useMemo(() => {
@@ -23,11 +50,10 @@ export function Galaxy({ data, onNodeSelect }: GalaxyProps) {
 
   // Get connected node IDs for highlighting
   const connectedNodeIds = useMemo(() => {
-    const targetId = selectedNodeId || hoveredNodeId;
+    const targetId = selectedNode?.id || hoveredNode?.id;
     if (!targetId) return new Set<string>();
 
     const connected = new Set<string>();
-
     data.edges.forEach((edge) => {
       if (edge.source === targetId) {
         connected.add(edge.target);
@@ -38,96 +64,109 @@ export function Galaxy({ data, onNodeSelect }: GalaxyProps) {
     });
 
     return connected;
-  }, [data.edges, selectedNodeId, hoveredNodeId]);
+  }, [data.edges, selectedNode, hoveredNode]);
 
-  // Handle node click
-  const handleNodeClick = useCallback(
-    (node: MindmapNode) => {
-      if (selectedNodeId === node.id) {
-        // Deselect
-        setSelectedNodeId(null);
-        onNodeSelect(null);
-      } else {
-        // Select
-        setSelectedNodeId(node.id);
-        onNodeSelect(node);
-
-        // Animate camera to node
-        if (node.position && controls) {
-          const orbitControls = controls as { target?: { set: (x: number, y: number, z: number) => void } };
-          if (orbitControls.target) {
-            // Smoothly move camera target to node position
-            orbitControls.target.set(
-              node.position.x,
-              node.position.y,
-              node.position.z
-            );
-          }
-        }
-      }
-    },
-    [selectedNodeId, onNodeSelect, controls]
+  // Optimize particle count based on node count
+  const particleCount = useMemo(
+    () => getOptimalParticleCount(data.nodes.length),
+    [data.nodes.length]
   );
 
-  // Handle node hover
-  const handleNodeHover = useCallback((nodeId: string, hovered: boolean) => {
-    setHoveredNodeId(hovered ? nodeId : null);
-  }, []);
+  // Handle background click
+  const handleCanvasClick = useCallback(
+    (e: ThreeEvent<MouseEvent>) => {
+      // Only process if not clicking on a node
+      if (e.object.type === 'Mesh' && e.object.userData?.isNode) return;
+      handleBackgroundClick();
+    },
+    [handleBackgroundClick]
+  );
 
-  // Handle background click (deselect)
-  const handleBackgroundClick = useCallback(() => {
-    if (selectedNodeId) {
-      setSelectedNodeId(null);
-      onNodeSelect(null);
+  // Start animation after component mount
+  useEffect(() => {
+    if (enableAnimation) {
+      const timer = setTimeout(() => setIsAnimationReady(true), 100);
+      return () => clearTimeout(timer);
     }
-  }, [selectedNodeId, onNodeSelect]);
+  }, [enableAnimation]);
 
   return (
-    <group onClick={handleBackgroundClick}>
-      {/* Invisible background plane for click detection */}
-      <mesh position={[0, 0, -500]} visible={false}>
+    <>
+      {/* Camera controls */}
+      <CameraController selectedNode={selectedNode} />
+      {enableAutoRotate && (
+        <AutoRotateCamera enabled={isIdle && animationComplete} speed={0.05} />
+      )}
+
+      {/* Background effects */}
+      <ParticleField count={particleCount} radius={500} size={1} color="#ffffff" />
+      <NebulaEffect count={300} radius={350} />
+
+      {/* Click detection plane */}
+      <mesh
+        position={[0, 0, -500]}
+        onClick={handleCanvasClick}
+        visible={false}
+      >
         <planeGeometry args={[2000, 2000]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 
-      {/* Render edges first (behind nodes) */}
-      {data.edges.map((edge) => {
-        const sourceNode = nodeMap.get(edge.source);
-        const targetNode = nodeMap.get(edge.target);
+      {/* Main content */}
+      <BigBangAnimation
+        isReady={isAnimationReady}
+        onComplete={() => setAnimationComplete(true)}
+        duration={1500}
+      >
+        {/* Edges (render first, behind nodes) */}
+        {data.edges.map((edge) => {
+          const sourceNode = nodeMap.get(edge.source);
+          const targetNode = nodeMap.get(edge.target);
 
-        if (!sourceNode || !targetNode) return null;
+          if (!sourceNode || !targetNode) return null;
 
-        const isHighlighted =
-          edge.source === selectedNodeId ||
-          edge.target === selectedNodeId ||
-          edge.source === hoveredNodeId ||
-          edge.target === hoveredNodeId;
+          const isHighlighted =
+            selectedNode &&
+            (edge.source === selectedNode.id || edge.target === selectedNode.id);
 
-        return (
-          <Edge
-            key={`${edge.source}-${edge.target}`}
-            edge={edge}
-            sourceNode={sourceNode}
-            targetNode={targetNode}
-            isHighlighted={isHighlighted}
-          />
-        );
-      })}
+          const isHoveredConnection =
+            hoveredNode &&
+            (edge.source === hoveredNode.id || edge.target === hoveredNode.id);
 
-      {/* Render nodes */}
-      {data.nodes.map((node) => (
-        <Node
-          key={node.id}
-          node={node}
-          isSelected={node.id === selectedNodeId}
-          isHovered={
-            node.id === hoveredNodeId ||
-            connectedNodeIds.has(node.id)
-          }
-          onClick={() => handleNodeClick(node)}
-          onHover={(hovered) => handleNodeHover(node.id, hovered)}
-        />
-      ))}
-    </group>
+          return (
+            <Edge
+              key={`${edge.source}-${edge.target}`}
+              edge={edge}
+              sourceNode={sourceNode}
+              targetNode={targetNode}
+              isHighlighted={isHighlighted || isHoveredConnection || false}
+            />
+          );
+        })}
+
+        {/* Nodes */}
+        {data.nodes.map((node) => {
+          const isSelected = selectedNode?.id === node.id;
+          const isHovered =
+            hoveredNode?.id === node.id || connectedNodeIds.has(node.id);
+
+          return (
+            <Node
+              key={node.id}
+              node={node}
+              isSelected={isSelected}
+              isHovered={isHovered}
+              onClick={() => handleNodeClick(node)}
+              onHover={(hovered) => handleNodeHover(hovered ? node : null)}
+            />
+          );
+        })}
+      </BigBangAnimation>
+
+      {/* Post-processing effects */}
+      {enablePostProcessing && (
+        <PostProcessing bloomIntensity={0.6} bloomThreshold={0.15} />
+      )}
+    </>
   );
 }

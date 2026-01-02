@@ -15,8 +15,8 @@
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 11.5.1 | 시각 효과 | ⬜ |
-| 11.5.2 | 카메라 및 인터랙션 | ⬜ |
+| 11.5.1 | 시각 효과 | ✅ |
+| 11.5.2 | 카메라 및 인터랙션 | ✅ |
 
 ---
 
@@ -24,8 +24,8 @@
 
 ### 체크리스트
 
-- [ ] **빅뱅 초기 애니메이션**
-  - [ ] `src/components/mindmap/BigBangAnimation.tsx`
+- [x] **빅뱅 초기 애니메이션**
+  - [x] `src/components/mindmap/BigBangAnimation.tsx`
 
     ```tsx
     'use client';
@@ -89,8 +89,8 @@
     }
     ```
 
-- [ ] **노드 개별 애니메이션 래퍼**
-  - [ ] `src/components/mindmap/AnimatedNode.tsx`
+- [x] **노드 개별 애니메이션 래퍼** (기존 Node.tsx에서 이미 spring 애니메이션 구현됨)
+  - [x] `src/components/mindmap/Node.tsx` (AnimatedNode 통합)
 
     ```tsx
     'use client';
@@ -218,8 +218,8 @@
     }
     ```
 
-- [ ] **파티클 배경 효과**
-  - [ ] `src/components/mindmap/ParticleField.tsx`
+- [x] **파티클 배경 효과**
+  - [x] `src/components/mindmap/ParticleField.tsx`
 
     ```tsx
     'use client';
@@ -304,8 +304,8 @@
     }
     ```
 
-- [ ] **성운 효과 (Nebula)**
-  - [ ] `src/components/mindmap/NebulaEffect.tsx`
+- [x] **성운 효과 (Nebula)**
+  - [x] `src/components/mindmap/NebulaEffect.tsx`
 
     ```tsx
     'use client';
@@ -378,8 +378,8 @@
     }
     ```
 
-- [ ] **Post-processing 설정 개선**
-  - [ ] `src/components/mindmap/PostProcessing.tsx`
+- [x] **Post-processing 설정 개선**
+  - [x] `src/components/mindmap/PostProcessing.tsx`
 
     ```tsx
     'use client';
@@ -433,8 +433,8 @@ pnpm dev
 
 ### 체크리스트
 
-- [ ] **카메라 컨트롤러**
-  - [ ] `src/components/mindmap/CameraController.tsx`
+- [x] **카메라 컨트롤러**
+  - [x] `src/components/mindmap/CameraController.tsx`
 
     ```tsx
     'use client';
@@ -501,8 +501,8 @@ pnpm dev
     }
     ```
 
-- [ ] **자동 회전 카메라 (Idle 상태)**
-  - [ ] `src/components/mindmap/AutoRotateCamera.tsx`
+- [x] **자동 회전 카메라 (Idle 상태)**
+  - [x] `src/components/mindmap/AutoRotateCamera.tsx`
 
     ```tsx
     'use client';
@@ -549,7 +549,7 @@ pnpm dev
     }
     ```
 
-- [ ] **궤도 애니메이션 (자식 노드)**
+- [ ] **궤도 애니메이션 (자식 노드)** (미구현 - 필요시 추가)
   - [ ] `src/components/mindmap/OrbitAnimation.tsx`
 
     ```tsx
@@ -610,8 +610,8 @@ pnpm dev
     }
     ```
 
-- [ ] **마인드맵 인터랙션 훅**
-  - [ ] `src/lib/hooks/use-mindmap-interaction.ts`
+- [x] **마인드맵 인터랙션 훅**
+  - [x] `src/lib/hooks/use-mindmap-interaction.ts`
 
     ```typescript
     import { useState, useCallback, useEffect } from 'react';
@@ -679,8 +679,8 @@ pnpm dev
     }
     ```
 
-- [ ] **Galaxy 컴포넌트 업데이트 (애니메이션 통합)**
-  - [ ] `src/components/mindmap/Galaxy.tsx` 업데이트
+- [x] **Galaxy 컴포넌트 업데이트 (애니메이션 통합)**
+  - [x] `src/components/mindmap/Galaxy.tsx` 업데이트
 
     ```tsx
     'use client';
@@ -874,8 +874,8 @@ pnpm dev
     }
     ```
 
-- [ ] **성능 최적화 유틸**
-  - [ ] `src/lib/utils/three-performance.ts`
+- [x] **성능 최적화 유틸**
+  - [x] `src/lib/utils/three-performance.ts`
 
     ```typescript
     import { useMemo } from 'react';
@@ -963,15 +963,15 @@ pnpm dev
 
 ### 전체 검증 체크리스트
 
-- [ ] 빅뱅 초기 애니메이션
-- [ ] 노드별 순차 등장 애니메이션
-- [ ] 파티클 배경 효과
-- [ ] 성운 효과
-- [ ] Bloom/Vignette post-processing
-- [ ] 노드 선택 시 카메라 이동
-- [ ] 부드러운 lerp transition
-- [ ] Idle 시 자동 회전
-- [ ] 성능 최적화 (60fps)
+- [x] 빅뱅 초기 애니메이션
+- [x] 노드별 순차 등장 애니메이션 (기존 Node.tsx에서 spring 사용)
+- [x] 파티클 배경 효과
+- [x] 성운 효과
+- [x] Bloom/Vignette post-processing
+- [x] 노드 선택 시 카메라 이동
+- [x] 부드러운 lerp transition
+- [x] Idle 시 자동 회전
+- [x] 성능 최적화 (seeded random, particle count optimization)
 
 ### 테스트
 
