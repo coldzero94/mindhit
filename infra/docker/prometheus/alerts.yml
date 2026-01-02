@@ -1,0 +1,116 @@
+groups:
+  - name: mindhit-api
+    rules:
+      # API 서버 다운
+      - alert: APIDown
+        expr: up{job="mindhit-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MindHit API server is down"
+          description: "API server has been down for more than 1 minute"
+
+      # 높은 에러율 (5xx > 1%)
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(mindhit_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(mindhit_http_requests_total[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 1%)"
+
+      # 높은 지연시간 (p95 > 2s)
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(mindhit_http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "95th percentile latency is {{ $value }}s (threshold: 2s)"
+
+  - name: mindhit-ai
+    rules:
+      # AI 처리 에러 급증
+      - alert: AIProcessingErrors
+        expr: increase(mindhit_ai_processing_errors_total[1h]) > 10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High AI processing errors"
+          description: "{{ $value }} AI processing errors in the last hour"
+
+      # AI 응답 시간 느림
+      - alert: SlowAIProcessing
+        expr: |
+          histogram_quantile(0.95, sum(rate(mindhit_ai_processing_duration_seconds_bucket[5m])) by (le)) > 60
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow AI processing"
+          description: "AI processing p95 is {{ $value }}s (threshold: 60s)"
+
+  - name: mindhit-worker
+    rules:
+      # Worker 작업 실패율 높음
+      - alert: HighWorkerFailureRate
+        expr: |
+          (
+            sum(rate(mindhit_worker_jobs_processed_total{status="failed"}[1h]))
+            /
+            sum(rate(mindhit_worker_jobs_processed_total[1h]))
+          ) > 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High worker job failure rate"
+          description: "Worker failure rate is {{ $value | humanizePercentage }}"
+
+      # 대기 중인 작업 너무 많음
+      - alert: HighQueueBacklog
+        expr: sum(mindhit_worker_jobs_in_queue{state="pending"}) > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High queue backlog"
+          description: "{{ $value }} jobs pending in queue"
+
+  - name: mindhit-infrastructure
+    rules:
+      # DB 쿼리 느림
+      - alert: SlowDBQueries
+        expr: |
+          histogram_quantile(0.95, sum(rate(mindhit_db_query_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries"
+          description: "DB query p95 is {{ $value }}s (threshold: 0.5s)"
+
+      # Redis 캐시 히트율 낮음
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            sum(rate(mindhit_redis_cache_operations_total{result="hit"}[5m]))
+            /
+            sum(rate(mindhit_redis_cache_operations_total{operation="get"}[5m]))
+          ) < 0.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"

@@ -163,7 +163,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 11.3 | ✅ Done | Session Detail Page (Mindmap API) |
 | Phase 11.4 | ✅ Done | Account & Usage Page |
 | Phase 11.5 | ✅ Done | Animation & Interaction |
-| Phase 12 | ⬜ Pending | Production Monitoring |
+| Phase 12 | ✅ Done | Production Monitoring |
 | Phase 13 | ⬜ Pending | Deployment & Operations |
 | Phase 14 | ⬜ Pending | Stripe Billing Integration |
 
@@ -176,6 +176,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2026-01-02] Phase 12 completed: Production Monitoring - Business metrics (sessions, events, auth, worker, AI), Grafana dashboards (api-overview, business-metrics, ai-worker, infrastructure), Loki log aggregation, Alertmanager with alerts.yml
 - [2026-01-02] Phase 11.5 completed: Animation & Interaction - BigBangAnimation, ParticleField, NebulaEffect, PostProcessing, CameraController, AutoRotateCamera, useMindmapInteraction hook, Galaxy integration with seeded random for React 19 compatibility
 - [2026-01-02] Phase 11.4 completed: Account & Usage Page - subscription/usage API wrappers, useSubscription/useUsage hooks, SubscriptionCard, UsageCard, UsageHistory components, account page, HeaderUsageBadge
 - [2026-01-02] Phase 11.3 updated: Session title editing - SessionTitleEdit component, useUpdateSession hook integration, inline edit with Enter/Escape support

@@ -15,6 +15,7 @@ import (
 	"github.com/mindhit/api/ent/pagevisit"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
+	"github.com/mindhit/api/internal/infrastructure/metrics"
 )
 
 // Event service errors.
@@ -68,6 +69,9 @@ func (s *EventService) ProcessBatchEvents(
 		return 0, ErrSessionNotAcceptingEvents
 	}
 
+	// Record batch size metric
+	metrics.EventBatchSize.Observe(float64(len(events)))
+
 	processed := 0
 
 	for _, event := range events {
@@ -75,6 +79,8 @@ func (s *EventService) ProcessBatchEvents(
 			// Log error but continue processing
 			continue
 		}
+		// Record event by type
+		metrics.EventsReceived.WithLabelValues(event.Type).Inc()
 		processed++
 	}
 

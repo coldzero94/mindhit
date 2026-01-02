@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -14,6 +15,7 @@ import (
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/session"
 	"github.com/mindhit/api/internal/infrastructure/ai"
+	"github.com/mindhit/api/internal/infrastructure/metrics"
 	"github.com/mindhit/api/internal/infrastructure/queue"
 	"github.com/mindhit/api/internal/service"
 )
@@ -96,6 +98,9 @@ type RelationshipGraphResponse struct {
 
 // HandleMindmapGenerate processes mindmap generation for a session.
 func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
+	start := time.Now()
+	jobType := "mindmap_generation"
+
 	var payload queue.MindmapGeneratePayload
 	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 		return fmt.Errorf("unmarshal payload: %w", err)
@@ -107,6 +112,11 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 	}
 
 	slog.Info("generating mindmap", "session_id", payload.SessionID)
+
+	// Defer metrics recording
+	defer func() {
+		metrics.WorkerJobDuration.WithLabelValues(jobType).Observe(time.Since(start).Seconds())
+	}()
 
 	// Check if AI manager is available
 	if h.aiManager == nil {
@@ -259,6 +269,12 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 	if err != nil {
 		return fmt.Errorf("update session status: %w", err)
 	}
+
+	// Record success metrics
+	metrics.WorkerJobsProcessed.WithLabelValues(jobType, "success").Inc()
+	metrics.MindmapsGenerated.WithLabelValues("success").Inc()
+	metrics.MindmapNodeCount.Observe(float64(len(mindmapData.Nodes)))
+	metrics.MindmapEdgeCount.Observe(float64(len(mindmapData.Edges)))
 
 	slog.Info("mindmap generated",
 		"session_id", payload.SessionID,

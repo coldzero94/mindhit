@@ -12,6 +12,7 @@ import (
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/session"
 	"github.com/mindhit/api/ent/user"
+	"github.com/mindhit/api/internal/infrastructure/metrics"
 	"github.com/mindhit/api/internal/infrastructure/queue"
 )
 
@@ -46,12 +47,18 @@ func (s *SessionService) activeSessions() *ent.SessionQuery {
 
 // Start creates a new recording session
 func (s *SessionService) Start(ctx context.Context, userID uuid.UUID) (*ent.Session, error) {
-	return s.client.Session.
+	sess, err := s.client.Session.
 		Create().
 		SetUserID(userID).
 		SetSessionStatus(session.SessionStatusRecording).
 		SetStartedAt(time.Now()).
 		Save(ctx)
+
+	if err == nil {
+		metrics.SessionsCreated.Inc()
+	}
+
+	return sess, err
 }
 
 // Pause pauses a recording session
@@ -108,6 +115,13 @@ func (s *SessionService) Stop(ctx context.Context, sessionID, userID uuid.UUID) 
 	if err != nil {
 		return nil, err
 	}
+
+	// Record session duration metric
+	if sess.StartedAt != (time.Time{}) {
+		duration := now.Sub(sess.StartedAt).Seconds()
+		metrics.SessionDuration.Observe(duration)
+	}
+	metrics.SessionsCompleted.WithLabelValues("success").Inc()
 
 	// Enqueue processing task
 	if s.queueClient != nil {

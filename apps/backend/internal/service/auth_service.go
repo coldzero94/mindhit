@@ -15,6 +15,7 @@ import (
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/passwordresettoken"
 	"github.com/mindhit/api/ent/user"
+	"github.com/mindhit/api/internal/infrastructure/metrics"
 )
 
 // Auth service errors
@@ -79,6 +80,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*ent.U
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
+			metrics.AuthAttempts.WithLabelValues("password", "failed").Inc()
 			return nil, ErrInvalidCredentials
 		}
 		return nil, err
@@ -86,14 +88,17 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*ent.U
 
 	// Check if user has a password (Google OAuth users don't)
 	if u.PasswordHash == nil {
+		metrics.AuthAttempts.WithLabelValues("password", "failed").Inc()
 		return nil, ErrInvalidCredentials
 	}
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(password)); err != nil {
+		metrics.AuthAttempts.WithLabelValues("password", "failed").Inc()
 		return nil, ErrInvalidCredentials
 	}
 
+	metrics.AuthAttempts.WithLabelValues("password", "success").Inc()
 	return u, nil
 }
 

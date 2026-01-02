@@ -14,131 +14,70 @@
 
 ---
 
+## 현재 인프라 상태 (Phase 5에서 구현됨)
+
+### 이미 구현된 항목
+
+| 항목 | 파일 위치 | 상태 |
+|------|----------|------|
+| Prometheus 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` | ✅ |
+| 구조화된 로깅 | `internal/infrastructure/logger/logger.go` | ✅ |
+| HTTP 로깅 미들웨어 | `internal/infrastructure/middleware/logging.go` | ✅ |
+| Request ID 미들웨어 | `internal/infrastructure/middleware/request_id.go` | ✅ |
+| Prometheus 서비스 | `infra/docker/docker-compose.yml` | ✅ |
+| Grafana 서비스 | `infra/docker/docker-compose.yml` | ✅ |
+| 기본 prometheus.yml | `infra/docker/prometheus.yml` | ✅ |
+
+### 현재 포트 할당
+
+| 서비스 | 포트 | 비고 |
+|-------|------|------|
+| API Server | 9000 | `host.docker.internal:9000` |
+| Prometheus | 9091 | 9090은 asynqmon이 사용 |
+| Grafana | 3010 | |
+| Asynqmon | 9090 | Asynq 모니터링 UI |
+| Alertmanager | 9093 | 알림 관리 |
+| Loki | 3100 | 로그 수집 |
+| PostgreSQL | 5433 | |
+| Redis | 6380 | |
+
+### 현재 메트릭 (middleware/metrics.go)
+
+```go
+// 이미 구현된 메트릭
+mindhit_http_requests_total{method, path, status}
+mindhit_http_request_duration_seconds{method, path}
+mindhit_http_requests_in_flight
+mindhit_sessions_active
+mindhit_events_processed_total
+```
+
+---
+
 ## 진행 상황
 
 | Step | 이름 | 상태 |
 |------|------|------|
-| 12.1 | Prometheus 메트릭 수집 | ⬜ |
-| 12.2 | Grafana 대시보드 구성 | ⬜ |
-| 12.3 | 구조화된 로깅 시스템 | ⬜ |
-| 12.4 | 알림 시스템 구성 | ⬜ |
+| 12.1 | 비즈니스/Worker 메트릭 확장 | ✅ |
+| 12.2 | Grafana 대시보드 프로비저닝 | ✅ |
+| 12.3 | 로그 수집 시스템 (Loki) | ✅ |
+| 12.4 | 알림 시스템 구성 | ✅ |
 
 ---
 
-## Step 12.1: Prometheus 메트릭 수집
+## Step 12.1: 비즈니스/Worker 메트릭 확장
 
 ### 목표
 
-API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
+기존 HTTP 메트릭에 비즈니스 로직, AI 처리, Worker 관련 메트릭 추가
 
 ### 체크리스트
 
-- [ ] **Prometheus 클라이언트 의존성 추가**
-
-  ```bash
-  cd apps/backend
-  go get github.com/prometheus/client_golang/prometheus
-  go get github.com/prometheus/client_golang/prometheus/promauto
-  go get github.com/prometheus/client_golang/prometheus/promhttp
-  ```
-
-- [ ] **메트릭 미들웨어 구현**
-  - [ ] `internal/infrastructure/middleware/metrics.go`
+- [x] **비즈니스 메트릭 파일 생성**
+  - [x] `internal/infrastructure/metrics/metrics.go`
 
     ```go
-    package middleware
-
-    import (
-        "strconv"
-        "time"
-
-        "github.com/gin-gonic/gin"
-        "github.com/prometheus/client_golang/prometheus"
-        "github.com/prometheus/client_golang/prometheus/promauto"
-    )
-
-    var (
-        // HTTP 요청 총 수
-        httpRequestsTotal = promauto.NewCounterVec(
-            prometheus.CounterOpts{
-                Name: "http_requests_total",
-                Help: "Total number of HTTP requests",
-            },
-            []string{"method", "path", "status"},
-        )
-
-        // HTTP 요청 지속시간
-        httpRequestDuration = promauto.NewHistogramVec(
-            prometheus.HistogramOpts{
-                Name:    "http_request_duration_seconds",
-                Help:    "HTTP request duration in seconds",
-                Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
-            },
-            []string{"method", "path"},
-        )
-
-        // 활성 연결 수
-        httpActiveConnections = promauto.NewGauge(
-            prometheus.GaugeOpts{
-                Name: "http_active_connections",
-                Help: "Number of active HTTP connections",
-            },
-        )
-
-        // 요청 크기
-        httpRequestSize = promauto.NewHistogramVec(
-            prometheus.HistogramOpts{
-                Name:    "http_request_size_bytes",
-                Help:    "HTTP request size in bytes",
-                Buckets: prometheus.ExponentialBuckets(100, 10, 8),
-            },
-            []string{"method", "path"},
-        )
-
-        // 응답 크기
-        httpResponseSize = promauto.NewHistogramVec(
-            prometheus.HistogramOpts{
-                Name:    "http_response_size_bytes",
-                Help:    "HTTP response size in bytes",
-                Buckets: prometheus.ExponentialBuckets(100, 10, 8),
-            },
-            []string{"method", "path"},
-        )
-    )
-
-    func Metrics() gin.HandlerFunc {
-        return func(c *gin.Context) {
-            start := time.Now()
-            path := c.FullPath()
-            if path == "" {
-                path = "unknown"
-            }
-
-            httpActiveConnections.Inc()
-            defer httpActiveConnections.Dec()
-
-            // 요청 크기 기록
-            httpRequestSize.WithLabelValues(c.Request.Method, path).
-                Observe(float64(c.Request.ContentLength))
-
-            c.Next()
-
-            // 메트릭 기록
-            duration := time.Since(start).Seconds()
-            status := strconv.Itoa(c.Writer.Status())
-
-            httpRequestsTotal.WithLabelValues(c.Request.Method, path, status).Inc()
-            httpRequestDuration.WithLabelValues(c.Request.Method, path).Observe(duration)
-            httpResponseSize.WithLabelValues(c.Request.Method, path).
-                Observe(float64(c.Writer.Size()))
-        }
-    }
-    ```
-
-- [ ] **비즈니스 메트릭 정의**
-  - [ ] `internal/infrastructure/metrics/business.go`
-
-    ```go
+    // Package metrics provides Prometheus metrics for business logic monitoring.
     package metrics
 
     import (
@@ -146,8 +85,8 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
         "github.com/prometheus/client_golang/prometheus/promauto"
     )
 
+    // Session metrics
     var (
-        // 세션 관련 메트릭
         SessionsCreated = promauto.NewCounter(
             prometheus.CounterOpts{
                 Name: "mindhit_sessions_created_total",
@@ -155,11 +94,12 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
             },
         )
 
-        SessionsCompleted = promauto.NewCounter(
+        SessionsCompleted = promauto.NewCounterVec(
             prometheus.CounterOpts{
                 Name: "mindhit_sessions_completed_total",
                 Help: "Total number of sessions completed",
             },
+            []string{"status"}, // "success", "failed"
         )
 
         SessionDuration = promauto.NewHistogram(
@@ -169,21 +109,16 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
                 Buckets: []float64{60, 300, 600, 1800, 3600, 7200},
             },
         )
+    )
 
-        ActiveSessions = promauto.NewGauge(
-            prometheus.GaugeOpts{
-                Name: "mindhit_active_sessions",
-                Help: "Number of currently active sessions",
-            },
-        )
-
-        // 이벤트 관련 메트릭
+    // Event metrics
+    var (
         EventsReceived = promauto.NewCounterVec(
             prometheus.CounterOpts{
                 Name: "mindhit_events_received_total",
-                Help: "Total number of events received",
+                Help: "Total number of events received by type",
             },
-            []string{"event_type"},
+            []string{"event_type"}, // "page_visit", "scroll", "highlight", "click"
         )
 
         EventBatchSize = promauto.NewHistogram(
@@ -193,31 +128,116 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
                 Buckets: []float64{1, 5, 10, 25, 50, 100, 250, 500},
             },
         )
+    )
 
-        // AI 처리 메트릭
-        AIProcessingDuration = promauto.NewHistogram(
+    // AI processing metrics
+    var (
+        AIRequestsTotal = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_ai_requests_total",
+                Help: "Total number of AI API requests",
+            },
+            []string{"provider", "operation", "status"}, // provider: openai/gemini/claude, operation: tag_extraction/mindmap_generation, status: success/error
+        )
+
+        AIProcessingDuration = promauto.NewHistogramVec(
             prometheus.HistogramOpts{
                 Name:    "mindhit_ai_processing_duration_seconds",
                 Help:    "AI processing duration in seconds",
                 Buckets: []float64{1, 5, 10, 30, 60, 120, 300},
             },
+            []string{"provider", "operation"},
         )
 
-        AIProcessingErrors = promauto.NewCounter(
+        AITokensUsed = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_ai_tokens_used_total",
+                Help: "Total number of AI tokens used",
+            },
+            []string{"provider", "token_type"}, // token_type: input/output
+        )
+
+        AIProcessingErrors = promauto.NewCounterVec(
             prometheus.CounterOpts{
                 Name: "mindhit_ai_processing_errors_total",
                 Help: "Total number of AI processing errors",
             },
+            []string{"provider", "operation", "error_type"},
+        )
+    )
+
+    // Worker/Job metrics
+    var (
+        WorkerJobsProcessed = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_worker_jobs_processed_total",
+                Help: "Total number of worker jobs processed",
+            },
+            []string{"job_type", "status"}, // job_type: session_processing/cleanup/tag_extraction/mindmap_generation, status: success/failed/retried
         )
 
-        // 데이터베이스 메트릭
+        WorkerJobDuration = promauto.NewHistogramVec(
+            prometheus.HistogramOpts{
+                Name:    "mindhit_worker_job_duration_seconds",
+                Help:    "Worker job processing duration in seconds",
+                Buckets: []float64{0.1, 0.5, 1, 5, 10, 30, 60, 300},
+            },
+            []string{"job_type"},
+        )
+
+        WorkerJobsInQueue = promauto.NewGaugeVec(
+            prometheus.GaugeOpts{
+                Name: "mindhit_worker_jobs_in_queue",
+                Help: "Number of jobs currently in queue",
+            },
+            []string{"queue", "state"}, // state: pending/active/scheduled/retry
+        )
+
+        WorkerJobRetries = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_worker_job_retries_total",
+                Help: "Total number of job retries",
+            },
+            []string{"job_type"},
+        )
+    )
+
+    // Mindmap metrics
+    var (
+        MindmapsGenerated = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_mindmaps_generated_total",
+                Help: "Total number of mindmaps generated",
+            },
+            []string{"status"}, // "success", "failed"
+        )
+
+        MindmapNodeCount = promauto.NewHistogram(
+            prometheus.HistogramOpts{
+                Name:    "mindhit_mindmap_node_count",
+                Help:    "Number of nodes per mindmap",
+                Buckets: []float64{5, 10, 25, 50, 100, 250, 500},
+            },
+        )
+
+        MindmapEdgeCount = promauto.NewHistogram(
+            prometheus.HistogramOpts{
+                Name:    "mindhit_mindmap_edge_count",
+                Help:    "Number of edges per mindmap",
+                Buckets: []float64{5, 10, 25, 50, 100, 250, 500},
+            },
+        )
+    )
+
+    // Database metrics
+    var (
         DBQueryDuration = promauto.NewHistogramVec(
             prometheus.HistogramOpts{
                 Name:    "mindhit_db_query_duration_seconds",
                 Help:    "Database query duration in seconds",
                 Buckets: []float64{.001, .005, .01, .025, .05, .1, .25, .5, 1},
             },
-            []string{"operation"},
+            []string{"operation"}, // "select", "insert", "update", "delete"
         )
 
         DBConnectionsActive = promauto.NewGauge(
@@ -227,161 +247,195 @@ API 서버의 핵심 메트릭 수집 및 Prometheus 엔드포인트 노출
             },
         )
 
-        // Redis 메트릭
-        RedisCacheHits = promauto.NewCounter(
-            prometheus.CounterOpts{
-                Name: "mindhit_redis_cache_hits_total",
-                Help: "Total number of Redis cache hits",
+        DBConnectionsIdle = promauto.NewGauge(
+            prometheus.GaugeOpts{
+                Name: "mindhit_db_connections_idle",
+                Help: "Number of idle database connections",
             },
         )
+    )
 
-        RedisCacheMisses = promauto.NewCounter(
+    // Redis/Cache metrics
+    var (
+        RedisCacheOperations = promauto.NewCounterVec(
             prometheus.CounterOpts{
-                Name: "mindhit_redis_cache_misses_total",
-                Help: "Total number of Redis cache misses",
+                Name: "mindhit_redis_cache_operations_total",
+                Help: "Total number of Redis cache operations",
             },
+            []string{"operation", "result"}, // operation: get/set/delete, result: hit/miss/success/error
         )
 
-        // 인증 메트릭
-        AuthLoginAttempts = promauto.NewCounterVec(
-            prometheus.CounterOpts{
-                Name: "mindhit_auth_login_attempts_total",
-                Help: "Total number of login attempts",
+        RedisOperationDuration = promauto.NewHistogramVec(
+            prometheus.HistogramOpts{
+                Name:    "mindhit_redis_operation_duration_seconds",
+                Help:    "Redis operation duration in seconds",
+                Buckets: []float64{.0001, .0005, .001, .005, .01, .05, .1},
             },
-            []string{"status"}, // "success", "failed"
+            []string{"operation"},
+        )
+    )
+
+    // Auth metrics
+    var (
+        AuthAttempts = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_auth_attempts_total",
+                Help: "Total number of authentication attempts",
+            },
+            []string{"method", "status"}, // method: password/google/refresh, status: success/failed
         )
 
-        AuthTokenRefreshes = promauto.NewCounter(
+        AuthTokensIssued = promauto.NewCounterVec(
             prometheus.CounterOpts{
-                Name: "mindhit_auth_token_refreshes_total",
-                Help: "Total number of token refreshes",
+                Name: "mindhit_auth_tokens_issued_total",
+                Help: "Total number of tokens issued",
             },
+            []string{"token_type"}, // "access", "refresh"
+        )
+    )
+
+    // Subscription/Usage metrics
+    var (
+        SubscriptionsByPlan = promauto.NewGaugeVec(
+            prometheus.GaugeOpts{
+                Name: "mindhit_subscriptions_by_plan",
+                Help: "Number of active subscriptions by plan",
+            },
+            []string{"plan"}, // "free", "pro", "enterprise"
+        )
+
+        TokenUsageDaily = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_token_usage_daily_total",
+                Help: "Daily token usage by user plan",
+            },
+            []string{"plan"},
+        )
+
+        UsageLimitExceeded = promauto.NewCounterVec(
+            prometheus.CounterOpts{
+                Name: "mindhit_usage_limit_exceeded_total",
+                Help: "Number of times usage limit was exceeded",
+            },
+            []string{"plan", "limit_type"}, // limit_type: daily/monthly
         )
     )
     ```
 
-- [ ] **main.go에 메트릭 엔드포인트 추가**
+- [x] **서비스에 메트릭 호출 추가**
+  - [x] `internal/service/session_service.go` - 세션 생성/완료 시 메트릭 기록
+  - [x] `internal/service/event_service.go` - 이벤트 수신 시 메트릭 기록
+  - [x] `internal/service/auth_service.go` - 인증 시도 시 메트릭 기록
+  - [ ] `internal/infrastructure/ai/manager.go` - AI 요청 시 메트릭 기록 (TODO: AI 메트릭)
+  - [x] `internal/worker/handler/*.go` - Worker 작업 시 메트릭 기록
 
-  ```go
-  import "github.com/prometheus/client_golang/prometheus/promhttp"
+- [x] **Worker 핸들러에 메트릭 적용 예시**
 
-  // /metrics 엔드포인트 추가
-  r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-  ```
+    ```go
+    // internal/worker/handler/mindmap.go
+    func (h *MindmapHandler) Handle(ctx context.Context, task *asynq.Task) error {
+        start := time.Now()
+        jobType := "mindmap_generation"
 
-- [ ] **Docker Compose에 Prometheus 추가**
-  - [ ] `docker-compose.monitoring.yml`
+        defer func() {
+            duration := time.Since(start).Seconds()
+            metrics.WorkerJobDuration.WithLabelValues(jobType).Observe(duration)
+        }()
 
-    ```yaml
-    version: '3.8'
+        // ... processing logic ...
 
-    services:
-      prometheus:
-        image: prom/prometheus:v2.48.0
-        container_name: mindhit-prometheus
-        ports:
-          - "9090:9090"
-        volumes:
-          - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-          - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
-          - prometheus_data:/prometheus
-        command:
-          - '--config.file=/etc/prometheus/prometheus.yml'
-          - '--storage.tsdb.path=/prometheus'
-          - '--web.enable-lifecycle'
-        networks:
-          - mindhit-network
+        if err != nil {
+            metrics.WorkerJobsProcessed.WithLabelValues(jobType, "failed").Inc()
+            return err
+        }
 
-    volumes:
-      prometheus_data:
-
-    networks:
-      mindhit-network:
-        external: true
+        metrics.WorkerJobsProcessed.WithLabelValues(jobType, "success").Inc()
+        return nil
+    }
     ```
 
-- [ ] **Prometheus 설정 파일 생성**
-  - [ ] `monitoring/prometheus/prometheus.yml`
+- [ ] **AI Provider에 메트릭 적용 예시** (TODO: 추후 구현)
 
-    ```yaml
-    global:
-      scrape_interval: 15s
-      evaluation_interval: 15s
+    ```go
+    // internal/infrastructure/ai/manager.go
+    func (m *ProviderManager) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
+        start := time.Now()
+        provider := m.getCurrentProvider()
 
-    alerting:
-      alertmanagers:
-        - static_configs:
-            - targets:
-              - alertmanager:9093
+        resp, err := provider.Chat(ctx, req)
 
-    rule_files:
-      - "alerts.yml"
+        duration := time.Since(start).Seconds()
+        operation := req.Operation // "tag_extraction" or "mindmap_generation"
 
-    scrape_configs:
-      - job_name: 'prometheus'
-        static_configs:
-          - targets: ['localhost:9090']
+        if err != nil {
+            metrics.AIRequestsTotal.WithLabelValues(provider.Name(), operation, "error").Inc()
+            metrics.AIProcessingErrors.WithLabelValues(provider.Name(), operation, "api_error").Inc()
+            return nil, err
+        }
 
-      - job_name: 'mindhit-api'
-        static_configs:
-          - targets: ['api:8080']
-        metrics_path: /metrics
-        scheme: http
+        metrics.AIRequestsTotal.WithLabelValues(provider.Name(), operation, "success").Inc()
+        metrics.AIProcessingDuration.WithLabelValues(provider.Name(), operation).Observe(duration)
+        metrics.AITokensUsed.WithLabelValues(provider.Name(), "input").Add(float64(resp.Usage.InputTokens))
+        metrics.AITokensUsed.WithLabelValues(provider.Name(), "output").Add(float64(resp.Usage.OutputTokens))
 
-      - job_name: 'postgres'
-        static_configs:
-          - targets: ['postgres-exporter:9187']
-
-      - job_name: 'redis'
-        static_configs:
-          - targets: ['redis-exporter:9121']
+        return resp, nil
+    }
     ```
 
 ### 검증
 
 ```bash
 # API 서버 실행 후 메트릭 확인
-curl http://localhost:8080/metrics
+curl http://localhost:9000/metrics | grep mindhit_
 
-# Prometheus UI 확인
-# http://localhost:9090
+# 특정 메트릭 확인
+curl http://localhost:9000/metrics | grep mindhit_ai_
+curl http://localhost:9000/metrics | grep mindhit_worker_
 ```
 
 ---
 
-## Step 12.2: Grafana 대시보드 구성
+## Step 12.2: Grafana 대시보드 프로비저닝
 
 ### 목표
 
-Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
+Grafana 대시보드 자동 프로비저닝 및 MindHit 전용 대시보드 구성
 
 ### 체크리스트
 
-- [ ] **Docker Compose에 Grafana 추가**
-  - [ ] `docker-compose.monitoring.yml`에 추가
+- [x] **Grafana 프로비저닝 폴더 구조 생성**
+
+    ```bash
+    mkdir -p infra/docker/grafana/provisioning/datasources
+    mkdir -p infra/docker/grafana/provisioning/dashboards
+    mkdir -p infra/docker/grafana/dashboards
+    ```
+
+- [x] **docker-compose.yml 업데이트**
+  - [x] `infra/docker/docker-compose.yml` Grafana 볼륨 추가
 
     ```yaml
     grafana:
-      image: grafana/grafana:10.2.0
+      image: grafana/grafana:latest
+      platform: linux/amd64
       container_name: mindhit-grafana
       ports:
-        - "3001:3000"
+        - "3010:3010"
+      volumes:
+        - grafana_data:/var/lib/grafana
+        - ./grafana/provisioning:/etc/grafana/provisioning
+        - ./grafana/dashboards:/var/lib/grafana/dashboards
       environment:
+        - GF_SERVER_HTTP_PORT=3010
         - GF_SECURITY_ADMIN_USER=admin
         - GF_SECURITY_ADMIN_PASSWORD=admin
         - GF_USERS_ALLOW_SIGN_UP=false
-      volumes:
-        - grafana_data:/var/lib/grafana
-        - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-        - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
       depends_on:
         - prometheus
-      networks:
-        - mindhit-network
     ```
 
-- [ ] **Grafana 데이터소스 자동 설정**
-  - [ ] `monitoring/grafana/provisioning/datasources/datasource.yml`
+- [x] **데이터소스 자동 설정**
+  - [x] `infra/docker/grafana/provisioning/datasources/datasources.yml`
 
     ```yaml
     apiVersion: 1
@@ -395,14 +449,14 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
         editable: false
     ```
 
-- [ ] **대시보드 자동 프로비저닝**
-  - [ ] `monitoring/grafana/provisioning/dashboards/dashboard.yml`
+- [x] **대시보드 프로비저닝 설정**
+  - [x] `infra/docker/grafana/provisioning/dashboards/dashboards.yml`
 
     ```yaml
     apiVersion: 1
 
     providers:
-      - name: 'MindHit Dashboards'
+      - name: 'MindHit'
         orgId: 1
         folder: 'MindHit'
         type: file
@@ -412,94 +466,158 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
           path: /var/lib/grafana/dashboards
     ```
 
-- [ ] **API 서버 대시보드**
-  - [ ] `monitoring/grafana/dashboards/api-overview.json`
+- [x] **API Overview 대시보드**
+  - [x] `infra/docker/grafana/dashboards/api-overview.json`
 
     ```json
     {
-      "title": "MindHit API Overview",
-      "uid": "mindhit-api-overview",
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "liveNow": false,
       "panels": [
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "unit": "reqps" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
           "title": "Request Rate",
-          "type": "graph",
+          "type": "timeseries",
           "targets": [
             {
-              "expr": "rate(http_requests_total[5m])",
-              "legendFormat": "{{method}} {{path}}"
+              "expr": "sum(rate(mindhit_http_requests_total[5m])) by (method)",
+              "legendFormat": "{{method}}"
             }
           ]
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "unit": "s" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
           "title": "Response Time (p95)",
-          "type": "graph",
+          "type": "timeseries",
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+              "expr": "histogram_quantile(0.95, sum(rate(mindhit_http_request_duration_seconds_bucket[5m])) by (le))",
               "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(mindhit_http_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "p50"
             }
           ]
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": { "unit": "percentunit" }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "id": 3,
           "title": "Error Rate",
-          "type": "graph",
+          "type": "timeseries",
           "targets": [
             {
-              "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])",
-              "legendFormat": "Error Rate"
+              "expr": "sum(rate(mindhit_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(mindhit_http_requests_total[5m]))",
+              "legendFormat": "5xx Error Rate"
+            },
+            {
+              "expr": "sum(rate(mindhit_http_requests_total{status=~\"4..\"}[5m])) / sum(rate(mindhit_http_requests_total[5m]))",
+              "legendFormat": "4xx Error Rate"
             }
           ]
         },
         {
-          "title": "Active Connections",
-          "type": "gauge",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "id": 4,
+          "title": "Active Requests",
+          "type": "stat",
           "targets": [
             {
-              "expr": "http_active_connections",
-              "legendFormat": "Active"
+              "expr": "mindhit_http_requests_in_flight",
+              "legendFormat": "In Flight"
             }
           ]
         }
-      ]
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["mindhit", "api"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "MindHit API Overview",
+      "uid": "mindhit-api-overview",
+      "version": 1,
+      "weekStart": ""
     }
     ```
 
-- [ ] **세션/비즈니스 메트릭 대시보드**
-  - [ ] `monitoring/grafana/dashboards/business-metrics.json`
+- [x] **비즈니스 메트릭 대시보드**
+  - [x] `infra/docker/grafana/dashboards/business-metrics.json`
 
     ```json
     {
-      "title": "MindHit Business Metrics",
-      "uid": "mindhit-business",
+      "annotations": { "list": [] },
+      "editable": true,
       "panels": [
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "id": 1,
           "title": "Active Sessions",
           "type": "stat",
           "targets": [
-            {
-              "expr": "mindhit_active_sessions"
-            }
+            { "expr": "mindhit_sessions_active" }
           ]
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "id": 2,
           "title": "Sessions Created (24h)",
           "type": "stat",
           "targets": [
-            {
-              "expr": "increase(mindhit_sessions_created_total[24h])"
-            }
+            { "expr": "increase(mindhit_sessions_created_total[24h])" }
           ]
         },
         {
-          "title": "Session Duration Distribution",
-          "type": "histogram",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "id": 3,
+          "title": "Events Processed (1h)",
+          "type": "stat",
           "targets": [
-            {
-              "expr": "mindhit_session_duration_seconds_bucket"
-            }
+            { "expr": "increase(mindhit_events_processed_total[1h])" }
           ]
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "id": 4,
+          "title": "Mindmaps Generated (24h)",
+          "type": "stat",
+          "targets": [
+            { "expr": "increase(mindhit_mindmaps_generated_total{status=\"success\"}[24h])" }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "id": 5,
           "title": "Events by Type",
           "type": "piechart",
           "targets": [
@@ -510,91 +628,263 @@ Prometheus 데이터를 시각화하는 Grafana 대시보드 구성
           ]
         },
         {
-          "title": "AI Processing Time",
-          "type": "graph",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "id": 6,
+          "title": "Session Duration Distribution",
+          "type": "histogram",
           "targets": [
-            {
-              "expr": "histogram_quantile(0.95, rate(mindhit_ai_processing_duration_seconds_bucket[5m]))",
-              "legendFormat": "p95"
-            }
+            { "expr": "mindhit_session_duration_seconds_bucket" }
           ]
         }
-      ]
+      ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "tags": ["mindhit", "business"],
+      "time": { "from": "now-24h", "to": "now" },
+      "title": "MindHit Business Metrics",
+      "uid": "mindhit-business",
+      "version": 1
     }
     ```
 
-- [ ] **인프라 대시보드**
-  - [ ] `monitoring/grafana/dashboards/infrastructure.json`
+- [x] **AI & Worker 대시보드**
+  - [x] `infra/docker/grafana/dashboards/ai-worker.json`
 
     ```json
     {
-      "title": "MindHit Infrastructure",
-      "uid": "mindhit-infra",
+      "annotations": { "list": [] },
+      "editable": true,
       "panels": [
         {
-          "title": "Database Query Time (p95)",
-          "type": "graph",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
+          "title": "AI Requests by Provider",
+          "type": "timeseries",
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, rate(mindhit_db_query_duration_seconds_bucket[5m]))",
+              "expr": "sum(rate(mindhit_ai_requests_total[5m])) by (provider)",
+              "legendFormat": "{{provider}}"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" } },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
+          "title": "AI Processing Time (p95)",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(mindhit_ai_processing_duration_seconds_bucket[5m])) by (le, provider))",
+              "legendFormat": "{{provider}}"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "id": 3,
+          "title": "AI Tokens Used (1h)",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "sum(increase(mindhit_ai_tokens_used_total[1h])) by (token_type)",
+              "legendFormat": "{{token_type}}"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+          "id": 4,
+          "title": "AI Error Rate",
+          "type": "stat",
+          "fieldConfig": { "defaults": { "unit": "percentunit" } },
+          "targets": [
+            {
+              "expr": "sum(rate(mindhit_ai_requests_total{status=\"error\"}[5m])) / sum(rate(mindhit_ai_requests_total[5m]))"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+          "id": 5,
+          "title": "Worker Jobs in Queue",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "sum(mindhit_worker_jobs_in_queue) by (queue)",
+              "legendFormat": "{{queue}}"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "id": 6,
+          "title": "Worker Job Processing Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum(rate(mindhit_worker_jobs_processed_total[5m])) by (job_type, status)",
+              "legendFormat": "{{job_type}} - {{status}}"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" } },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "id": 7,
+          "title": "Worker Job Duration (p95)",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(mindhit_worker_job_duration_seconds_bucket[5m])) by (le, job_type))",
+              "legendFormat": "{{job_type}}"
+            }
+          ]
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "tags": ["mindhit", "ai", "worker"],
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "MindHit AI & Worker",
+      "uid": "mindhit-ai-worker",
+      "version": 1
+    }
+    ```
+
+- [x] **인프라 대시보드**
+  - [x] `infra/docker/grafana/dashboards/infrastructure.json`
+
+    ```json
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" } },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
+          "title": "Database Query Time (p95)",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(mindhit_db_query_duration_seconds_bucket[5m])) by (le, operation))",
               "legendFormat": "{{operation}}"
             }
           ]
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
           "title": "Database Connections",
-          "type": "gauge",
+          "type": "timeseries",
           "targets": [
-            {
-              "expr": "mindhit_db_connections_active"
-            }
+            { "expr": "mindhit_db_connections_active", "legendFormat": "Active" },
+            { "expr": "mindhit_db_connections_idle", "legendFormat": "Idle" }
           ]
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "id": 3,
           "title": "Redis Cache Hit Rate",
           "type": "stat",
+          "fieldConfig": { "defaults": { "unit": "percentunit" } },
           "targets": [
             {
-              "expr": "rate(mindhit_redis_cache_hits_total[5m]) / (rate(mindhit_redis_cache_hits_total[5m]) + rate(mindhit_redis_cache_misses_total[5m]))"
+              "expr": "sum(rate(mindhit_redis_cache_operations_total{result=\"hit\"}[5m])) / sum(rate(mindhit_redis_cache_operations_total{operation=\"get\"}[5m]))"
             }
           ]
         },
         {
-          "title": "Auth Login Success Rate",
-          "type": "stat",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "s" } },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "id": 4,
+          "title": "Redis Operation Time",
+          "type": "timeseries",
           "targets": [
             {
-              "expr": "rate(mindhit_auth_login_attempts_total{status=\"success\"}[1h]) / rate(mindhit_auth_login_attempts_total[1h])"
+              "expr": "histogram_quantile(0.95, sum(rate(mindhit_redis_operation_duration_seconds_bucket[5m])) by (le, operation))",
+              "legendFormat": "{{operation}}"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "id": 5,
+          "title": "Auth Success Rate",
+          "type": "stat",
+          "fieldConfig": { "defaults": { "unit": "percentunit" } },
+          "targets": [
+            {
+              "expr": "sum(rate(mindhit_auth_attempts_total{status=\"success\"}[1h])) / sum(rate(mindhit_auth_attempts_total[1h]))"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "id": 6,
+          "title": "Auth Attempts by Method",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum(rate(mindhit_auth_attempts_total[5m])) by (method, status)",
+              "legendFormat": "{{method}} - {{status}}"
             }
           ]
         }
-      ]
+      ],
+      "refresh": "30s",
+      "schemaVersion": 38,
+      "tags": ["mindhit", "infrastructure"],
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "MindHit Infrastructure",
+      "uid": "mindhit-infra",
+      "version": 1
     }
     ```
 
 ### 검증
 
 ```bash
+# Docker Compose 재시작
+cd infra/docker && docker-compose down && docker-compose up -d
+
 # Grafana 접속
-# http://localhost:3001
+# http://localhost:3010
 # admin / admin 로그인
 
-# 대시보드 확인
-# MindHit 폴더 아래 대시보드들 확인
+# MindHit 폴더에서 대시보드 확인
 ```
 
 ---
 
-## Step 12.3: 구조화된 로깅 시스템
+## Step 12.3: 로그 수집 시스템 (Loki)
 
 ### 목표
 
-JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
+Loki를 통한 중앙 집중 로그 수집 및 Grafana 연동
+
+> **Note**: 로컬 개발에서는 `docker logs` 또는 터미널 출력으로 충분합니다.
+> Loki는 프로덕션/스테이징 환경에서 더 유용하며, 선택적으로 구성할 수 있습니다.
 
 ### 체크리스트
 
-- [ ] **구조화된 로거 설정**
-  - [ ] `internal/infrastructure/logger/logger.go`
+- [ ] **logger.go 컨텍스트 지원 확장** (선택, 추후 구현)
+  - [ ] `internal/infrastructure/logger/logger.go` 업데이트
 
     ```go
     package logger
@@ -613,26 +903,27 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
         SessionIDKey contextKey = "session_id"
     )
 
-    // Setup initializes the global logger
-    func Setup(environment string) {
+    // Init initializes the default slog logger based on the environment.
+    func Init(env string) {
         var handler slog.Handler
 
         opts := &slog.HandlerOptions{
-            Level: slog.LevelInfo,
+            AddSource: true,
         }
 
-        if environment == "development" {
+        switch env {
+        case "production":
+            opts.Level = slog.LevelInfo
+            handler = slog.NewJSONHandler(os.Stdout, opts)
+        default:
             opts.Level = slog.LevelDebug
             handler = slog.NewTextHandler(os.Stdout, opts)
-        } else {
-            handler = slog.NewJSONHandler(os.Stdout, opts)
         }
 
-        logger := slog.New(handler)
-        slog.SetDefault(logger)
+        slog.SetDefault(slog.New(handler))
     }
 
-    // FromContext creates a logger with context values
+    // FromContext creates a logger with context values.
     func FromContext(ctx context.Context) *slog.Logger {
         logger := slog.Default()
 
@@ -649,105 +940,54 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
         return logger
     }
 
-    // WithRequestID adds request ID to context
+    // WithRequestID adds request ID to context.
     func WithRequestID(ctx context.Context, requestID string) context.Context {
         return context.WithValue(ctx, RequestIDKey, requestID)
     }
 
-    // WithUserID adds user ID to context
+    // WithUserID adds user ID to context.
     func WithUserID(ctx context.Context, userID string) context.Context {
         return context.WithValue(ctx, UserIDKey, userID)
     }
 
-    // WithSessionID adds session ID to context
+    // WithSessionID adds session ID to context.
     func WithSessionID(ctx context.Context, sessionID string) context.Context {
         return context.WithValue(ctx, SessionIDKey, sessionID)
     }
     ```
 
-- [ ] **요청 로깅 미들웨어**
-  - [ ] `internal/infrastructure/middleware/logging.go`
-
-    ```go
-    package middleware
-
-    import (
-        "log/slog"
-        "time"
-
-        "github.com/gin-gonic/gin"
-        "github.com/google/uuid"
-
-        "github.com/mindhit/api/internal/infrastructure/logger"
-    )
-
-    func Logging() gin.HandlerFunc {
-        return func(c *gin.Context) {
-            start := time.Now()
-            requestID := uuid.New().String()
-
-            // 컨텍스트에 request ID 추가
-            ctx := logger.WithRequestID(c.Request.Context(), requestID)
-            c.Request = c.Request.WithContext(ctx)
-            c.Header("X-Request-ID", requestID)
-
-            // 요청 처리
-            c.Next()
-
-            // 로그 기록
-            duration := time.Since(start)
-            status := c.Writer.Status()
-
-            logLevel := slog.LevelInfo
-            if status >= 500 {
-                logLevel = slog.LevelError
-            } else if status >= 400 {
-                logLevel = slog.LevelWarn
-            }
-
-            slog.Log(c.Request.Context(), logLevel, "request completed",
-                "method", c.Request.Method,
-                "path", c.Request.URL.Path,
-                "status", status,
-                "duration_ms", duration.Milliseconds(),
-                "client_ip", c.ClientIP(),
-                "user_agent", c.Request.UserAgent(),
-                "request_id", requestID,
-            )
-        }
-    }
-    ```
-
-- [ ] **로그 집계 (Loki) 설정**
-  - [ ] `docker-compose.monitoring.yml`에 추가
+- [x] **docker-compose.yml에 Loki 추가**
+  - [x] `infra/docker/docker-compose.yml`
 
     ```yaml
+    # Loki - Log aggregation (선택적)
     loki:
       image: grafana/loki:2.9.0
+      platform: linux/amd64
       container_name: mindhit-loki
       ports:
         - "3100:3100"
       command: -config.file=/etc/loki/local-config.yaml
       volumes:
-        - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml
+        - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
         - loki_data:/loki
-      networks:
-        - mindhit-network
 
+    # Promtail - Log collector (선택적)
     promtail:
       image: grafana/promtail:2.9.0
+      platform: linux/amd64
       container_name: mindhit-promtail
       volumes:
-        - ./monitoring/promtail/promtail-config.yaml:/etc/promtail/config.yaml
+        - ./promtail/promtail-config.yaml:/etc/promtail/config.yaml
         - /var/log:/var/log:ro
         - /var/lib/docker/containers:/var/lib/docker/containers:ro
       command: -config.file=/etc/promtail/config.yaml
-      networks:
-        - mindhit-network
+      depends_on:
+        - loki
     ```
 
-- [ ] **Loki 설정**
-  - [ ] `monitoring/loki/loki-config.yaml`
+- [x] **Loki 설정 파일**
+  - [x] `infra/docker/loki/loki-config.yaml`
 
     ```yaml
     auth_enabled: false
@@ -775,13 +1015,10 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
           index:
             prefix: index_
             period: 24h
-
-    ruler:
-      alertmanager_url: http://alertmanager:9093
     ```
 
-- [ ] **Promtail 설정**
-  - [ ] `monitoring/promtail/promtail-config.yaml`
+- [x] **Promtail 설정 파일**
+  - [x] `infra/docker/promtail/promtail-config.yaml`
 
     ```yaml
     server:
@@ -795,13 +1032,13 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
       - url: http://loki:3100/loki/api/v1/push
 
     scrape_configs:
-      - job_name: containers
+      - job_name: docker
         static_configs:
           - targets:
               - localhost
             labels:
               job: containerlogs
-              __path__: /var/lib/docker/containers/*/*log.json
+              __path__: /var/lib/docker/containers/*/*-json.log
         pipeline_stages:
           - json:
               expressions:
@@ -813,6 +1050,7 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
                 level: level
                 msg: msg
                 request_id: request_id
+                user_id: user_id
               source: output
           - labels:
               level:
@@ -821,26 +1059,35 @@ JSON 형식의 구조화된 로그와 로그 수집 시스템 구성
               source: output
     ```
 
-- [ ] **Grafana에 Loki 데이터소스 추가**
-  - [ ] `monitoring/grafana/provisioning/datasources/datasource.yml`에 추가
+- [x] **Grafana 데이터소스에 Loki 추가**
+  - [x] `infra/docker/grafana/provisioning/datasources/datasources.yml` 업데이트
 
     ```yaml
-    - name: Loki
-      type: loki
-      access: proxy
-      url: http://loki:3100
-      isDefault: false
-      editable: false
+    apiVersion: 1
+
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+        editable: false
     ```
 
 ### 검증
 
 ```bash
-# 로그 확인 (콘솔)
-docker-compose logs -f api
+# Loki 헬스 체크
+curl http://localhost:3100/ready
 
 # Grafana에서 Loki 로그 쿼리
-# Explore > Loki
+# Explore > Loki 데이터소스 선택
 # {job="containerlogs"} |= "mindhit"
 ```
 
@@ -850,24 +1097,62 @@ docker-compose logs -f api
 
 ### 목표
 
-Alertmanager를 통한 알림 시스템 구축
+Alertmanager를 통한 알림 시스템 구축 (Slack/Email 연동)
 
 ### 체크리스트
 
-- [ ] **Prometheus 알림 규칙 정의**
-  - [ ] `monitoring/prometheus/alerts.yml`
+- [x] **prometheus.yml에 Alertmanager 연동 추가**
+  - [x] `infra/docker/prometheus.yml` 업데이트
+
+    ```yaml
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+
+    rule_files:
+      - /etc/prometheus/alerts.yml
+
+    scrape_configs:
+      - job_name: "prometheus"
+        static_configs:
+          - targets: ["localhost:9090"]
+
+      - job_name: "mindhit-api"
+        static_configs:
+          - targets: ["host.docker.internal:9000"]
+        metrics_path: /metrics
+    ```
+
+- [x] **알림 규칙 파일 생성**
+  - [x] `infra/docker/prometheus/alerts.yml`
 
     ```yaml
     groups:
       - name: mindhit-api
         rules:
-          # API 에러율 높음
+          # API 서버 다운
+          - alert: APIDown
+            expr: up{job="mindhit-api"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "MindHit API server is down"
+              description: "API server has been down for more than 1 minute"
+
+          # 높은 에러율 (5xx > 1%)
           - alert: HighErrorRate
             expr: |
               (
-                sum(rate(http_requests_total{status=~"5.."}[5m]))
+                sum(rate(mindhit_http_requests_total{status=~"5.."}[5m]))
                 /
-                sum(rate(http_requests_total[5m]))
+                sum(rate(mindhit_http_requests_total[5m]))
               ) > 0.01
             for: 5m
             labels:
@@ -876,44 +1161,19 @@ Alertmanager를 통한 알림 시스템 구축
               summary: "High API error rate"
               description: "Error rate is {{ $value | humanizePercentage }} (threshold: 1%)"
 
-          # API 응답 시간 느림
+          # 높은 지연시간 (p95 > 2s)
           - alert: HighLatency
             expr: |
-              histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+              histogram_quantile(0.95, sum(rate(mindhit_http_request_duration_seconds_bucket[5m])) by (le)) > 2
             for: 5m
             labels:
               severity: warning
             annotations:
               summary: "High API latency"
-              description: "95th percentile latency is {{ $value }}s"
+              description: "95th percentile latency is {{ $value }}s (threshold: 2s)"
 
-          # API 서버 다운
-          - alert: APIDown
-            expr: up{job="mindhit-api"} == 0
-            for: 1m
-            labels:
-              severity: critical
-            annotations:
-              summary: "API server is down"
-              description: "MindHit API server is not responding"
-
-      - name: mindhit-business
+      - name: mindhit-ai
         rules:
-          # 세션 처리 실패 급증
-          - alert: HighSessionFailureRate
-            expr: |
-              (
-                increase(mindhit_sessions_completed_total{status="failed"}[1h])
-                /
-                increase(mindhit_sessions_completed_total[1h])
-              ) > 0.1
-            for: 15m
-            labels:
-              severity: warning
-            annotations:
-              summary: "High session failure rate"
-              description: "Session failure rate is {{ $value | humanizePercentage }}"
-
           # AI 처리 에러 급증
           - alert: AIProcessingErrors
             expr: increase(mindhit_ai_processing_errors_total[1h]) > 10
@@ -924,71 +1184,100 @@ Alertmanager를 통한 알림 시스템 구축
               summary: "High AI processing errors"
               description: "{{ $value }} AI processing errors in the last hour"
 
-      - name: mindhit-infrastructure
-        rules:
-          # 데이터베이스 연결 부족
-          - alert: LowDBConnections
-            expr: mindhit_db_connections_active < 2
-            for: 5m
+          # AI 응답 시간 느림
+          - alert: SlowAIProcessing
+            expr: |
+              histogram_quantile(0.95, sum(rate(mindhit_ai_processing_duration_seconds_bucket[5m])) by (le)) > 60
+            for: 10m
             labels:
               severity: warning
             annotations:
-              summary: "Low database connections"
-              description: "Only {{ $value }} active database connections"
+              summary: "Slow AI processing"
+              description: "AI processing p95 is {{ $value }}s (threshold: 60s)"
 
-          # 데이터베이스 쿼리 느림
+      - name: mindhit-worker
+        rules:
+          # Worker 작업 실패율 높음
+          - alert: HighWorkerFailureRate
+            expr: |
+              (
+                sum(rate(mindhit_worker_jobs_processed_total{status="failed"}[1h]))
+                /
+                sum(rate(mindhit_worker_jobs_processed_total[1h]))
+              ) > 0.1
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High worker job failure rate"
+              description: "Worker failure rate is {{ $value | humanizePercentage }}"
+
+          # 대기 중인 작업 너무 많음
+          - alert: HighQueueBacklog
+            expr: sum(mindhit_worker_jobs_in_queue{state="pending"}) > 100
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High queue backlog"
+              description: "{{ $value }} jobs pending in queue"
+
+      - name: mindhit-infrastructure
+        rules:
+          # DB 쿼리 느림
           - alert: SlowDBQueries
             expr: |
-              histogram_quantile(0.95, rate(mindhit_db_query_duration_seconds_bucket[5m])) > 0.5
+              histogram_quantile(0.95, sum(rate(mindhit_db_query_duration_seconds_bucket[5m])) by (le)) > 0.5
             for: 10m
             labels:
               severity: warning
             annotations:
               summary: "Slow database queries"
-              description: "95th percentile query time is {{ $value }}s"
+              description: "DB query p95 is {{ $value }}s (threshold: 0.5s)"
 
           # Redis 캐시 히트율 낮음
           - alert: LowCacheHitRate
             expr: |
               (
-                rate(mindhit_redis_cache_hits_total[5m])
+                sum(rate(mindhit_redis_cache_operations_total{result="hit"}[5m]))
                 /
-                (rate(mindhit_redis_cache_hits_total[5m]) + rate(mindhit_redis_cache_misses_total[5m]))
+                sum(rate(mindhit_redis_cache_operations_total{operation="get"}[5m]))
               ) < 0.5
             for: 30m
             labels:
               severity: warning
             annotations:
-              summary: "Low Redis cache hit rate"
+              summary: "Low cache hit rate"
               description: "Cache hit rate is {{ $value | humanizePercentage }}"
     ```
 
-- [ ] **Alertmanager 추가**
-  - [ ] `docker-compose.monitoring.yml`에 추가
+- [x] **docker-compose.yml에 Alertmanager 추가**
+  - [x] `infra/docker/docker-compose.yml`
 
     ```yaml
+    # Alertmanager - Alert management
     alertmanager:
       image: prom/alertmanager:v0.26.0
+      platform: linux/amd64
       container_name: mindhit-alertmanager
       ports:
         - "9093:9093"
       volumes:
-        - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+        - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
         - alertmanager_data:/alertmanager
       command:
         - '--config.file=/etc/alertmanager/alertmanager.yml'
         - '--storage.path=/alertmanager'
-      networks:
-        - mindhit-network
     ```
 
-- [ ] **Alertmanager 설정**
-  - [ ] `monitoring/alertmanager/alertmanager.yml`
+- [x] **Alertmanager 설정 파일**
+  - [x] `infra/docker/alertmanager/alertmanager.yml`
 
     ```yaml
     global:
       resolve_timeout: 5m
-      slack_api_url: '${SLACK_WEBHOOK_URL}'
+      # Slack webhook URL (환경변수로 설정)
+      # slack_api_url: '${SLACK_WEBHOOK_URL}'
 
     route:
       group_by: ['alertname', 'severity']
@@ -1007,18 +1296,23 @@ Alertmanager를 통한 알림 시스템 구축
 
     receivers:
       - name: 'default'
-        slack_configs:
-          - channel: '#mindhit-alerts'
+        # Slack 설정 (선택)
+        # slack_configs:
+        #   - channel: '#mindhit-alerts'
+        #     send_resolved: true
+        #     title: '{{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} {{ .CommonAnnotations.summary }}'
+        #     text: '{{ .CommonAnnotations.description }}'
+
+        # Webhook 설정 (선택)
+        webhook_configs:
+          - url: 'http://host.docker.internal:9000/webhooks/alerts'
             send_resolved: true
-            title: '{{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} {{ .CommonAnnotations.summary }}'
-            text: '{{ .CommonAnnotations.description }}'
 
       - name: 'critical'
-        slack_configs:
-          - channel: '#mindhit-alerts-critical'
+        # Critical 알림용 (예: PagerDuty, Slack critical 채널)
+        webhook_configs:
+          - url: 'http://host.docker.internal:9000/webhooks/alerts/critical'
             send_resolved: true
-            title: '{{ if eq .Status "firing" }}🚨 CRITICAL{{ else }}✅ RESOLVED{{ end }} {{ .CommonAnnotations.summary }}'
-            text: '{{ .CommonAnnotations.description }}'
 
     inhibit_rules:
       - source_match:
@@ -1028,28 +1322,50 @@ Alertmanager를 통한 알림 시스템 구축
         equal: ['alertname']
     ```
 
-- [ ] **환경 변수 파일 업데이트**
-  - [ ] `.env.example`에 추가
+- [x] **Prometheus 볼륨 업데이트**
+  - [x] `infra/docker/docker-compose.yml` prometheus 서비스 업데이트
+
+    ```yaml
+    prometheus:
+      image: prom/prometheus:latest
+      platform: linux/amd64
+      container_name: mindhit-prometheus
+      ports:
+        - "9091:9090"
+      volumes:
+        - ./prometheus.yml:/etc/prometheus/prometheus.yml
+        - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+        - prometheus_data:/prometheus
+      command:
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        - "--storage.tsdb.path=/prometheus"
+        - "--web.enable-lifecycle"
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+    ```
+
+- [x] **환경 변수 파일 업데이트**
+  - [x] `.env.example`에 추가
 
     ```env
-    # Alerting
+    # Alerting (선택)
     SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx
     ```
 
 ### 검증
 
 ```bash
+# Alertmanager 헬스 체크
+curl http://localhost:9093/-/healthy
+
+# Prometheus Alerts 확인
+# http://localhost:9091/alerts
+
 # Alertmanager UI 확인
 # http://localhost:9093
 
-# Prometheus Alerts 확인
-# http://localhost:9090/alerts
-
-# 테스트 알림 발생 (API 서버 중지)
-docker-compose stop api
-
-# 알림 확인 후 재시작
-docker-compose start api
+# 알림 규칙 검증
+docker exec mindhit-prometheus promtool check rules /etc/prometheus/alerts.yml
 ```
 
 ---
@@ -1058,19 +1374,22 @@ docker-compose start api
 
 ### 전체 검증 체크리스트
 
-- [ ] **Prometheus 메트릭 수집**
+- [ ] **메트릭 수집**
   - [ ] `/metrics` 엔드포인트 응답
-  - [ ] HTTP 메트릭 수집 확인
-  - [ ] 비즈니스 메트릭 수집 확인
+  - [ ] HTTP 메트릭 수집 확인 (`mindhit_http_*`)
+  - [ ] 비즈니스 메트릭 수집 확인 (`mindhit_sessions_*`, `mindhit_events_*`)
+  - [ ] AI 메트릭 수집 확인 (`mindhit_ai_*`)
+  - [ ] Worker 메트릭 수집 확인 (`mindhit_worker_*`)
 
 - [ ] **Grafana 대시보드**
-  - [ ] 로그인 가능
+  - [ ] 로그인 가능 (`http://localhost:3010`)
   - [ ] API Overview 대시보드 표시
   - [ ] Business Metrics 대시보드 표시
+  - [ ] AI & Worker 대시보드 표시
   - [ ] Infrastructure 대시보드 표시
 
-- [ ] **로깅 시스템**
-  - [ ] 구조화된 JSON 로그 출력
+- [ ] **로깅 시스템** (선택)
+  - [ ] 구조화된 JSON 로그 출력 (production 환경)
   - [ ] Request ID 추적
   - [ ] Loki에서 로그 검색
 
@@ -1084,8 +1403,8 @@ docker-compose start api
 | 테스트 유형 | 대상 | 검증 방법 |
 | ----------- | ---- | --------- |
 | 통합 테스트 | 메트릭 수집 | Prometheus API 쿼리 |
-| 통합 테스트 | 로그 수집 | Loki API 쿼리 |
-| 알림 테스트 | 알림 규칙 | `amtool check-config` |
+| 통합 테스트 | 로그 수집 | Loki API 쿼리 (선택) |
+| 알림 테스트 | 알림 규칙 | `promtool check rules` |
 | 회귀 테스트 | 기존 테스트 통과 | `moonx backend:test` |
 
 ```bash
@@ -1094,44 +1413,84 @@ docker-compose start api
 moonx backend:test
 
 # 2. 모니터링 스택 헬스 체크
-curl http://localhost:9090/-/healthy  # Prometheus
-curl http://localhost:3001/api/health # Grafana
-```
+curl http://localhost:9091/-/healthy  # Prometheus
+curl http://localhost:3010/api/health # Grafana
+curl http://localhost:9093/-/healthy  # Alertmanager
 
-> **Note**: Phase 12는 운영 인프라 설정이므로 기능 테스트보다 시스템 헬스 체크가 중요합니다.
+# 3. 메트릭 확인
+curl http://localhost:9000/metrics | grep mindhit_
+```
 
 ### 산출물 요약
 
 | 항목 | 위치 |
 | ---- | ---- |
-| 메트릭 미들웨어 | `internal/infrastructure/middleware/metrics.go` |
-| 비즈니스 메트릭 | `internal/infrastructure/metrics/business.go` |
-| 로거 설정 | `internal/infrastructure/logger/logger.go` |
-| Prometheus 설정 | `monitoring/prometheus/prometheus.yml` |
-| 알림 규칙 | `monitoring/prometheus/alerts.yml` |
-| Grafana 대시보드 | `monitoring/grafana/dashboards/*.json` |
-| Alertmanager 설정 | `monitoring/alertmanager/alertmanager.yml` |
-| Loki 설정 | `monitoring/loki/loki-config.yaml` |
+| 비즈니스 메트릭 | `internal/infrastructure/metrics/metrics.go` |
+| Grafana 데이터소스 | `infra/docker/grafana/provisioning/datasources/datasources.yml` |
+| Grafana 대시보드 | `infra/docker/grafana/dashboards/*.json` |
+| Prometheus 설정 | `infra/docker/prometheus.yml` |
+| 알림 규칙 | `infra/docker/prometheus/alerts.yml` |
+| Alertmanager 설정 | `infra/docker/alertmanager/alertmanager.yml` |
+| Loki 설정 (선택) | `infra/docker/loki/loki-config.yaml` |
+| Promtail 설정 (선택) | `infra/docker/promtail/promtail-config.yaml` |
 
 ### 모니터링 스택 요약
 
 | 서비스 | 포트 | 용도 |
 |-------|------|------|
-| Prometheus | 9090 | 메트릭 수집/저장 |
-| Grafana | 3001 | 대시보드/시각화 |
+| Prometheus | 9091 | 메트릭 수집/저장 |
+| Grafana | 3010 | 대시보드/시각화 |
 | Alertmanager | 9093 | 알림 관리 |
-| Loki | 3100 | 로그 집계 |
+| Loki | 3100 | 로그 집계 (선택) |
+| Asynqmon | 9090 | Asynq 작업 모니터링 |
 
 ### 핵심 메트릭
 
-| 메트릭 | 용도 |
-|-------|------|
-| `http_requests_total` | API 요청 수 |
-| `http_request_duration_seconds` | 응답 시간 |
-| `mindhit_active_sessions` | 활성 세션 수 |
-| `mindhit_events_received_total` | 이벤트 수신 수 |
-| `mindhit_ai_processing_duration_seconds` | AI 처리 시간 |
-| `mindhit_db_query_duration_seconds` | DB 쿼리 시간 |
+| 카테고리 | 메트릭 | 용도 |
+|---------|-------|------|
+| HTTP | `mindhit_http_requests_total` | API 요청 수 |
+| HTTP | `mindhit_http_request_duration_seconds` | 응답 시간 |
+| Session | `mindhit_sessions_active` | 활성 세션 수 |
+| Session | `mindhit_sessions_created_total` | 생성된 세션 수 |
+| Event | `mindhit_events_received_total` | 이벤트 수신 수 |
+| AI | `mindhit_ai_requests_total` | AI 요청 수 |
+| AI | `mindhit_ai_processing_duration_seconds` | AI 처리 시간 |
+| AI | `mindhit_ai_tokens_used_total` | 토큰 사용량 |
+| Worker | `mindhit_worker_jobs_processed_total` | 처리된 작업 수 |
+| Worker | `mindhit_worker_jobs_in_queue` | 대기 중인 작업 |
+| DB | `mindhit_db_query_duration_seconds` | DB 쿼리 시간 |
+| Cache | `mindhit_redis_cache_operations_total` | 캐시 작업 수 |
+
+---
+
+## 폴더 구조
+
+Phase 12 완료 후 infra/docker 폴더 구조:
+
+```text
+infra/docker/
+├── docker-compose.yml
+├── prometheus.yml
+├── prometheus/
+│   └── alerts.yml
+├── grafana/
+│   ├── provisioning/
+│   │   ├── datasources/
+│   │   │   └── datasources.yml
+│   │   └── dashboards/
+│   │       └── dashboards.yml
+│   └── dashboards/
+│       ├── api-overview.json
+│       ├── business-metrics.json
+│       ├── ai-worker.json
+│       └── infrastructure.json
+├── alertmanager/
+│   └── alertmanager.yml
+├── loki/                    # 선택
+│   └── loki-config.yaml
+└── promtail/                # 선택
+    └── promtail-config.yaml
+```
 
 ---
 

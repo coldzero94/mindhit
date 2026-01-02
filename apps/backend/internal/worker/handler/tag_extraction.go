@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
 	"github.com/mindhit/api/internal/infrastructure/ai"
+	"github.com/mindhit/api/internal/infrastructure/metrics"
 	"github.com/mindhit/api/internal/infrastructure/queue"
 )
 
@@ -36,6 +38,13 @@ type TagResult struct {
 
 // HandleURLTagExtraction processes tag extraction for a URL.
 func (h *handlers) HandleURLTagExtraction(ctx context.Context, t *asynq.Task) error {
+	start := time.Now()
+	jobType := "tag_extraction"
+
+	defer func() {
+		metrics.WorkerJobDuration.WithLabelValues(jobType).Observe(time.Since(start).Seconds())
+	}()
+
 	var payload queue.URLTagExtractionPayload
 	if err := json.Unmarshal(t.Payload(), &payload); err != nil {
 		return fmt.Errorf("unmarshal payload: %w", err)
@@ -103,6 +112,8 @@ func (h *handlers) HandleURLTagExtraction(ctx context.Context, t *asynq.Task) er
 	if err != nil {
 		return fmt.Errorf("update url: %w", err)
 	}
+
+	metrics.WorkerJobsProcessed.WithLabelValues(jobType, "success").Inc()
 
 	slog.Info("extracted tags",
 		"url", u.URL,
