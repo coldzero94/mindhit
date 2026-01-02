@@ -1,6 +1,6 @@
 $schema: 'https://moonrepo.dev/schemas/project.json'
 
-type: application
+layer: application
 language: go
 
 tasks:
@@ -12,6 +12,15 @@ tasks:
       - .air.api.toml
     env:
       ENVIRONMENT: local
+
+  # 테스트용 API 서버 (rate limiting 비활성화)
+  dev-api-test:
+    command: air
+    args:
+      - -c
+      - .air.api.toml
+    env:
+      ENVIRONMENT: test
 
   dev-worker:
     command: air
@@ -117,7 +126,9 @@ tasks:
     args:
       - run
       - ./cmd/api
-    local: true
+    options:
+      cache: false
+      persistent: true
 
   # run Worker
   run-worker:
@@ -125,7 +136,9 @@ tasks:
     args:
       - run
       - ./cmd/worker
-    local: true
+    options:
+      cache: false
+      persistent: true
 
   # DB 마이그레이션
   migrate:
@@ -143,7 +156,9 @@ tasks:
       - diff
       - --env
       - local
-    local: true
+    options:
+      cache: false
+      persistent: false
 
   migrate-status:
     command: atlas
@@ -152,7 +167,9 @@ tasks:
       - status
       - --env
       - local
-    local: true
+    options:
+      cache: false
+      persistent: false
 
   # OpenAPI 코드 생성
   generate-api:
@@ -161,7 +178,9 @@ tasks:
       - -config
       - oapi-codegen.yaml
       - ../../packages/protocol/tsp-output/openapi/openapi.yaml
-    local: true
+    options:
+      cache: false
+      persistent: false
 
   # 클린업
   clean:

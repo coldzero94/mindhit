@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 )
@@ -38,7 +39,8 @@ func (Highlight) Edges() []ent.Edge {
 		edge.From("session", Session.Type).
 			Ref("highlights").
 			Unique().
-			Required(),
+			Required().
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("page_visit", PageVisit.Type).
 			Unique(),
 	}

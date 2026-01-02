@@ -1,10 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
 language: typescript
-type: application
+layer: application
 
 tasks:
   dev:
     command: pnpm dev
-    local: true
+    options:
+      cache: false
+      persistent: true
 
   build:
     command: pnpm build
@@ -17,7 +21,9 @@ tasks:
 
   watch:
     command: pnpm watch
-    local: true
+    options:
+      cache: false
+      persistent: true
 
   test:
     command: pnpm test

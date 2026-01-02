@@ -765,7 +765,9 @@ mindhit/
 │   │   │   │   ├── url.go
 │   │   │   │   └── jwt.go
 │   │   │   ├── infrastructure/ # 인프라 레이어
+│   │   │   │   ├── ai/        # AI Provider 클라이언트
 │   │   │   │   ├── config/
+│   │   │   │   ├── database/
 │   │   │   │   ├── logger/
 │   │   │   │   ├── middleware/
 │   │   │   │   └── queue/      # Asynq 클라이언트
@@ -773,6 +775,8 @@ mindhit/
 │   │   │   │   └── handler/
 │   │   │   ├── testutil/       # 테스트 유틸리티 (fixture 등)
 │   │   │   └── generated/      # oapi-codegen 생성 코드
+│   │   ├── tests/
+│   │   │   └── integration/    # API 통합 테스트
 │   │   ├── ent/                # Ent ORM 스키마 & 생성 코드
 │   │   │   ├── schema/
 │   │   │   └── migrate/
@@ -781,8 +785,14 @@ mindhit/
 │   │   ├── go.mod
 │   │   └── moon.yml
 │   ├── web/                    # Next.js 웹앱
-│   │   ├── app/
-│   │   ├── components/
+│   │   ├── src/
+│   │   │   ├── app/           # Next.js App Router
+│   │   │   ├── components/
+│   │   │   ├── lib/           # API clients, hooks, utils
+│   │   │   ├── stores/        # Zustand stores
+│   │   │   └── test/          # Test infrastructure
+│   │   │       ├── integration/
+│   │   │       └── mocks/
 │   │   ├── Dockerfile
 │   │   └── moon.yml
 │   └── extension/              # Chrome Extension
@@ -836,12 +846,13 @@ apps/backend/
 │   ├── api/main.go
 │   └── worker/main.go
 ├── internal/                   # 비공개 코드 (외부 import 불가)
-│   ├── controller/             # HTTP 컨트롤러
-│   ├── service/                # 비즈니스 로직
-│   ├── infrastructure/         # 인프라 (config, logger, queue)
-│   ├── worker/                 # Worker 핸들러
+│   ├── controller/             # HTTP 컨트롤러 (*_test.go 포함)
+│   ├── service/                # 비즈니스 로직 (*_test.go 포함)
+│   ├── infrastructure/         # 인프라 (ai, config, database, logger, middleware, queue)
+│   ├── worker/handler/         # Worker 핸들러 (*_test.go 포함)
 │   ├── testutil/               # 테스트 유틸리티 (fixture 등)
 │   └── generated/              # oapi-codegen 생성 코드
+├── tests/integration/          # API 통합 테스트
 ├── ent/                        # Ent ORM 스키마 & 생성 코드
 ├── Dockerfile.api
 ├── Dockerfile.worker

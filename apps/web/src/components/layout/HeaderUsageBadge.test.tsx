@@ -5,7 +5,6 @@ import { render } from "@/test/utils";
 import { HeaderUsageBadge } from "./HeaderUsageBadge";
 import { server } from "@/test/mocks/server";
 import {
-  mockUsageSummary,
   mockUsageSummaryHigh,
   mockUsageSummaryOver,
   mockUsageSummaryUnlimited,

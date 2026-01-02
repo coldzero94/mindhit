@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["three"],
   // Turbopack config (Next.js 16+ default bundler)
-  turbopack: {},
+  turbopack: {
+    // Monorepo: set root to workspace root for proper module resolution
+    root: resolve(__dirname, "../.."),
+  },
   async rewrites() {
     return [
       {

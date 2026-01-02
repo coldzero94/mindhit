@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -110,10 +111,12 @@ func (AILog) Edges() []ent.Edge {
 		edge.From("user", User.Type).
 			Ref("ai_logs").
 			Field("user_id").
-			Unique(),
+			Unique().
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.From("session", Session.Type).
 			Ref("ai_logs").
 			Field("session_id").
-			Unique(),
+			Unique().
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

@@ -67,9 +67,16 @@ apps/web/
 │   │   ├── utils/              # Utility functions
 │   │   │   └── mindmap-transform.ts  # API to frontend type transform
 │   │   └── utils.ts            # Utility functions (cn)
-│   └── stores/
-│       └── auth-store.ts       # Zustand auth store with persist
+│   ├── stores/
+│   │   └── auth-store.ts       # Zustand auth store with persist
+│   └── test/                   # Test infrastructure
+│       ├── integration/        # Integration tests (API + cleanup)
+│       ├── mocks/              # MSW handlers and mock data
+│       ├── helpers/            # Test helper functions
+│       ├── setup.ts            # Vitest setup
+│       └── utils.tsx           # Test render utilities
 ├── openapi-ts.config.ts        # Hey API configuration
+├── vitest.config.ts            # Vitest configuration
 ├── moon.yml                    # Moon task definitions
 └── package.json
 ```
@@ -152,6 +159,11 @@ pnpm dev             # Alternative
 moonx web:lint       # Run ESLint
 moonx web:typecheck  # Run TypeScript check
 
+# Testing
+moonx web:test                   # Run all tests
+pnpm vitest run                  # Run tests directly
+pnpm test:integration            # Run integration tests only
+
 # Build
 moonx web:build      # Production build
 
@@ -178,6 +190,38 @@ moonx web:generate   # Generate API client from OpenAPI
 | `src/app/providers.tsx` | QueryClient + Toaster setup |
 | `eslint.config.mjs` | ESLint config (ignores generated files) |
 | `openapi-ts.config.ts` | Hey API generation config |
+| `vitest.config.ts` | Vitest test configuration |
+| `src/test/setup.ts` | Vitest setup (MSW, cleanup) |
+| `src/test/mocks/handlers.ts` | MSW request handlers |
+| `src/test/integration/*.test.ts` | Integration tests |
+
+## Testing
+
+### Unit Tests
+
+Unit tests are colocated with components (`*.test.tsx` next to `*.tsx`):
+
+- `src/components/**/*.test.tsx` - Component tests
+- `src/lib/hooks/*.test.ts` - Hook tests
+
+### Integration Tests
+
+Integration tests are in `src/test/integration/`:
+
+- `auth.test.ts` - Authentication flow tests
+- `sessions.test.ts` - Session management tests
+
+Integration tests run against a real backend (`NEXT_PUBLIC_API_URL`) and include automatic cleanup.
+
+Run with backend in test mode:
+
+```bash
+# Terminal 1: Start backend in test mode
+moonx backend:dev-api-test
+
+# Terminal 2: Run integration tests
+pnpm test:integration
+```
 
 ## Notes
 

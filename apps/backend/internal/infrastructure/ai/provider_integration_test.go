@@ -25,11 +25,11 @@ func init() {
 	// Load .env from project root
 	// Try multiple paths as test working directory varies
 	paths := []string{
-		"../../.env",                           // from apps/backend/
-		"../../../.env",                        // one more level
-		"../../../../.env",                     // two more levels
-		"../../../../../.env",                  // three more levels
-		"../../../../../../.env",               // four more levels
+		"../../.env",             // from apps/backend/
+		"../../../.env",          // one more level
+		"../../../../.env",       // two more levels
+		"../../../../../.env",    // three more levels
+		"../../../../../../.env", // four more levels
 	}
 	for _, p := range paths {
 		if err := godotenv.Load(p); err == nil {

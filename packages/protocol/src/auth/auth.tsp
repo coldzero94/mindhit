@@ -204,4 +204,20 @@ namespace Routes {
     @statusCode statusCode: 401;
     @body body: Common.ErrorResponse;
   };
+
+  @delete
+  @route("/me")
+  @doc("계정 삭제. hard=true인 경우 DB에서 완전 삭제 (테스트 환경에서만 허용)")
+  op deleteMe(
+    @header authorization: string,
+    @query hard?: boolean
+  ): {
+    @statusCode statusCode: 204;
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  } | {
+    @statusCode statusCode: 403;
+    @body body: Common.ErrorResponse;
+  };
 }

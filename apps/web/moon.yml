@@ -1,10 +1,14 @@
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
 language: typescript
-type: application
+layer: application
 
 tasks:
   dev:
     command: next dev
-    local: true
+    options:
+      cache: false
+      persistent: true
 
   build:
     command: next build
@@ -18,7 +22,9 @@ tasks:
 
   start:
     command: next start
-    local: true
+    options:
+      cache: false
+      persistent: true
 
   lint:
     command: eslint
@@ -39,3 +45,21 @@ tasks:
       - "/packages/protocol/tsp-output/openapi/openapi.yaml"
     outputs:
       - "src/api/generated"
+
+  test:
+    command: pnpm vitest run
+    inputs:
+      - "src/**/*"
+      - "vitest.config.ts"
+
+  test-integration:
+    command: pnpm vitest run --config vitest.integration.config.ts
+    options:
+      cache: false
+      persistent: false
+
+  test-e2e:
+    command: pnpm playwright test
+    options:
+      cache: false
+      persistent: false

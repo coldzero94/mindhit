@@ -173,6 +173,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Common.ErrorResponse'
+    delete:
+      operationId: Routes_deleteMe
+      description: 계정 삭제. hard=true인 경우 DB에서 완전 삭제 (테스트 환경에서만 허용)
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: hard
+          in: query
+          required: false
+          schema:
+            type: boolean
+          explode: false
+      responses:
+        '204':
+          description: 'There is no content to send for this request, but the headers may be useful. '
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '403':
+          description: Access is forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
   /v1/auth/refresh:
     post:
       operationId: Routes_refresh

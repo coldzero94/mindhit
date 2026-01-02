@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,13 +19,14 @@ import (
 
 // Auth service errors
 var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrEmailExists        = errors.New("email already exists")
-	ErrUserInactive       = errors.New("user account is inactive")
-	ErrTokenExpired       = errors.New("token expired")
-	ErrTokenUsed          = errors.New("token already used")
-	ErrTokenInvalid       = errors.New("invalid token")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrInvalidCredentials   = errors.New("invalid credentials")
+	ErrEmailExists          = errors.New("email already exists")
+	ErrUserInactive         = errors.New("user account is inactive")
+	ErrTokenExpired         = errors.New("token expired")
+	ErrTokenUsed            = errors.New("token already used")
+	ErrTokenInvalid         = errors.New("invalid token")
+	ErrHardDeleteNotAllowed = errors.New("hard delete only allowed in test environment")
 )
 
 // AuthService handles user authentication operations.
@@ -243,4 +245,39 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	}
 
 	return tx.Commit()
+}
+
+// DeleteUser deletes a user account.
+// If hardDelete is true, the user is permanently removed from the database (only allowed in test environment).
+// Otherwise, the user is soft-deleted (status set to "inactive", deleted_at set).
+func (s *AuthService) DeleteUser(ctx context.Context, id uuid.UUID, hardDelete bool) error {
+	// Check if user exists
+	u, err := s.activeUsers().
+		Where(user.IDEQ(id)).
+		Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	if hardDelete {
+		// Only allow hard delete in test environment
+		env := os.Getenv("ENVIRONMENT")
+		if env != "test" && env != "testing" {
+			return ErrHardDeleteNotAllowed
+		}
+
+		// Hard delete: DB CASCADE will automatically delete all related data
+		return s.client.User.DeleteOneID(u.ID).Exec(ctx)
+	}
+
+	// Soft delete: set status to inactive and deleted_at timestamp
+	_, err = s.client.User.
+		UpdateOneID(u.ID).
+		SetStatus(user.StatusInactive).
+		SetDeletedAt(time.Now()).
+		Save(ctx)
+	return err
 }

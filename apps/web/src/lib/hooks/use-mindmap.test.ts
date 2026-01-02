@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { useMindmap, useGenerateMindmap, mindmapKeys } from "./use-mindmap";
-import { mockMindmap, mockMindmapNodes, mockMindmapEdges } from "@/test/mocks/handlers";
+import { mockMindmapNodes, mockMindmapEdges } from "@/test/mocks/handlers";
 
 // Create wrapper with QueryClient
 function createWrapper() {

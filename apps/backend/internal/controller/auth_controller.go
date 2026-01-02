@@ -400,3 +400,81 @@ func (c *AuthController) RoutesResetPassword(ctx context.Context, request genera
 		Message: "Password has been reset successfully.",
 	}, nil
 }
+
+// RoutesDeleteMe handles DELETE /v1/auth/me
+func (c *AuthController) RoutesDeleteMe(ctx context.Context, request generated.RoutesDeleteMeRequestObject) (generated.RoutesDeleteMeResponseObject, error) {
+	// Extract token from Authorization header
+	authHeader := request.Params.Authorization
+	if authHeader == "" {
+		return generated.RoutesDeleteMe401JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: "authorization header is required",
+			},
+		}, nil
+	}
+
+	// Parse Bearer token
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return generated.RoutesDeleteMe401JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: "invalid authorization header format",
+			},
+		}, nil
+	}
+
+	tokenString := parts[1]
+
+	// Validate access token
+	claims, err := c.jwtService.ValidateAccessToken(tokenString)
+	if err != nil {
+		return generated.RoutesDeleteMe401JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: "invalid or expired access token",
+			},
+		}, nil
+	}
+
+	// Determine if hard delete is requested
+	hardDelete := request.Params.Hard != nil && *request.Params.Hard
+
+	// Delete user
+	err = c.authService.DeleteUser(ctx, claims.UserID, hardDelete)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			return generated.RoutesDeleteMe401JSONResponse{
+				Error: struct {
+					Code    *string `json:"code,omitempty"`
+					Message string  `json:"message"`
+				}{
+					Message: "user not found",
+				},
+			}, nil
+		}
+		if errors.Is(err, service.ErrHardDeleteNotAllowed) {
+			return generated.RoutesDeleteMe403JSONResponse{
+				Error: struct {
+					Code    *string `json:"code,omitempty"`
+					Message string  `json:"message"`
+				}{
+					Message: "hard delete is only allowed in test environment",
+				},
+			}, nil
+		}
+		slog.Error("failed to delete user", "error", err, "user_id", claims.UserID)
+		return nil, err
+	}
+
+	slog.InfoContext(ctx, "user deleted", "user_id", claims.UserID, "hard_delete", hardDelete)
+
+	return generated.RoutesDeleteMe204Response{}, nil
+}

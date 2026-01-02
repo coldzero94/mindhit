@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"entgo.io/ent"
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -49,7 +50,8 @@ func (Session) Edges() []ent.Edge {
 		edge.From("user", User.Type).
 			Ref("sessions").
 			Unique().
-			Required(),
+			Required().
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("page_visits", PageVisit.Type),
 		edge.To("highlights", Highlight.Type),
 		edge.To("raw_events", RawEvent.Type),

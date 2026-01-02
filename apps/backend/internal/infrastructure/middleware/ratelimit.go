@@ -3,11 +3,18 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// isTestEnvironment checks if the application is running in test mode.
+func isTestEnvironment() bool {
+	env := os.Getenv("ENVIRONMENT")
+	return env == "test" || env == "testing"
+}
 
 // RateLimiter provides in-memory rate limiting functionality.
 type RateLimiter struct {
@@ -117,7 +124,15 @@ var authRateLimitPaths = map[string]bool{
 // AuthRateLimitMiddleware returns a middleware that applies rate limiting
 // only to authentication endpoints. This is designed to work with oapi-codegen's
 // MiddlewareFunc signature.
+// Rate limiting is disabled in test environment (ENVIRONMENT=test).
 func AuthRateLimitMiddleware() func(c *gin.Context) {
+	// Disable rate limiting in test environment
+	if isTestEnvironment() {
+		return func(_ *gin.Context) {
+			// No-op: rate limiting disabled in test mode
+		}
+	}
+
 	limiter := NewRateLimiter(10, time.Minute)
 
 	return func(c *gin.Context) {

@@ -3,7 +3,6 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { render } from "@/test/utils";
 import { SubscriptionCard } from "./SubscriptionCard";
-import { mockSubscription, mockPlan } from "@/test/mocks/handlers";
 
 describe("SubscriptionCard", () => {
   describe("loading state", () => {

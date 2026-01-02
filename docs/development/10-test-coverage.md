@@ -2,7 +2,7 @@
 
 이 문서는 프로젝트의 테스트 커버리지를 추적합니다.
 
-> **Last Updated**: 2026-01-02 (Phase 11 Dashboard 테스트 추가)
+> **Last Updated**: 2026-01-02 (Backend Integration + Frontend E2E 테스트 추가)
 
 ---
 
@@ -752,36 +752,126 @@ timeline
 3. **현재 Unit Test 충분**: 76%+ 커버리지로 핵심 비즈니스 로직 검증 완료
 4. **외부 의존성**: Redis, PostgreSQL 연동 테스트는 CI 환경 구성 필요
 
-### Integration Test 계획 (Phase 7+)
+### Backend Integration Tests (Phase 11+) ✅
+
+**위치:** `apps/backend/tests/integration/`
 
 ```text
 tests/integration/
-├── auth_flow_test.go      # 회원가입 → 로그인 → 토큰 갱신 → 로그아웃
-├── session_flow_test.go   # 세션 시작 → 이벤트 수집 → 종료 → Worker 처리
-└── worker_flow_test.go    # Queue Enqueue → Worker 처리 → DB 업데이트
+├── helpers_test.go        # 테스트 헬퍼 함수 (uniqueEmail, parseUUID)
+├── auth_flow_test.go      # 회원가입 → 로그인 → 토큰 갱신 → 로그아웃 ✅
+├── session_flow_test.go   # 세션 생성 → 일시정지 → 재개 → 종료 ✅
+└── event_flow_test.go     # 이벤트 배치 전송 → 조회 → 통계 ✅
+```
+
+**테스트 항목:**
+
+| 파일 | 테스트 | 설명 |
+| ---- | ------ | ---- |
+| `auth_flow_test.go` | `TestAuthFlow_SignupLoginRefreshLogout` | 전체 인증 플로우 |
+| | `TestAuthFlow_PasswordReset` | 비밀번호 재설정 플로우 |
+| | `TestAuthFlow_DuplicateSignup` | 중복 가입 거부 |
+| `session_flow_test.go` | `TestSessionFlow_CreatePauseResumeStop` | 세션 라이프사이클 |
+| | `TestSessionFlow_UpdateAndDelete` | 세션 수정/삭제 |
+| | `TestSessionFlow_MultipleActiveSessions` | 다중 활성 세션 |
+| `event_flow_test.go` | `TestEventFlow_CollectAndQuery` | 이벤트 수집/조회 |
+| | `TestEventFlow_EmptyBatch` | 빈 배치 처리 |
+| | `TestEventFlow_InvalidSession` | 잘못된 세션 처리 |
+
+**실행 명령:**
+
+```bash
+cd apps/backend
+go test ./tests/integration/... -tags=integration -v
 ```
 
 **필요 인프라:**
 
-- Docker Compose (PostgreSQL + Redis)
-- Test fixtures (seed data)
-- CI workflow 수정
+- PostgreSQL (testutil.SetupTestDB 사용)
+- Test fixtures (자동 생성)
 
-### E2E Test 계획 (Phase 8+)
+### Frontend Integration Tests (Vitest + Real API) ✅
+
+**위치:** `apps/web/src/test/integration/`
 
 ```text
-tests/e2e/
-├── auth.spec.ts           # 로그인/회원가입 UI 플로우
-├── dashboard.spec.ts      # 대시보드 세션 목록/상세
-├── extension.spec.ts      # Extension ↔ Web 연동
-└── mindmap.spec.ts        # 마인드맵 생성/조회
+src/test/integration/
+├── setup.ts                      # 테스트 헬퍼 (API 클라이언트, 유저 생성)
+├── auth.integration.test.ts      # Auth API 테스트 (11개)
+└── sessions.integration.test.ts  # Sessions API 테스트 (12개)
 ```
 
-**도구:**
+**테스트 항목:**
 
-- Playwright (크로스 브라우저)
-- Chrome Extension testing
-- Visual regression (optional)
+| 파일 | 테스트 그룹 | 테스트 |
+| ---- | ---------- | ------ |
+| `auth.integration.test.ts` | Signup | 성공, 중복 이메일, 잘못된 이메일 |
+| | Login | 성공, 잘못된 비밀번호, 존재하지 않는 이메일 |
+| | Me | 유효한 토큰, 토큰 없음, 잘못된 토큰 |
+| | Logout | 로그아웃 성공 |
+| | Full Flow | 가입→로그인→me→로그아웃 |
+| `sessions.integration.test.ts` | Lifecycle | 시작, 일시정지, 재개, 종료 |
+| | CRUD | 목록, 조회, 수정, 삭제 |
+| | Pagination | limit/offset 페이지네이션 |
+| | Authorization | 타 유저 세션 접근 차단, 미인증 차단 |
+| | Full Flow | 생성→수정→일시정지→재개→종료→삭제 |
+
+**실행 명령:**
+
+```bash
+moonx web:test-integration
+
+# 또는 직접 실행
+cd apps/web
+pnpm test:integration
+```
+
+**주의사항:**
+
+- 백엔드 서버가 실행 중이어야 함
+- **테스트 환경 실행 (권장)**: `moonx backend:dev-api-test`
+  - Rate limiting이 비활성화되어 테스트가 안정적으로 실행됨
+- 일반 실행: `moonx backend:dev-api`
+  - Rate limiting 활성화 (분당 10개 인증 요청 제한)
+
+### Frontend E2E Tests (Playwright) ✅
+
+**위치:** `apps/web/e2e/`
+
+```text
+e2e/
+├── auth.spec.ts           # 로그인/회원가입 UI 플로우 ✅
+└── dashboard.spec.ts      # 대시보드 세션 목록/상세 ✅
+```
+
+**테스트 항목:**
+
+| 파일 | 테스트 그룹 | 테스트 |
+| ---- | ---------- | ------ |
+| `auth.spec.ts` | Login Page | 폼 렌더링, 빈 필드 검증, 이메일 검증, 비밀번호 검증, 회원가입 링크 |
+| | Signup Page | 폼 렌더링, 비밀번호 불일치, 로그인 링크 |
+| | Full Auth Flow | 가입→로그아웃→로그인 (skip - 백엔드 필요) |
+| | Protected Routes | 미인증 시 로그인 리다이렉트 |
+| `dashboard.spec.ts` | Sessions Page | 미인증 리다이렉트, 세션 상세 리다이렉트 |
+| | Account Page | 미인증 리다이렉트 |
+| | Navigation | 홈페이지 접근 |
+
+**실행 명령:**
+
+```bash
+moonx web:test-e2e
+
+# 또는 직접 실행
+cd apps/web
+pnpm test:e2e           # 테스트 실행
+pnpm test:e2e:ui        # UI 모드
+pnpm test:e2e:report    # 리포트 보기
+```
+
+**인프라:**
+
+- Playwright + Chromium
+- Next.js dev server (자동 시작)
 
 ### 현재 미테스트 영역 분석
 
@@ -820,6 +910,9 @@ go test ./tests/integration/... -tags=integration
 
 | 날짜 | Phase | 변경사항 |
 | ---- | ----- | -------- |
+| 2026-01-02 | Phase 11 | Frontend Integration (Vitest + Real API) 추가: auth (11개), sessions (12개) |
+| 2026-01-02 | Phase 11 | Backend Integration 테스트 추가: auth_flow (3개), session_flow (3개), event_flow (3개) |
+| 2026-01-02 | Phase 11 | Frontend E2E (Playwright) 추가: auth.spec.ts (10개), dashboard.spec.ts (5개) |
 | 2026-01-02 | Phase 11 | Frontend Dashboard 테스트 추가: use-subscription (5개), use-usage (7개), use-mindmap (11개), use-mindmap-interaction (22개), SubscriptionCard (9개), UsageCard (12개), HeaderUsageBadge (6개) → 총 136개 테스트 |
 | 2025-12-31 | Phase 8.1 | Extension 테스트 확장: settings-store (6개), api getSessions/updateSession (6개), useNetworkStatus (7개) 추가 → 총 50개 테스트 |
 | 2025-12-31 | Phase 10 | AI 통합 테스트 추가: provider_integration_test.go (7개, build tag: integration), godotenv로 .env 자동 로드 |
