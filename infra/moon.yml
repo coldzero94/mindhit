@@ -14,6 +14,7 @@ tasks:
       - infra/docker/docker-compose.yml
       - up
       - -d
+    local: true
     options:
       runFromWorkspaceRoot: true
 
@@ -24,6 +25,7 @@ tasks:
       - -f
       - infra/docker/docker-compose.yml
       - down
+    local: true
     options:
       runFromWorkspaceRoot: true
 
@@ -35,6 +37,7 @@ tasks:
       - infra/docker/docker-compose.yml
       - logs
       - -f
+    local: true
     options:
       runFromWorkspaceRoot: true
 
