@@ -99,7 +99,7 @@ func run() error {
 	subscriptionController := controller.NewSubscriptionController(subscriptionService, jwtService)
 	usageController := controller.NewUsageController(usageService, jwtService)
 	oauthController := controller.NewOAuthController(oauthService, jwtService, subscriptionService)
-	mindmapController := controller.NewMindmapController(mindmapService, jwtService)
+	mindmapController := controller.NewMindmapController(mindmapService, jwtService, queueClient)
 
 	// Combined handler implementing StrictServerInterface
 	handler := controller.NewHandler(authController, sessionController, eventController, subscriptionController, usageController, oauthController, mindmapController)

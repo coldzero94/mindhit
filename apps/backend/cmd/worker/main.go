@@ -80,6 +80,7 @@ func run() error {
 		OpenAIAPIKey: cfg.AI.OpenAIAPIKey,
 		GeminiAPIKey: cfg.AI.GeminiAPIKey,
 		ClaudeAPIKey: cfg.AI.ClaudeAPIKey,
+		GroqAPIKey:   cfg.AI.GroqAPIKey,
 	}
 
 	configAdapter := service.NewAIConfigAdapter(aiConfigService)
@@ -100,6 +101,14 @@ func run() error {
 	// Initialize usage service for token tracking
 	usageService := service.NewUsageService(client)
 
+	// Create queue client for enqueueing tasks from handlers
+	queueClient := queue.NewClient(cfg.RedisAddr)
+	defer func() {
+		if err := queueClient.Close(); err != nil {
+			slog.Error("failed to close queue client", "error", err)
+		}
+	}()
+
 	// Create worker server
 	server := queue.NewServer(queue.ServerConfig{
 		RedisAddr:   cfg.RedisAddr,
@@ -107,7 +116,7 @@ func run() error {
 	})
 
 	// Register handlers
-	handler.RegisterHandlers(server, client, aiManager, usageService)
+	handler.RegisterHandlers(server, client, aiManager, usageService, queueClient)
 
 	// Create scheduler for periodic tasks
 	scheduler, err := queue.NewScheduler(cfg.RedisAddr)

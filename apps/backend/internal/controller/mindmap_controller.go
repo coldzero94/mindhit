@@ -8,10 +8,12 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hibiken/asynq"
 
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/internal/generated"
+	"github.com/mindhit/api/internal/infrastructure/queue"
 	"github.com/mindhit/api/internal/service"
 )
 
@@ -19,13 +21,15 @@ import (
 type MindmapController struct {
 	mindmapService *service.MindmapService
 	jwtService     *service.JWTService
+	queueClient    *queue.Client
 }
 
 // NewMindmapController creates a new MindmapController.
-func NewMindmapController(mindmapService *service.MindmapService, jwtService *service.JWTService) *MindmapController {
+func NewMindmapController(mindmapService *service.MindmapService, jwtService *service.JWTService, queueClient *queue.Client) *MindmapController {
 	return &MindmapController{
 		mindmapService: mindmapService,
 		jwtService:     jwtService,
+		queueClient:    queueClient,
 	}
 }
 
@@ -125,8 +129,20 @@ func (c *MindmapController) MindmapRoutesGenerateMindmap(ctx context.Context, re
 		}
 	}
 
-	// TODO: Enqueue mindmap generation job if status is pending
-	// This will be handled by the worker
+	// Enqueue mindmap generation job if status is pending
+	if mindmap.Status == mindmapgraph.StatusPending && c.queueClient != nil {
+		task, err := queue.NewMindmapGenerateTask(sessionID.String())
+		if err != nil {
+			slog.Error("failed to create mindmap task", "error", err)
+		} else {
+			_, err = c.queueClient.Enqueue(task, asynq.MaxRetry(3))
+			if err != nil {
+				slog.Error("failed to enqueue mindmap task", "error", err)
+			} else {
+				slog.Info("enqueued mindmap generation", "session_id", sessionID.String())
+			}
+		}
+	}
 
 	return generated.MindmapRoutesGenerateMindmap202JSONResponse{
 		Mindmap: mapMindmap(mindmap, sessionID),

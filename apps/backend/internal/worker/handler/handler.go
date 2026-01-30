@@ -14,16 +14,19 @@ func RegisterHandlers(
 	client *ent.Client,
 	aiManager *ai.ProviderManager,
 	usageService *service.UsageService,
+	queueClient *queue.Client,
 ) {
 	h := &handlers{
 		client:       client,
 		aiManager:    aiManager,
 		usageService: usageService,
+		queueClient:  queueClient,
 	}
 
 	server.HandleFunc(queue.TypeSessionProcess, h.HandleSessionProcess)
 	server.HandleFunc(queue.TypeSessionCleanup, h.HandleSessionCleanup)
 	server.HandleFunc(queue.TypeURLTagExtraction, h.HandleURLTagExtraction)
+	server.HandleFunc(queue.TypeURLBatchTagExtraction, h.HandleURLBatchTagExtraction)
 	server.HandleFunc(queue.TypeMindmapGenerate, h.HandleMindmapGenerate)
 }
 
@@ -31,4 +34,5 @@ type handlers struct {
 	client       *ent.Client
 	aiManager    *ai.ProviderManager
 	usageService *service.UsageService
+	queueClient  *queue.Client
 }
