@@ -154,6 +154,46 @@ Run integration tests:
 go test ./tests/integration/...
 ```
 
+## AI Provider Infrastructure
+
+### Supported Providers
+
+| Provider | Default Model | Use Case |
+|----------|--------------|----------|
+| **Groq** | `llama-3.3-70b-versatile` | Default, Mindmap (free tier) |
+| Groq | `llama-3.1-8b-instant` | Tag extraction (fast) |
+| Gemini | `gemini-2.0-flash` | Fallback |
+| OpenAI | `gpt-4o` | Fallback |
+| Claude | `claude-sonnet-4` | Fallback |
+
+### Configuration
+
+AI provider selection is managed in DB (`ai_configs` table):
+
+```bash
+go run ./scripts/seed.go ai-configs  # Update AI configs
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `internal/infrastructure/ai/types.go` | Provider types, ChatRequest/ChatResponse |
+| `internal/infrastructure/ai/provider_*.go` | Provider implementations |
+| `internal/infrastructure/ai/manager.go` | Provider orchestration + fallback |
+| `internal/worker/handler/tag_extraction.go` | Tag extraction handler |
+| `internal/worker/handler/tag_extraction_batch.go` | Batch tag extraction |
+| `internal/worker/handler/mindmap.go` | Mindmap generation handler |
+
+### AI API Keys
+
+```bash
+GROQ_API_KEY=gsk_...        # Groq API key (recommended)
+GEMINI_API_KEY=AIza...      # Google AI key
+OPENAI_API_KEY=sk-proj-...  # OpenAI key
+CLAUDE_API_KEY=sk-ant-...   # Anthropic key
+```
+
 ## Notes
 
 - Generated files in `internal/generated/` are committed (not gitignored)

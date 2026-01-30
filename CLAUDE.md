@@ -176,6 +176,7 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
+- [2026-01-30] AI Optimization: Groq Provider integration (OpenAI-compatible API), token usage recording fix for tag extraction, mindmap prompt optimization (removed URL/Duration), batch tag extraction handler (5 URLs per batch), default AI config changed to Groq (llama-3.3-70b-versatile for mindmap, llama-3.1-8b-instant for tag extraction), session processing handler now enqueues AI tasks (batch tag extraction + mindmap generation with 30s delay), MindmapController enqueues generation task on API call
 - [2026-01-02] Phase 12 completed: Production Monitoring - Business metrics (sessions, events, auth, worker, AI), Grafana dashboards (api-overview, business-metrics, ai-worker, infrastructure), Loki log aggregation, Alertmanager with alerts.yml
 - [2026-01-02] Phase 11.5 completed: Animation & Interaction - BigBangAnimation, ParticleField, NebulaEffect, PostProcessing, CameraController, AutoRotateCamera, useMindmapInteraction hook, Galaxy integration with seeded random for React 19 compatibility
 - [2026-01-02] Phase 11.4 completed: Account & Usage Page - subscription/usage API wrappers, useSubscription/useUsage hooks, SubscriptionCard, UsageCard, UsageHistory components, account page, HeaderUsageBadge
