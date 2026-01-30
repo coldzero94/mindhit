@@ -1,6 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { render } from "@/test/utils";
 import { SubscriptionCard } from "./SubscriptionCard";
 
@@ -51,26 +50,12 @@ describe("SubscriptionCard", () => {
       });
     });
 
-    it("should show upgrade button for free plan", async () => {
-      const onUpgrade = vi.fn();
-      render(<SubscriptionCard onUpgrade={onUpgrade} />);
+    it("should show plan change button", async () => {
+      render(<SubscriptionCard />);
 
       await waitFor(() => {
-        expect(screen.getByText("업그레이드")).toBeInTheDocument();
+        expect(screen.getByText("플랜 변경")).toBeInTheDocument();
       });
-    });
-
-    it("should call onUpgrade when upgrade button is clicked", async () => {
-      const user = userEvent.setup();
-      const onUpgrade = vi.fn();
-      render(<SubscriptionCard onUpgrade={onUpgrade} />);
-
-      await waitFor(() => {
-        expect(screen.getByText("업그레이드")).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByText("업그레이드"));
-      expect(onUpgrade).toHaveBeenCalledTimes(1);
     });
   });
 
