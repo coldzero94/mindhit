@@ -46,51 +46,68 @@ export function SessionControl() {
   };
 
   const handlePause = async () => {
-    if (!token || !sessionId) return;
+    if (!sessionId) return;
     setIsLoading(true);
     clearError();
-    try {
-      await api.pauseSession(token, sessionId);
-      pauseSession();
-      chrome.runtime.sendMessage({ type: "SESSION_PAUSED" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to pause session";
-      setError({ message, action: "pause" });
-    } finally {
-      setIsLoading(false);
+
+    // Pause locally first
+    pauseSession();
+    chrome.runtime.sendMessage({ type: "SESSION_PAUSED" });
+
+    // Sync with server (best effort)
+    if (token) {
+      try {
+        await api.pauseSession(token, sessionId);
+      } catch (err) {
+        console.warn("Failed to sync session pause with server:", err);
+      }
     }
+
+    setIsLoading(false);
   };
 
   const handleResume = async () => {
-    if (!token || !sessionId) return;
+    if (!sessionId) return;
     setIsLoading(true);
     clearError();
-    try {
-      await api.resumeSession(token, sessionId);
-      resumeSession();
-      chrome.runtime.sendMessage({ type: "SESSION_RESUMED" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to resume session";
-      setError({ message, action: "resume" });
-    } finally {
-      setIsLoading(false);
+
+    // Resume locally first
+    resumeSession();
+    chrome.runtime.sendMessage({ type: "SESSION_RESUMED" });
+
+    // Sync with server (best effort)
+    if (token) {
+      try {
+        await api.resumeSession(token, sessionId);
+      } catch (err) {
+        console.warn("Failed to sync session resume with server:", err);
+      }
     }
+
+    setIsLoading(false);
   };
 
   const handleStop = async () => {
-    if (!token || !sessionId) return;
+    if (!sessionId) return;
     setIsLoading(true);
     clearError();
-    try {
-      await api.stopSession(token, sessionId);
-      stopSession();
-      chrome.runtime.sendMessage({ type: "SESSION_STOPPED" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to stop session";
-      setError({ message, action: "stop" });
-    } finally {
-      setIsLoading(false);
+
+    // Always stop locally first, even if API call fails
+    // This ensures user can always stop recording
+    stopSession();
+    chrome.runtime.sendMessage({ type: "SESSION_STOPPED" });
+
+    // Try to sync with server (best effort)
+    if (token) {
+      try {
+        await api.stopSession(token, sessionId);
+      } catch (err) {
+        // Log error but don't block - session is already stopped locally
+        console.warn("Failed to sync session stop with server:", err);
+      }
     }
+
+    setIsLoading(false);
   };
 
   if (status === "idle") {
