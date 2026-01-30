@@ -44,6 +44,22 @@ export function App() {
     hydrate();
   }, []);
 
+  // Listen for storage changes (e.g., when background saves auth)
+  useEffect(() => {
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === "local" && changes["mindhit-auth"]) {
+        console.log("[MindHit] Auth storage changed, rehydrating...");
+        useAuthStore.persist.rehydrate();
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
+
   // Update elapsed time
   useEffect(() => {
     if (status === "recording") {

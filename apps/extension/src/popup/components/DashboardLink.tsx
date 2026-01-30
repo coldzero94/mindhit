@@ -1,8 +1,19 @@
 import { WEB_APP_URL } from "@/lib/constants";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function DashboardLink() {
+  const { token, user } = useAuthStore();
+
   const openDashboard = () => {
-    chrome.tabs.create({ url: WEB_APP_URL });
+    // If user is authenticated, pass token to web app for auto-login
+    if (token && user) {
+      const userBase64 = btoa(JSON.stringify({ id: user.id, email: user.email }));
+      const callbackUrl = `${WEB_APP_URL}/auth/extension-callback?token=${encodeURIComponent(token)}&user=${encodeURIComponent(userBase64)}`;
+      chrome.tabs.create({ url: callbackUrl });
+    } else {
+      // Not authenticated, just open the web app
+      chrome.tabs.create({ url: WEB_APP_URL });
+    }
   };
 
   return (

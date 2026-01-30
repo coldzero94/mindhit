@@ -1,102 +1,44 @@
 import { useState } from "react";
-import { useAuthStore } from "@/stores/auth-store";
-import { api } from "@/lib/api";
-import { GOOGLE_CLIENT_ID } from "@/lib/constants";
 
 export function GoogleSignInButton() {
-  const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setIsLoading(true);
     setError("");
 
-    try {
-      // Build OAuth URL with Authorization Code flow
-      const redirectUri = chrome.identity.getRedirectURL();
-      const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-      authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-      authUrl.searchParams.set("redirect_uri", redirectUri);
-      authUrl.searchParams.set("response_type", "code");
-      authUrl.searchParams.set("scope", "openid email profile");
-      authUrl.searchParams.set("access_type", "offline");
-      authUrl.searchParams.set("prompt", "consent");
+    // Delegate ENTIRE OAuth flow to background script
+    // Background will: launch OAuth -> exchange code -> save to storage
+    // App.tsx has storage.onChanged listener that will trigger rehydration
+    chrome.runtime.sendMessage(
+      { type: "START_GOOGLE_AUTH" },
+      (response: { success: boolean; canceled?: boolean; error?: string } | undefined) => {
+        setIsLoading(false);
 
-      // Launch OAuth flow
-      const responseUrl = await new Promise<string>((resolve, reject) => {
-        chrome.identity.launchWebAuthFlow(
-          {
-            url: authUrl.toString(),
-            interactive: true,
-          },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else if (response) {
-              resolve(response);
-            } else {
-              reject(new Error("No response from OAuth flow"));
-            }
-          }
-        );
-      });
+        if (chrome.runtime.lastError) {
+          // Background might have closed the channel - check storage instead
+          // The storage.onChanged listener in App.tsx will handle this
+          console.log("[MindHit] Message channel closed, checking storage...");
+          return;
+        }
 
-      // Extract authorization code from response URL
-      const url = new URL(responseUrl);
-      const code = url.searchParams.get("code");
+        if (!response) {
+          // No response but no error - background might still be working
+          return;
+        }
 
-      if (!code) {
-        throw new Error("No authorization code received");
+        if (response.success) {
+          // Auth successful - storage.onChanged will trigger rehydration
+          console.log("[MindHit] Google auth successful");
+        } else if (response.canceled) {
+          // User closed the OAuth popup - not an error
+          setError("");
+        } else if (response.error) {
+          setError(response.error);
+        }
       }
-
-      // Exchange code for tokens via backend
-      const result = await api.googleAuthCode(code, redirectUri);
-
-      // Build the Zustand persist format
-      const authData = JSON.stringify({
-        state: {
-          user: result.user,
-          token: result.token,
-          isAuthenticated: true,
-        },
-        version: 0,
-      });
-
-      // Use callback-based storage write for more reliable persistence
-      // This ensures the write completes before we continue
-      await new Promise<void>((resolve, reject) => {
-        chrome.storage.local.set({ "mindhit-auth": authData }, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve();
-          }
-        });
-      });
-
-      // Verify the write was successful by reading it back
-      const verification = await chrome.storage.local.get("mindhit-auth");
-      if (!verification["mindhit-auth"]) {
-        throw new Error("Failed to persist auth data");
-      }
-
-      // Update Zustand in-memory state
-      setAuth(result.user, result.token);
-
-      // Force rehydration to sync Zustand with storage
-      await useAuthStore.persist.rehydrate();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Google login failed";
-      // User closed the popup
-      if (message.includes("canceled") || message.includes("closed")) {
-        setError("");
-      } else {
-        setError(message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
   return (

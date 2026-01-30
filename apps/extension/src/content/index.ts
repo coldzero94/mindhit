@@ -60,6 +60,7 @@ function cleanup(): void {
   pageEnteredAt = null;
   window.removeEventListener("scroll", handleScroll);
   window.removeEventListener("beforeunload", handlePageLeave);
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 }
 
 // Check initial state
@@ -119,6 +120,7 @@ function startRecording(): void {
   // Add event listeners
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("beforeunload", handlePageLeave);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
   // Update page count in Side Panel
   safeSendMessage({ type: "INCREMENT_PAGE_COUNT" });
@@ -131,6 +133,7 @@ function stopRecording(): void {
 
   window.removeEventListener("scroll", handleScroll);
   window.removeEventListener("beforeunload", handlePageLeave);
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 
   isRecording = false;
   pageEnteredAt = null;
@@ -168,6 +171,43 @@ function handlePageLeave(): void {
     duration_ms: Date.now() - pageEnteredAt,
     max_scroll_depth: maxScrollDepth,
   });
+}
+
+/**
+ * Handle tab visibility change (tab switch).
+ * Sends page_leave when hidden, page_visit when visible again.
+ */
+function handleVisibilityChange(): void {
+  if (!isRecording || !isContextValid()) return;
+
+  if (document.visibilityState === "hidden") {
+    // Tab became hidden - send page_leave with current duration
+    if (pageEnteredAt) {
+      sendEvent({
+        type: "page_leave",
+        timestamp: Date.now(),
+        url: window.location.href,
+        duration_ms: Date.now() - pageEnteredAt,
+        max_scroll_depth: maxScrollDepth,
+      });
+      pageEnteredAt = null; // Reset so we don't double-send
+    }
+  } else if (document.visibilityState === "visible") {
+    // Tab became visible again - send new page_visit
+    pageEnteredAt = Date.now();
+    maxScrollDepth = 0;
+
+    sendEvent({
+      type: "page_visit",
+      timestamp: Date.now(),
+      url: window.location.href,
+      title: document.title,
+      referrer: document.referrer,
+    });
+
+    // Increment page count for this new visit
+    safeSendMessage({ type: "INCREMENT_PAGE_COUNT" });
+  }
 }
 
 function sendEvent(event: BrowsingEvent): void {
