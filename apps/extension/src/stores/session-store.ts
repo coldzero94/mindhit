@@ -96,6 +96,8 @@ export const useSessionStore = create<SessionState>()(
     {
       name: STORAGE_KEYS.SESSION,
       storage: createJSONStorage(() => chromeStorage),
+      // Skip auto hydration - we'll manually hydrate in App.tsx
+      skipHydration: true,
     }
   )
 );

@@ -4,6 +4,7 @@ import {
   API_BASE_URL,
   EVENT_BATCH_SIZE,
   EVENT_FLUSH_INTERVAL,
+  STORAGE_KEYS,
 } from "@/lib/constants";
 
 const REQUEST_TIMEOUT = 30000; // 30 seconds
@@ -13,6 +14,7 @@ interface SessionState {
   sessionId: string | null;
   events: BrowsingEvent[];
   pageCount: number;
+  highlightCount: number;
 }
 
 const state: SessionState = {
@@ -20,6 +22,7 @@ const state: SessionState = {
   sessionId: null,
   events: [],
   pageCount: 0,
+  highlightCount: 0,
 };
 
 let flushIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -43,7 +46,28 @@ function updateBadge(): void {
 
 function resetBadge(): void {
   state.pageCount = 0;
+  state.highlightCount = 0;
   chrome.action.setBadgeText({ text: "" });
+}
+
+// Update Zustand session store in chrome.storage
+async function updateSessionStore(): Promise<void> {
+  try {
+    const data = await chrome.storage.local.get(STORAGE_KEYS.SESSION);
+    const rawValue = data[STORAGE_KEYS.SESSION];
+    if (!rawValue) return;
+
+    const parsed = typeof rawValue === "string" ? JSON.parse(rawValue) : rawValue;
+    if (parsed?.state) {
+      parsed.state.pageCount = state.pageCount;
+      parsed.state.highlightCount = state.highlightCount;
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.SESSION]: JSON.stringify(parsed),
+      });
+    }
+  } catch (error) {
+    console.error("[MindHit] Failed to update session store:", error);
+  }
 }
 
 // Valid message types from extension
@@ -123,13 +147,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
 
     case "INCREMENT_PAGE_COUNT":
-      // Update badge with page count
+      // Update badge with page count and sync to store
       state.pageCount++;
       updateBadge();
+      updateSessionStore();
       break;
 
     case "INCREMENT_HIGHLIGHT_COUNT":
-      // Pass through for popup to handle via store
+      // Update highlight count and sync to store
+      state.highlightCount++;
+      updateSessionStore();
       break;
   }
 

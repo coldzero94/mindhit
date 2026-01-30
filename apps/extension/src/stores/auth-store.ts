@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { User } from "@/types";
-import { chromeSessionStorage } from "@/lib/chrome-storage";
+import { chromeStorage } from "@/lib/chrome-storage";
 import { STORAGE_KEYS } from "@/lib/constants";
 
 interface AuthState {
@@ -23,8 +23,10 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: STORAGE_KEYS.AUTH,
-      // Use session storage for auth data (cleared when browser closes)
-      storage: createJSONStorage(() => chromeSessionStorage),
+      // Use local storage for auth data (persists across browser sessions)
+      storage: createJSONStorage(() => chromeStorage),
+      // Skip auto hydration - we'll manually hydrate in App.tsx
+      skipHydration: true,
     }
   )
 );

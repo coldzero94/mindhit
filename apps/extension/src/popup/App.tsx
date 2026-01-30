@@ -18,18 +18,14 @@ export function App() {
 
   // Wait for Zustand to hydrate from chrome.storage
   useEffect(() => {
-    const unsubAuth = useAuthStore.persist.onFinishHydration(() => {
+    // With skipHydration: true, we must manually trigger hydration
+    // This ensures data is loaded before rendering
+    Promise.all([
+      useAuthStore.persist.rehydrate(),
+      useSessionStore.persist.rehydrate(),
+    ]).then(() => {
       setIsHydrated(true);
     });
-
-    // Check if already hydrated
-    if (useAuthStore.persist.hasHydrated()) {
-      setIsHydrated(true);
-    }
-
-    return () => {
-      unsubAuth();
-    };
   }, []);
 
   // Update elapsed time

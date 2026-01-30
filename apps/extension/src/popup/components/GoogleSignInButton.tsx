@@ -54,7 +54,7 @@ export function GoogleSignInButton() {
       const result = await api.googleAuthCode(code, redirectUri);
 
       // Save to chrome.storage directly to ensure persistence
-      await chrome.storage.session.set({
+      await chrome.storage.local.set({
         "mindhit-auth": JSON.stringify({
           state: {
             user: result.user,
