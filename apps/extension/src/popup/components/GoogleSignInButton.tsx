@@ -53,20 +53,39 @@ export function GoogleSignInButton() {
       // Exchange code for tokens via backend
       const result = await api.googleAuthCode(code, redirectUri);
 
-      // Save to chrome.storage directly to ensure persistence
-      await chrome.storage.local.set({
-        "mindhit-auth": JSON.stringify({
-          state: {
-            user: result.user,
-            token: result.token,
-            isAuthenticated: true,
-          },
-          version: 0,
-        }),
+      // Build the Zustand persist format
+      const authData = JSON.stringify({
+        state: {
+          user: result.user,
+          token: result.token,
+          isAuthenticated: true,
+        },
+        version: 0,
       });
 
-      // Update Zustand state
+      // Use callback-based storage write for more reliable persistence
+      // This ensures the write completes before we continue
+      await new Promise<void>((resolve, reject) => {
+        chrome.storage.local.set({ "mindhit-auth": authData }, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      // Verify the write was successful by reading it back
+      const verification = await chrome.storage.local.get("mindhit-auth");
+      if (!verification["mindhit-auth"]) {
+        throw new Error("Failed to persist auth data");
+      }
+
+      // Update Zustand in-memory state
       setAuth(result.user, result.token);
+
+      // Force rehydration to sync Zustand with storage
+      await useAuthStore.persist.rehydrate();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Google login failed";
       // User closed the popup

@@ -18,14 +18,30 @@ export function App() {
 
   // Wait for Zustand to hydrate from chrome.storage
   useEffect(() => {
-    // With skipHydration: true, we must manually trigger hydration
-    // This ensures data is loaded before rendering
-    Promise.all([
-      useAuthStore.persist.rehydrate(),
-      useSessionStore.persist.rehydrate(),
-    ]).then(() => {
-      setIsHydrated(true);
-    });
+    const hydrate = async () => {
+      try {
+        // With skipHydration: true, we must manually trigger hydration
+        // This ensures data is loaded before rendering
+        await Promise.all([
+          useAuthStore.persist.rehydrate(),
+          useSessionStore.persist.rehydrate(),
+        ]);
+
+        // Debug: Log hydration result
+        const authState = useAuthStore.getState();
+        console.log("[MindHit] Hydration complete:", {
+          isAuthenticated: authState.isAuthenticated,
+          hasUser: !!authState.user,
+          hasToken: !!authState.token,
+        });
+      } catch (error) {
+        console.error("[MindHit] Hydration failed:", error);
+      } finally {
+        setIsHydrated(true);
+      }
+    };
+
+    hydrate();
   }, []);
 
   // Update elapsed time

@@ -26,7 +26,13 @@ export const chromeStorage: StateStorage = {
     try {
       const result = await chrome.storage.local.get(name);
       const value = result[name];
-      return typeof value === "string" ? value : null;
+      const returnValue = typeof value === "string" ? value : null;
+      console.log(`[MindHit] Storage read "${name}":`, {
+        hasValue: !!returnValue,
+        valueType: typeof value,
+        valueLength: typeof value === "string" ? value.length : 0,
+      });
+      return returnValue;
     } catch (error) {
       console.error("[MindHit] Failed to read from storage:", error);
       return null;
