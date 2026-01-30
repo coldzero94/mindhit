@@ -1330,6 +1330,22 @@ components:
         duration_ms:
           type: integer
           format: int32
+        summary:
+          type: string
+          description: AI 생성 요약
+        keywords:
+          type: array
+          items:
+            type: string
+          description: AI 추출 키워드
+        visit_count:
+          type: integer
+          format: int32
+          description: 세션 내 방문 횟수
+        total_duration_ms:
+          type: integer
+          format: int32
+          description: 총 체류 시간 (ms)
       description: 페이지 방문 정보
     Mindmap.GenerateMindmapRequest:
       type: object

@@ -228,6 +228,22 @@ export type EventsPageVisit = {
   title?: string;
   visited_at: string;
   duration_ms?: number;
+  /**
+   * AI 생성 요약
+   */
+  summary?: string;
+  /**
+   * AI 추출 키워드
+   */
+  keywords?: Array<string>;
+  /**
+   * 세션 내 방문 횟수
+   */
+  visit_count?: number;
+  /**
+   * 총 체류 시간 (ms)
+   */
+  total_duration_ms?: number;
 };
 
 /**

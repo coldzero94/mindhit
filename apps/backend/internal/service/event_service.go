@@ -15,6 +15,7 @@ import (
 	"github.com/mindhit/api/ent/pagevisit"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
+	enturl "github.com/mindhit/api/ent/url"
 	"github.com/mindhit/api/internal/infrastructure/metrics"
 )
 
@@ -114,6 +115,8 @@ func (s *EventService) processEvent(
 	switch event.Type {
 	case "page_visit":
 		return s.processPageVisit(ctx, sessionID, event)
+	case "page_leave":
+		return s.processPageLeave(ctx, sessionID, event)
 	case "highlight":
 		return s.processHighlight(ctx, sessionID, event)
 	}
@@ -182,6 +185,56 @@ func (s *EventService) processHighlight(
 	}
 
 	return nil
+}
+
+func (s *EventService) processPageLeave(
+	ctx context.Context,
+	sessionID uuid.UUID,
+	event BatchEvent,
+) error {
+	if event.URL == "" {
+		return nil
+	}
+
+	// Get duration_ms and max_scroll_depth from payload
+	durationMs, _ := event.Payload["duration_ms"].(float64)
+	maxScrollDepth, _ := event.Payload["max_scroll_depth"].(float64)
+
+	// Find the most recent PageVisit for this URL in the session
+	pv, err := s.client.PageVisit.
+		Query().
+		Where(
+			pagevisit.HasSessionWith(session.IDEQ(sessionID)),
+			pagevisit.HasURLWith(enturl.URLEQ(normalizeURL(event.URL))),
+		).
+		Order(ent.Desc(pagevisit.FieldEnteredAt)).
+		First(ctx)
+
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// No matching page visit found, skip
+			return nil
+		}
+		return fmt.Errorf("query page visit: %w", err)
+	}
+
+	// Update the page visit with leave time and duration
+	_, err = pv.Update().
+		SetLeftAt(time.UnixMilli(event.Timestamp)).
+		SetNillableDurationMs(intPtr(int(durationMs))).
+		SetMaxScrollDepth(maxScrollDepth).
+		Save(ctx)
+
+	if err != nil {
+		return fmt.Errorf("update page visit: %w", err)
+	}
+
+	return nil
+}
+
+// intPtr returns a pointer to an int value.
+func intPtr(v int) *int {
+	return &v
 }
 
 // ProcessBatchEventsFromJSON processes events from raw JSON.
@@ -306,6 +359,75 @@ func (s *EventService) GetEventStats(
 		"highlights":   highlights,
 		"unique_urls":  uniqueURLs,
 	}, nil
+}
+
+// AggregatedPageVisit represents a page visit grouped by URL with aggregated stats.
+type AggregatedPageVisit struct {
+	URLID           uuid.UUID
+	URL             string
+	Title           string
+	Summary         string
+	Keywords        []string
+	VisitCount      int
+	TotalDurationMs int
+	FirstVisitedAt  time.Time
+	LastVisitedAt   time.Time
+}
+
+// GetAggregatedPageVisits returns page visits grouped by URL with summaries and stats.
+func (s *EventService) GetAggregatedPageVisits(
+	ctx context.Context,
+	sessionID uuid.UUID,
+) ([]AggregatedPageVisit, error) {
+	// Get all page visits for this session with URL eager loading
+	pageVisits, err := s.client.PageVisit.
+		Query().
+		Where(pagevisit.HasSessionWith(session.IDEQ(sessionID))).
+		WithURL().
+		Order(ent.Asc(pagevisit.FieldEnteredAt)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query page visits: %w", err)
+	}
+
+	// Group by URL and aggregate stats
+	urlMap := make(map[uuid.UUID]*AggregatedPageVisit)
+	for _, pv := range pageVisits {
+		if pv.Edges.URL == nil {
+			continue
+		}
+		u := pv.Edges.URL
+		existing, ok := urlMap[u.ID]
+		if !ok {
+			existing = &AggregatedPageVisit{
+				URLID:          u.ID,
+				URL:            u.URL,
+				Title:          u.Title,
+				Summary:        u.Summary,
+				Keywords:       u.Keywords,
+				VisitCount:     0,
+				FirstVisitedAt: pv.EnteredAt,
+				LastVisitedAt:  pv.EnteredAt,
+			}
+			urlMap[u.ID] = existing
+		}
+
+		existing.VisitCount++
+		if pv.DurationMs != nil {
+			existing.TotalDurationMs += *pv.DurationMs
+		}
+		if pv.EnteredAt.After(existing.LastVisitedAt) {
+			existing.LastVisitedAt = pv.EnteredAt
+		}
+	}
+
+	// Convert to slice
+	result := make([]AggregatedPageVisit, 0, len(urlMap))
+	for _, v := range urlMap {
+		result = append(result, *v)
+	}
+
+	return result, nil
 }
 
 func toJSON(v interface{}) (string, error) {

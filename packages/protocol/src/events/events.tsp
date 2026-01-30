@@ -73,6 +73,20 @@ model PageVisit {
   visitedAt: utcDateTime;
   @encodedName("application/json", "duration_ms")
   durationMs?: int32;
+
+  @doc("AI 생성 요약")
+  summary?: string;
+
+  @doc("AI 추출 키워드")
+  keywords?: string[];
+
+  @doc("세션 내 방문 횟수")
+  @encodedName("application/json", "visit_count")
+  visitCount?: int32;
+
+  @doc("총 체류 시간 (ms)")
+  @encodedName("application/json", "total_duration_ms")
+  totalDurationMs?: int32;
 }
 
 @doc("하이라이트 정보")

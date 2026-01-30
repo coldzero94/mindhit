@@ -79,7 +79,6 @@ const VALID_MESSAGE_TYPES = [
   "EVENT",
   "GET_STATE",
   "INCREMENT_PAGE_COUNT",
-  "INCREMENT_HIGHLIGHT_COUNT",
 ] as const;
 
 // Message listener with sender verification
@@ -150,12 +149,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Update badge with page count and sync to store
       state.pageCount++;
       updateBadge();
-      updateSessionStore();
-      break;
-
-    case "INCREMENT_HIGHLIGHT_COUNT":
-      // Update highlight count and sync to store
-      state.highlightCount++;
       updateSessionStore();
       break;
   }

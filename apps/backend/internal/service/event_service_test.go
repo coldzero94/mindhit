@@ -91,6 +91,57 @@ func TestEventService_ProcessBatchEvents_WithHighlight(t *testing.T) {
 	assert.Equal(t, "#FF0000", highlights[0].Color)
 }
 
+func TestEventService_ProcessBatchEvents_WithPageLeave(t *testing.T) {
+	client, eventService, _, sessionService, authService := setupEventServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("page-leave-test"))
+	sess, err := sessionService.Start(ctx, user.ID)
+	require.NoError(t, err)
+
+	testURL := uniqueURL("page-leave")
+	enterTime := time.Now().UnixMilli()
+
+	// First, create a page_visit event
+	events := []service.BatchEvent{
+		{
+			Type:      "page_visit",
+			Timestamp: enterTime,
+			URL:       testURL,
+			Title:     "Test Page",
+		},
+	}
+	_, err = eventService.ProcessBatchEvents(ctx, sess.ID, events)
+	require.NoError(t, err)
+
+	// Then, send page_leave event
+	leaveTime := enterTime + 5000 // 5 seconds later
+	leaveEvents := []service.BatchEvent{
+		{
+			Type:      "page_leave",
+			Timestamp: leaveTime,
+			URL:       testURL,
+			Payload: map[string]interface{}{
+				"duration_ms":      float64(5000),
+				"max_scroll_depth": float64(0.75),
+			},
+		},
+	}
+	processed, err := eventService.ProcessBatchEvents(ctx, sess.ID, leaveEvents)
+	require.NoError(t, err)
+	assert.Equal(t, 1, processed)
+
+	// Verify page visit was updated
+	pageVisits, err := sess.QueryPageVisits().All(ctx)
+	require.NoError(t, err)
+	require.Len(t, pageVisits, 1)
+	assert.NotNil(t, pageVisits[0].LeftAt)
+	assert.NotNil(t, pageVisits[0].DurationMs)
+	assert.Equal(t, 5000, *pageVisits[0].DurationMs)
+	assert.Equal(t, 0.75, pageVisits[0].MaxScrollDepth)
+}
+
 func TestEventService_ProcessBatchEvents_SessionNotFound(t *testing.T) {
 	client, eventService, _, _, _ := setupEventServiceTest(t)
 	defer testutil.CleanupTestDB(t, client)
@@ -297,6 +348,63 @@ func TestEventService_GetEventStats_EmptySession(t *testing.T) {
 	assert.Equal(t, 0, stats["page_visits"])
 	assert.Equal(t, 0, stats["highlights"])
 	assert.Equal(t, 0, stats["unique_urls"])
+}
+
+// ==================== GetAggregatedPageVisits Tests ====================
+
+func TestEventService_GetAggregatedPageVisits_Success(t *testing.T) {
+	client, eventService, _, sessionService, authService := setupEventServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("aggregated"))
+	sess, err := sessionService.Start(ctx, user.ID)
+	require.NoError(t, err)
+
+	// Use unique URLs to avoid conflicts with other tests
+	url1 := uniqueURL("agg1")
+	url2 := uniqueURL("agg2")
+
+	// Create visits to same URL multiple times
+	events := []service.BatchEvent{
+		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: url1, Title: "Page 1"},
+		{Type: "page_visit", Timestamp: time.Now().UnixMilli() + 1000, URL: url2, Title: "Page 2"},
+		{Type: "page_visit", Timestamp: time.Now().UnixMilli() + 2000, URL: url1, Title: "Page 1"}, // duplicate
+	}
+	_, err = eventService.ProcessBatchEvents(ctx, sess.ID, events)
+	require.NoError(t, err)
+
+	result, err := eventService.GetAggregatedPageVisits(ctx, sess.ID)
+
+	require.NoError(t, err)
+	assert.Len(t, result, 2) // 2 unique URLs
+
+	// Find url1 result and verify aggregation
+	var page1 *service.AggregatedPageVisit
+	for i := range result {
+		if result[i].URL == url1 {
+			page1 = &result[i]
+			break
+		}
+	}
+	require.NotNil(t, page1)
+	assert.Equal(t, 2, page1.VisitCount) // visited twice
+	assert.Equal(t, "Page 1", page1.Title)
+}
+
+func TestEventService_GetAggregatedPageVisits_EmptySession(t *testing.T) {
+	client, eventService, _, sessionService, authService := setupEventServiceTest(t)
+	defer testutil.CleanupTestDB(t, client)
+
+	ctx := context.Background()
+	user := createTestUser(t, authService, uniqueEmail("empty-aggregated"))
+	sess, err := sessionService.Start(ctx, user.ID)
+	require.NoError(t, err)
+
+	result, err := eventService.GetAggregatedPageVisits(ctx, sess.ID)
+
+	require.NoError(t, err)
+	assert.Len(t, result, 0)
 }
 
 // ==================== URL Service Tests ====================

@@ -198,44 +198,64 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 	if request.Params.Type != nil {
 		eventType = *request.Params.Type
 	}
-	limit := 50
-	if request.Params.Limit != nil {
-		limit = int(*request.Params.Limit)
-	}
-	offset := 0
-	if request.Params.Offset != nil {
-		offset = int(*request.Params.Offset)
-	}
 
-	events, total, err := c.eventService.GetEventsBySession(ctx, sessionID, eventType, limit, offset)
-	if err != nil {
-		slog.ErrorContext(ctx, "failed to get events", "error", err)
-		return nil, err
-	}
-
-	// Convert to response types
+	// Get aggregated page visits (grouped by URL with summaries)
 	pageVisits := make([]generated.EventsPageVisit, 0)
-	highlights := make([]generated.EventsHighlight, 0)
-
-	for _, e := range events {
-		// Parse payload JSON to extract fields
-		var payload map[string]interface{}
-		if e.Payload != "" {
-			_ = json.Unmarshal([]byte(e.Payload), &payload)
+	if eventType == "" || eventType == "page_visit" {
+		aggregated, err := c.eventService.GetAggregatedPageVisits(ctx, sessionID)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to get aggregated page visits", "error", err)
+			return nil, err
 		}
 
-		if e.EventType == "page_visit" {
-			pv := generated.EventsPageVisit{
-				Id:        e.ID.String(),
-				Url:       getStringFromPayload(payload, "url"),
-				VisitedAt: e.CreatedAt,
+		for _, pv := range aggregated {
+			visit := generated.EventsPageVisit{
+				Id:        pv.URLID.String(),
+				Url:       pv.URL,
+				VisitedAt: pv.FirstVisitedAt,
 			}
-			if title := getStringFromPayload(payload, "title"); title != "" {
-				pv.Title = &title
+			if pv.Title != "" {
+				visit.Title = &pv.Title
 			}
-			pageVisits = append(pageVisits, pv)
-		} else if e.EventType == "highlight" {
-			// Text is stored in "content" field (mapped from BatchEvent.Content)
+			if pv.Summary != "" {
+				visit.Summary = &pv.Summary
+			}
+			if len(pv.Keywords) > 0 {
+				visit.Keywords = &pv.Keywords
+			}
+			visitCount := int32(pv.VisitCount)
+			visit.VisitCount = &visitCount
+			totalDuration := int32(pv.TotalDurationMs)
+			visit.TotalDurationMs = &totalDuration
+			pageVisits = append(pageVisits, visit)
+		}
+	}
+
+	// Get highlights from raw events
+	highlights := make([]generated.EventsHighlight, 0)
+	if eventType == "" || eventType == "highlight" {
+		// Use limit/offset for highlights only
+		limit := 50
+		if request.Params.Limit != nil {
+			limit = int(*request.Params.Limit)
+		}
+		offset := 0
+		if request.Params.Offset != nil {
+			offset = int(*request.Params.Offset)
+		}
+
+		events, _, err := c.eventService.GetEventsBySession(ctx, sessionID, "highlight", limit, offset)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to get highlights", "error", err)
+			return nil, err
+		}
+
+		for _, e := range events {
+			var payload map[string]interface{}
+			if e.Payload != "" {
+				_ = json.Unmarshal([]byte(e.Payload), &payload)
+			}
+
 			text := getStringFromPayload(payload, "content")
 			color := getStringFromPayload(payload, "color")
 			if color == "" {
@@ -251,6 +271,7 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 		}
 	}
 
+	total := len(pageVisits) + len(highlights)
 	return generated.RoutesListEvents200JSONResponse{
 		PageVisits: pageVisits,
 		Highlights: highlights,

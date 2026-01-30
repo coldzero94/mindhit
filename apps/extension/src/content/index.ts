@@ -49,7 +49,6 @@ function startRecording(): void {
 
   // Add event listeners
   window.addEventListener("scroll", handleScroll, { passive: true });
-  document.addEventListener("mouseup", handleSelection);
   window.addEventListener("beforeunload", handlePageLeave);
 
   // Update page count in Side Panel
@@ -62,7 +61,6 @@ function stopRecording(): void {
   handlePageLeave();
 
   window.removeEventListener("scroll", handleScroll);
-  document.removeEventListener("mouseup", handleSelection);
   window.removeEventListener("beforeunload", handlePageLeave);
 
   isRecording = false;
@@ -91,37 +89,6 @@ function handleScroll(): void {
   }
 }
 
-function handleSelection(): void {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) return;
-
-  const text = selection.toString().trim();
-  if (text.length < 10 || text.length > 1000) return;
-
-  // Generate CSS selector for selected text
-  const range = selection.getRangeAt(0);
-  const container = range.commonAncestorContainer;
-  const element =
-    container.nodeType === Node.TEXT_NODE
-      ? container.parentElement
-      : (container as Element);
-
-  if (!element) return;
-
-  const selector = generateSelector(element);
-
-  sendEvent({
-    type: "highlight",
-    timestamp: Date.now(),
-    url: window.location.href,
-    text,
-    selector,
-  });
-
-  // Update highlight count in Side Panel
-  chrome.runtime.sendMessage({ type: "INCREMENT_HIGHLIGHT_COUNT" });
-}
-
 function handlePageLeave(): void {
   if (!pageEnteredAt) return;
 
@@ -136,37 +103,4 @@ function handlePageLeave(): void {
 
 function sendEvent(event: BrowsingEvent): void {
   chrome.runtime.sendMessage({ type: "EVENT", event });
-}
-
-function generateSelector(element: Element): string {
-  const path: string[] = [];
-  let current: Element | null = element;
-
-  while (current && current !== document.body) {
-    let selector = current.tagName.toLowerCase();
-
-    if (current.id) {
-      selector = `#${current.id}`;
-      path.unshift(selector);
-      break;
-    }
-
-    if (current.className && typeof current.className === "string") {
-      const classes = current.className.split(" ").filter(Boolean).slice(0, 2);
-      if (classes.length) {
-        selector += `.${classes.join(".")}`;
-      }
-    }
-
-    const siblings = current.parentElement?.children;
-    if (siblings && siblings.length > 1) {
-      const index = Array.from(siblings).indexOf(current);
-      selector += `:nth-child(${index + 1})`;
-    }
-
-    path.unshift(selector);
-    current = current.parentElement;
-  }
-
-  return path.join(" > ").slice(0, 500);
 }

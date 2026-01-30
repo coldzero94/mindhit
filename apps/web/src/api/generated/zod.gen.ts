@@ -162,6 +162,10 @@ export const zEventsPageVisit = z.object({
   title: z.optional(z.string()),
   visited_at: z.iso.datetime(),
   duration_ms: z.optional(z.int()),
+  summary: z.optional(z.string()),
+  keywords: z.optional(z.array(z.string())),
+  visit_count: z.optional(z.int()),
+  total_duration_ms: z.optional(z.int()),
 });
 
 /**

@@ -42,6 +42,20 @@ const statusLabels: Record<SessionSessionStatus, string> = {
   failed: "실패",
 };
 
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}시간 ${minutes % 60}분`;
+  }
+  if (minutes > 0) {
+    return `${minutes}분 ${seconds % 60}초`;
+  }
+  return `${seconds}초`;
+}
+
 export default function SessionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -248,20 +262,55 @@ export default function SessionDetailPage() {
                   {events.page_visits.map((visit) => (
                     <li
                       key={visit.id}
-                      className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded"
+                      className="py-4 hover:bg-gray-50 -mx-2 px-2 rounded"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {visit.title || visit.url}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">
-                          {visit.url}
-                        </p>
-                      </div>
-                      <div className="text-sm text-gray-400 ml-4 shrink-0">
-                        {visit.duration_ms
-                          ? `${Math.floor(visit.duration_ms / 60000)}분 ${Math.floor((visit.duration_ms % 60000) / 1000)}초`
-                          : format(new Date(visit.visited_at), "HH:mm:ss")}
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">
+                            {visit.title || visit.url}
+                          </p>
+                          <p className="text-sm text-gray-500 truncate">
+                            {visit.url}
+                          </p>
+
+                          {/* AI Summary */}
+                          {visit.summary && (
+                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                              {visit.summary}
+                            </p>
+                          )}
+
+                          {/* Keywords */}
+                          {visit.keywords && visit.keywords.length > 0 && (
+                            <div className="flex gap-1 mt-2 flex-wrap">
+                              {visit.keywords.slice(0, 5).map((keyword) => (
+                                <Badge
+                                  key={keyword}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
+                                  {keyword}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Visit Stats */}
+                        <div className="text-right ml-4 shrink-0">
+                          {visit.visit_count && visit.visit_count > 1 && (
+                            <p className="text-sm font-medium text-blue-600">
+                              {visit.visit_count}회 방문
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-400">
+                            {visit.total_duration_ms
+                              ? formatDuration(visit.total_duration_ms)
+                              : visit.duration_ms
+                                ? formatDuration(visit.duration_ms)
+                                : format(new Date(visit.visited_at), "HH:mm:ss")}
+                          </p>
+                        </div>
                       </div>
                     </li>
                   ))}
