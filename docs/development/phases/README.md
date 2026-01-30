@@ -67,7 +67,7 @@ phases/
 | 11.5 | [애니메이션 및 인터랙션](./phase-11.5-animation.md) | ✅ 완료 | 2 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ✅ 완료 | 4 steps |
 | 13 | [배포 및 운영](./phase-13-deployment.md) | ⬜ 대기 | 4 steps |
-| 14.1 | [구독 관리 UI (Stripe 없이)](./phase-14.1-subscription-ui.md) | ⬜ 대기 | 4 steps |
+| 14.1 | [구독 관리 UI (Stripe 없이)](./phase-14.1-subscription-ui.md) | ✅ 완료 | 4 steps |
 | 14 | [Stripe 결제 연동](./phase-14-billing.md) | ⬜ 대기 | 3 steps |
 
 **상태 범례:**
