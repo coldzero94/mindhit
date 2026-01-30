@@ -5,34 +5,103 @@ let pageEnteredAt: number | null = null;
 let maxScrollDepth = 0;
 let lastScrollTime = 0;
 
+/**
+ * Check if extension context is still valid.
+ * Returns false if extension was unloaded/reloaded.
+ */
+function isContextValid(): boolean {
+  try {
+    return !!chrome.runtime?.id;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safely send a message to the background script.
+ * Handles "Extension context invalidated" errors gracefully.
+ */
+function safeSendMessage(
+  message: unknown,
+  callback?: (response: unknown) => void
+): void {
+  if (!isContextValid()) {
+    console.warn("[MindHit] Extension context invalidated, stopping recording");
+    cleanup();
+    return;
+  }
+
+  try {
+    chrome.runtime.sendMessage(message, (response) => {
+      // Check for runtime errors
+      if (chrome.runtime.lastError) {
+        const errorMessage = chrome.runtime.lastError.message || "";
+        if (errorMessage.includes("context invalidated")) {
+          console.warn("[MindHit] Extension context invalidated");
+          cleanup();
+          return;
+        }
+        console.warn("[MindHit] Message send error:", errorMessage);
+        return;
+      }
+      callback?.(response);
+    });
+  } catch (error) {
+    console.warn("[MindHit] Failed to send message:", error);
+    cleanup();
+  }
+}
+
+/**
+ * Cleanup when extension context is invalidated.
+ */
+function cleanup(): void {
+  isRecording = false;
+  pageEnteredAt = null;
+  window.removeEventListener("scroll", handleScroll);
+  window.removeEventListener("beforeunload", handlePageLeave);
+}
+
 // Check initial state
-chrome.runtime.sendMessage(
+safeSendMessage(
   { type: "GET_STATE" },
-  (response: { isRecording: boolean } | undefined) => {
-    if (response?.isRecording) {
+  (response: unknown) => {
+    const state = response as { isRecording: boolean } | undefined;
+    if (state?.isRecording) {
       startRecording();
     }
   }
 );
 
 // Message listener
-chrome.runtime.onMessage.addListener((message) => {
-  switch (message.type) {
-    case "START_RECORDING":
-    case "RESUME_RECORDING":
-    case "PAGE_LOADED":
-      startRecording();
-      break;
+try {
+  chrome.runtime.onMessage.addListener((message) => {
+    if (!isContextValid()) {
+      cleanup();
+      return;
+    }
 
-    case "PAUSE_RECORDING":
-    case "STOP_RECORDING":
-      stopRecording();
-      break;
-  }
-});
+    switch (message.type) {
+      case "START_RECORDING":
+      case "RESUME_RECORDING":
+      case "PAGE_LOADED":
+        startRecording();
+        break;
+
+      case "PAUSE_RECORDING":
+      case "STOP_RECORDING":
+        stopRecording();
+        break;
+    }
+  });
+} catch {
+  // Extension context may be invalidated on page load
+  console.warn("[MindHit] Failed to add message listener");
+}
 
 function startRecording(): void {
   if (isRecording) return;
+  if (!isContextValid()) return;
 
   isRecording = true;
   pageEnteredAt = Date.now();
@@ -52,7 +121,7 @@ function startRecording(): void {
   window.addEventListener("beforeunload", handlePageLeave);
 
   // Update page count in Side Panel
-  chrome.runtime.sendMessage({ type: "INCREMENT_PAGE_COUNT" });
+  safeSendMessage({ type: "INCREMENT_PAGE_COUNT" });
 }
 
 function stopRecording(): void {
@@ -102,5 +171,5 @@ function handlePageLeave(): void {
 }
 
 function sendEvent(event: BrowsingEvent): void {
-  chrome.runtime.sendMessage({ type: "EVENT", event });
+  safeSendMessage({ type: "EVENT", event });
 }
