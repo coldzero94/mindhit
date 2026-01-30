@@ -155,20 +155,22 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 		}
 		durationMsMap[u.ID.String()] = durationMs
 
+		// Optimized: removed URL and Duration (not needed for AI analysis)
+		// Duration is tracked in durationMsMap for node sizing
+		summary := u.Summary
+		if len(summary) > 200 {
+			summary = summary[:200] + "..."
+		}
 		pageData.WriteString(fmt.Sprintf(`
 - ID: %s
   Title: %s
-  URL: %s
   Keywords: [%s]
   Summary: %s
-  Duration: %dms
 `,
 			u.ID.String(),
 			u.Title,
-			u.URL,
 			strings.Join(u.Keywords, ", "),
-			u.Summary,
-			durationMs,
+			summary,
 		))
 	}
 
