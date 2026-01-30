@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { User, Settings, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
@@ -23,7 +22,6 @@ import {
 export default function AccountPage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -86,40 +84,12 @@ export default function AccountPage() {
 
       {/* Subscription & Usage */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SubscriptionCard onUpgrade={() => setShowUpgradeModal(true)} />
+        <SubscriptionCard />
         <UsageCard />
       </div>
 
       {/* Usage History */}
       <UsageHistory />
-
-      {/* Upgrade Modal */}
-      {showUpgradeModal && (
-        <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
-      )}
-    </div>
-  );
-}
-
-function UpgradeModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">플랜 업그레이드</h2>
-        <p className="text-gray-600 mb-6">
-          플랜 업그레이드 기능은 준비 중입니다. 더 많은 토큰과 기능을 원하시면
-          문의해 주세요.
-        </p>
-        <div className="flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg
-                       hover:bg-gray-200 transition-colors"
-          >
-            닫기
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

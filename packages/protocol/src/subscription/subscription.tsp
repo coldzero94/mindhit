@@ -47,6 +47,24 @@ model PlanListResponse {
   plans: Plan[];
 }
 
+@doc("플랜 변경 요청")
+model ChangePlanRequest {
+  @encodedName("application/json", "plan_id")
+  planId: string;
+}
+
+@doc("플랜 변경 응답")
+model ChangePlanResponse {
+  subscription: SubscriptionInfo;
+  message: string;
+}
+
+@doc("구독 취소 응답")
+model CancelSubscriptionResponse {
+  subscription: SubscriptionInfo;
+  message: string;
+}
+
 // ============ Routes ============
 
 @route("/v1/subscription")
@@ -71,6 +89,52 @@ namespace SubscriptionRoutes {
   ): {
     @statusCode statusCode: 200;
     @body body: PlanListResponse;
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/change")
+  @doc("플랜 변경")
+  op changePlan(
+    @header authorization: string,
+    @body body: ChangePlanRequest
+  ): {
+    @statusCode statusCode: 200;
+    @body body: ChangePlanResponse;
+  } | {
+    @statusCode statusCode: 400;
+    @body body: Common.ErrorResponse;
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  } | {
+    @statusCode statusCode: 404;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/cancel")
+  @doc("구독 취소 (기간 종료 시 Free로 전환)")
+  op cancelSubscription(
+    @header authorization: string
+  ): {
+    @statusCode statusCode: 200;
+    @body body: CancelSubscriptionResponse;
+  } | {
+    @statusCode statusCode: 401;
+    @body body: Common.ErrorResponse;
+  };
+
+  @post
+  @route("/reactivate")
+  @doc("구독 취소 철회")
+  op reactivateSubscription(
+    @header authorization: string
+  ): {
+    @statusCode statusCode: 200;
+    @body body: SubscriptionResponse;
   } | {
     @statusCode statusCode: 401;
     @body body: Common.ErrorResponse;

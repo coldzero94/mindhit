@@ -878,6 +878,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/subscription/cancel:
+    post:
+      operationId: SubscriptionRoutes_cancelSubscription
+      description: 구독 취소 (기간 종료 시 Free로 전환)
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription.CancelSubscriptionResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/subscription/change:
+    post:
+      operationId: SubscriptionRoutes_changePlan
+      description: 플랜 변경
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription.ChangePlanResponse'
+        '400':
+          description: The server could not understand the request due to invalid syntax.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+        '404':
+          description: The server cannot find the requested resource.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Subscription.ChangePlanRequest'
   /v1/subscription/plans:
     get:
       operationId: SubscriptionRoutes_listPlans
@@ -895,6 +959,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Subscription.PlanListResponse'
+        '401':
+          description: Access is unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Common.ErrorResponse'
+  /v1/subscription/reactivate:
+    post:
+      operationId: SubscriptionRoutes_reactivateSubscription
+      description: 구독 취소 철회
+      parameters:
+        - name: authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription.SubscriptionResponse'
         '401':
           description: Access is unauthorized.
           content:
@@ -1474,6 +1561,36 @@ components:
         description:
           type: string
       description: 세션 업데이트 요청
+    Subscription.CancelSubscriptionResponse:
+      type: object
+      required:
+        - subscription
+        - message
+      properties:
+        subscription:
+          $ref: '#/components/schemas/Subscription.SubscriptionInfo'
+        message:
+          type: string
+      description: 구독 취소 응답
+    Subscription.ChangePlanRequest:
+      type: object
+      required:
+        - plan_id
+      properties:
+        plan_id:
+          type: string
+      description: 플랜 변경 요청
+    Subscription.ChangePlanResponse:
+      type: object
+      required:
+        - subscription
+        - message
+      properties:
+        subscription:
+          $ref: '#/components/schemas/Subscription.SubscriptionInfo'
+        message:
+          type: string
+      description: 플랜 변경 응답
     Subscription.Plan:
       type: object
       required:

@@ -72,12 +72,21 @@ import type {
   RoutesUpdateData,
   RoutesUpdateErrors,
   RoutesUpdateResponses,
+  SubscriptionRoutesCancelSubscriptionData,
+  SubscriptionRoutesCancelSubscriptionErrors,
+  SubscriptionRoutesCancelSubscriptionResponses,
+  SubscriptionRoutesChangePlanData,
+  SubscriptionRoutesChangePlanErrors,
+  SubscriptionRoutesChangePlanResponses,
   SubscriptionRoutesGetSubscriptionData,
   SubscriptionRoutesGetSubscriptionErrors,
   SubscriptionRoutesGetSubscriptionResponses,
   SubscriptionRoutesListPlansData,
   SubscriptionRoutesListPlansErrors,
   SubscriptionRoutesListPlansResponses,
+  SubscriptionRoutesReactivateSubscriptionData,
+  SubscriptionRoutesReactivateSubscriptionErrors,
+  SubscriptionRoutesReactivateSubscriptionResponses,
   UsageRoutesGetUsageData,
   UsageRoutesGetUsageErrors,
   UsageRoutesGetUsageHistoryData,
@@ -459,6 +468,41 @@ export const subscriptionRoutesGetSubscription = <
   >({ url: "/v1/subscription", ...options });
 
 /**
+ * 구독 취소 (기간 종료 시 Free로 전환)
+ */
+export const subscriptionRoutesCancelSubscription = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<SubscriptionRoutesCancelSubscriptionData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    SubscriptionRoutesCancelSubscriptionResponses,
+    SubscriptionRoutesCancelSubscriptionErrors,
+    ThrowOnError
+  >({ url: "/v1/subscription/cancel", ...options });
+
+/**
+ * 플랜 변경
+ */
+export const subscriptionRoutesChangePlan = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<SubscriptionRoutesChangePlanData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    SubscriptionRoutesChangePlanResponses,
+    SubscriptionRoutesChangePlanErrors,
+    ThrowOnError
+  >({
+    url: "/v1/subscription/change",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+/**
  * 사용 가능한 플랜 목록 조회
  */
 export const subscriptionRoutesListPlans = <
@@ -471,6 +515,20 @@ export const subscriptionRoutesListPlans = <
     SubscriptionRoutesListPlansErrors,
     ThrowOnError
   >({ url: "/v1/subscription/plans", ...options });
+
+/**
+ * 구독 취소 철회
+ */
+export const subscriptionRoutesReactivateSubscription = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<SubscriptionRoutesReactivateSubscriptionData, ThrowOnError>,
+) =>
+  (options.client ?? client).post<
+    SubscriptionRoutesReactivateSubscriptionResponses,
+    SubscriptionRoutesReactivateSubscriptionErrors,
+    ThrowOnError
+  >({ url: "/v1/subscription/reactivate", ...options });
 
 /**
  * 현재 사용량 조회

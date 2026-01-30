@@ -379,6 +379,29 @@ export type SessionUpdateSessionRequest = {
 };
 
 /**
+ * 구독 취소 응답
+ */
+export type SubscriptionCancelSubscriptionResponse = {
+  subscription: SubscriptionSubscriptionInfo;
+  message: string;
+};
+
+/**
+ * 플랜 변경 요청
+ */
+export type SubscriptionChangePlanRequest = {
+  plan_id: string;
+};
+
+/**
+ * 플랜 변경 응답
+ */
+export type SubscriptionChangePlanResponse = {
+  subscription: SubscriptionSubscriptionInfo;
+  message: string;
+};
+
+/**
  * 플랜 정보
  */
 export type SubscriptionPlan = {
@@ -1300,6 +1323,74 @@ export type SubscriptionRoutesGetSubscriptionResponses = {
 export type SubscriptionRoutesGetSubscriptionResponse =
   SubscriptionRoutesGetSubscriptionResponses[keyof SubscriptionRoutesGetSubscriptionResponses];
 
+export type SubscriptionRoutesCancelSubscriptionData = {
+  body?: never;
+  headers: {
+    authorization: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/v1/subscription/cancel";
+};
+
+export type SubscriptionRoutesCancelSubscriptionErrors = {
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+};
+
+export type SubscriptionRoutesCancelSubscriptionError =
+  SubscriptionRoutesCancelSubscriptionErrors[keyof SubscriptionRoutesCancelSubscriptionErrors];
+
+export type SubscriptionRoutesCancelSubscriptionResponses = {
+  /**
+   * The request has succeeded.
+   */
+  200: SubscriptionCancelSubscriptionResponse;
+};
+
+export type SubscriptionRoutesCancelSubscriptionResponse =
+  SubscriptionRoutesCancelSubscriptionResponses[keyof SubscriptionRoutesCancelSubscriptionResponses];
+
+export type SubscriptionRoutesChangePlanData = {
+  body: SubscriptionChangePlanRequest;
+  headers: {
+    authorization: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/v1/subscription/change";
+};
+
+export type SubscriptionRoutesChangePlanErrors = {
+  /**
+   * The server could not understand the request due to invalid syntax.
+   */
+  400: CommonErrorResponse;
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+  /**
+   * The server cannot find the requested resource.
+   */
+  404: CommonErrorResponse;
+};
+
+export type SubscriptionRoutesChangePlanError =
+  SubscriptionRoutesChangePlanErrors[keyof SubscriptionRoutesChangePlanErrors];
+
+export type SubscriptionRoutesChangePlanResponses = {
+  /**
+   * The request has succeeded.
+   */
+  200: SubscriptionChangePlanResponse;
+};
+
+export type SubscriptionRoutesChangePlanResponse =
+  SubscriptionRoutesChangePlanResponses[keyof SubscriptionRoutesChangePlanResponses];
+
 export type SubscriptionRoutesListPlansData = {
   body?: never;
   headers: {
@@ -1329,6 +1420,36 @@ export type SubscriptionRoutesListPlansResponses = {
 
 export type SubscriptionRoutesListPlansResponse =
   SubscriptionRoutesListPlansResponses[keyof SubscriptionRoutesListPlansResponses];
+
+export type SubscriptionRoutesReactivateSubscriptionData = {
+  body?: never;
+  headers: {
+    authorization: string;
+  };
+  path?: never;
+  query?: never;
+  url: "/v1/subscription/reactivate";
+};
+
+export type SubscriptionRoutesReactivateSubscriptionErrors = {
+  /**
+   * Access is unauthorized.
+   */
+  401: CommonErrorResponse;
+};
+
+export type SubscriptionRoutesReactivateSubscriptionError =
+  SubscriptionRoutesReactivateSubscriptionErrors[keyof SubscriptionRoutesReactivateSubscriptionErrors];
+
+export type SubscriptionRoutesReactivateSubscriptionResponses = {
+  /**
+   * The request has succeeded.
+   */
+  200: SubscriptionSubscriptionResponse;
+};
+
+export type SubscriptionRoutesReactivateSubscriptionResponse =
+  SubscriptionRoutesReactivateSubscriptionResponses[keyof SubscriptionRoutesReactivateSubscriptionResponses];
 
 export type UsageRoutesGetUsageData = {
   body?: never;

@@ -162,3 +162,170 @@ func mapEntPlan(p *ent.Plan) generated.SubscriptionPlan {
 
 	return result
 }
+
+// SubscriptionRoutesChangePlan handles POST /v1/subscription/change.
+func (c *SubscriptionController) SubscriptionRoutesChangePlan(ctx context.Context, request generated.SubscriptionRoutesChangePlanRequestObject) (generated.SubscriptionRoutesChangePlanResponseObject, error) {
+	userID, err := c.extractUserID(request.Params.Authorization)
+	if err != nil {
+		return generated.SubscriptionRoutesChangePlan401JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	if request.Body == nil || request.Body.PlanId == "" {
+		return generated.SubscriptionRoutesChangePlan400JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: "plan_id is required",
+			},
+		}, nil
+	}
+
+	sub, err := c.subscriptionService.ChangePlan(ctx, userID, request.Body.PlanId)
+	if err != nil {
+		if errors.Is(err, service.ErrPlanNotFound) {
+			return generated.SubscriptionRoutesChangePlan404JSONResponse{
+				Error: struct {
+					Code    *string `json:"code,omitempty"`
+					Message string  `json:"message"`
+				}{
+					Message: "plan not found",
+				},
+			}, nil
+		}
+		slog.ErrorContext(ctx, "failed to change plan", "error", err, "user_id", userID)
+		return nil, err
+	}
+
+	// Load plan edge for response
+	plan, _ := sub.QueryPlan().Only(ctx)
+
+	subInfo := &service.SubscriptionInfo{
+		ID:                 sub.ID,
+		Status:             string(sub.Status),
+		CurrentPeriodStart: sub.CurrentPeriodStart,
+		CurrentPeriodEnd:   sub.CurrentPeriodEnd,
+		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
+	}
+	if plan != nil {
+		subInfo.Plan = &service.PlanInfo{
+			ID:                    plan.ID,
+			Name:                  plan.Name,
+			PriceCents:            plan.PriceCents,
+			BillingPeriod:         plan.BillingPeriod,
+			TokenLimit:            plan.TokenLimit,
+			SessionRetentionDays:  plan.SessionRetentionDays,
+			MaxConcurrentSessions: plan.MaxConcurrentSessions,
+			Features:              plan.Features,
+		}
+	}
+
+	return generated.SubscriptionRoutesChangePlan200JSONResponse{
+		Subscription: mapSubscriptionInfo(subInfo),
+		Message:      "플랜이 변경되었습니다",
+	}, nil
+}
+
+// SubscriptionRoutesCancelSubscription handles POST /v1/subscription/cancel.
+func (c *SubscriptionController) SubscriptionRoutesCancelSubscription(ctx context.Context, request generated.SubscriptionRoutesCancelSubscriptionRequestObject) (generated.SubscriptionRoutesCancelSubscriptionResponseObject, error) {
+	userID, err := c.extractUserID(request.Params.Authorization)
+	if err != nil {
+		return generated.SubscriptionRoutesCancelSubscription401JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	sub, err := c.subscriptionService.CancelSubscription(ctx, userID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to cancel subscription", "error", err, "user_id", userID)
+		return nil, err
+	}
+
+	// Load plan edge for response
+	plan, _ := sub.QueryPlan().Only(ctx)
+
+	subInfo := &service.SubscriptionInfo{
+		ID:                 sub.ID,
+		Status:             string(sub.Status),
+		CurrentPeriodStart: sub.CurrentPeriodStart,
+		CurrentPeriodEnd:   sub.CurrentPeriodEnd,
+		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
+	}
+	if plan != nil {
+		subInfo.Plan = &service.PlanInfo{
+			ID:                    plan.ID,
+			Name:                  plan.Name,
+			PriceCents:            plan.PriceCents,
+			BillingPeriod:         plan.BillingPeriod,
+			TokenLimit:            plan.TokenLimit,
+			SessionRetentionDays:  plan.SessionRetentionDays,
+			MaxConcurrentSessions: plan.MaxConcurrentSessions,
+			Features:              plan.Features,
+		}
+	}
+
+	return generated.SubscriptionRoutesCancelSubscription200JSONResponse{
+		Subscription: mapSubscriptionInfo(subInfo),
+		Message:      "구독이 취소 예정으로 설정되었습니다. 현재 기간 종료 후 Free 플랜으로 전환됩니다.",
+	}, nil
+}
+
+// SubscriptionRoutesReactivateSubscription handles POST /v1/subscription/reactivate.
+func (c *SubscriptionController) SubscriptionRoutesReactivateSubscription(ctx context.Context, request generated.SubscriptionRoutesReactivateSubscriptionRequestObject) (generated.SubscriptionRoutesReactivateSubscriptionResponseObject, error) {
+	userID, err := c.extractUserID(request.Params.Authorization)
+	if err != nil {
+		return generated.SubscriptionRoutesReactivateSubscription401JSONResponse{
+			Error: struct {
+				Code    *string `json:"code,omitempty"`
+				Message string  `json:"message"`
+			}{
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	sub, err := c.subscriptionService.ReactivateSubscription(ctx, userID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to reactivate subscription", "error", err, "user_id", userID)
+		return nil, err
+	}
+
+	// Load plan edge for response
+	plan, _ := sub.QueryPlan().Only(ctx)
+
+	subInfo := &service.SubscriptionInfo{
+		ID:                 sub.ID,
+		Status:             string(sub.Status),
+		CurrentPeriodStart: sub.CurrentPeriodStart,
+		CurrentPeriodEnd:   sub.CurrentPeriodEnd,
+		CancelAtPeriodEnd:  sub.CancelAtPeriodEnd,
+	}
+	if plan != nil {
+		subInfo.Plan = &service.PlanInfo{
+			ID:                    plan.ID,
+			Name:                  plan.Name,
+			PriceCents:            plan.PriceCents,
+			BillingPeriod:         plan.BillingPeriod,
+			TokenLimit:            plan.TokenLimit,
+			SessionRetentionDays:  plan.SessionRetentionDays,
+			MaxConcurrentSessions: plan.MaxConcurrentSessions,
+			Features:              plan.Features,
+		}
+	}
+
+	return generated.SubscriptionRoutesReactivateSubscription200JSONResponse{
+		Subscription: mapSubscriptionInfo(subInfo),
+	}, nil
+}

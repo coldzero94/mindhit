@@ -317,6 +317,13 @@ export const zSessionUpdateSessionRequest = z.object({
 });
 
 /**
+ * 플랜 변경 요청
+ */
+export const zSubscriptionChangePlanRequest = z.object({
+  plan_id: z.string(),
+});
+
+/**
  * 플랜 정보
  */
 export const zSubscriptionPlan = z.object({
@@ -347,6 +354,22 @@ export const zSubscriptionSubscriptionInfo = z.object({
   current_period_end: z.iso.datetime(),
   cancel_at_period_end: z.boolean(),
   plan: zSubscriptionPlan,
+});
+
+/**
+ * 구독 취소 응답
+ */
+export const zSubscriptionCancelSubscriptionResponse = z.object({
+  subscription: zSubscriptionSubscriptionInfo,
+  message: z.string(),
+});
+
+/**
+ * 플랜 변경 응답
+ */
+export const zSubscriptionChangePlanResponse = z.object({
+  subscription: zSubscriptionSubscriptionInfo,
+  message: z.string(),
 });
 
 /**
@@ -750,6 +773,36 @@ export const zSubscriptionRoutesGetSubscriptionData = z.object({
 export const zSubscriptionRoutesGetSubscriptionResponse =
   zSubscriptionSubscriptionResponse;
 
+export const zSubscriptionRoutesCancelSubscriptionData = z.object({
+  body: z.optional(z.never()),
+  path: z.optional(z.never()),
+  query: z.optional(z.never()),
+  headers: z.object({
+    authorization: z.string(),
+  }),
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zSubscriptionRoutesCancelSubscriptionResponse =
+  zSubscriptionCancelSubscriptionResponse;
+
+export const zSubscriptionRoutesChangePlanData = z.object({
+  body: zSubscriptionChangePlanRequest,
+  path: z.optional(z.never()),
+  query: z.optional(z.never()),
+  headers: z.object({
+    authorization: z.string(),
+  }),
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zSubscriptionRoutesChangePlanResponse =
+  zSubscriptionChangePlanResponse;
+
 export const zSubscriptionRoutesListPlansData = z.object({
   body: z.optional(z.never()),
   path: z.optional(z.never()),
@@ -764,6 +817,21 @@ export const zSubscriptionRoutesListPlansData = z.object({
  */
 export const zSubscriptionRoutesListPlansResponse =
   zSubscriptionPlanListResponse;
+
+export const zSubscriptionRoutesReactivateSubscriptionData = z.object({
+  body: z.optional(z.never()),
+  path: z.optional(z.never()),
+  query: z.optional(z.never()),
+  headers: z.object({
+    authorization: z.string(),
+  }),
+});
+
+/**
+ * The request has succeeded.
+ */
+export const zSubscriptionRoutesReactivateSubscriptionResponse =
+  zSubscriptionSubscriptionResponse;
 
 export const zUsageRoutesGetUsageData = z.object({
   body: z.optional(z.never()),

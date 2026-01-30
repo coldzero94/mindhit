@@ -308,6 +308,27 @@ type SessionUpdateSessionRequest struct {
 	Title       *string `json:"title,omitempty"`
 }
 
+// SubscriptionCancelSubscriptionResponse 구독 취소 응답
+type SubscriptionCancelSubscriptionResponse struct {
+	Message string `json:"message"`
+
+	// Subscription 구독 정보
+	Subscription SubscriptionSubscriptionInfo `json:"subscription"`
+}
+
+// SubscriptionChangePlanRequest 플랜 변경 요청
+type SubscriptionChangePlanRequest struct {
+	PlanId string `json:"plan_id"`
+}
+
+// SubscriptionChangePlanResponse 플랜 변경 응답
+type SubscriptionChangePlanResponse struct {
+	Message string `json:"message"`
+
+	// Subscription 구독 정보
+	Subscription SubscriptionSubscriptionInfo `json:"subscription"`
+}
+
 // SubscriptionPlan 플랜 정보
 type SubscriptionPlan struct {
 	BillingPeriod         string          `json:"billing_period"`
@@ -462,8 +483,23 @@ type SubscriptionRoutesGetSubscriptionParams struct {
 	Authorization string `json:"authorization"`
 }
 
+// SubscriptionRoutesCancelSubscriptionParams defines parameters for SubscriptionRoutesCancelSubscription.
+type SubscriptionRoutesCancelSubscriptionParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// SubscriptionRoutesChangePlanParams defines parameters for SubscriptionRoutesChangePlan.
+type SubscriptionRoutesChangePlanParams struct {
+	Authorization string `json:"authorization"`
+}
+
 // SubscriptionRoutesListPlansParams defines parameters for SubscriptionRoutesListPlans.
 type SubscriptionRoutesListPlansParams struct {
+	Authorization string `json:"authorization"`
+}
+
+// SubscriptionRoutesReactivateSubscriptionParams defines parameters for SubscriptionRoutesReactivateSubscription.
+type SubscriptionRoutesReactivateSubscriptionParams struct {
 	Authorization string `json:"authorization"`
 }
 
@@ -504,6 +540,9 @@ type RoutesBatchEventsJSONRequestBody = EventsBatchEventsRequest
 
 // MindmapRoutesGenerateMindmapJSONRequestBody defines body for MindmapRoutesGenerateMindmap for application/json ContentType.
 type MindmapRoutesGenerateMindmapJSONRequestBody = MindmapGenerateMindmapRequest
+
+// SubscriptionRoutesChangePlanJSONRequestBody defines body for SubscriptionRoutesChangePlan for application/json ContentType.
+type SubscriptionRoutesChangePlanJSONRequestBody = SubscriptionChangePlanRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -580,8 +619,17 @@ type ServerInterface interface {
 	// (GET /v1/subscription)
 	SubscriptionRoutesGetSubscription(c *gin.Context, params SubscriptionRoutesGetSubscriptionParams)
 
+	// (POST /v1/subscription/cancel)
+	SubscriptionRoutesCancelSubscription(c *gin.Context, params SubscriptionRoutesCancelSubscriptionParams)
+
+	// (POST /v1/subscription/change)
+	SubscriptionRoutesChangePlan(c *gin.Context, params SubscriptionRoutesChangePlanParams)
+
 	// (GET /v1/subscription/plans)
 	SubscriptionRoutesListPlans(c *gin.Context, params SubscriptionRoutesListPlansParams)
+
+	// (POST /v1/subscription/reactivate)
+	SubscriptionRoutesReactivateSubscription(c *gin.Context, params SubscriptionRoutesReactivateSubscriptionParams)
 
 	// (GET /v1/usage)
 	UsageRoutesGetUsage(c *gin.Context, params UsageRoutesGetUsageParams)
@@ -1580,6 +1628,90 @@ func (siw *ServerInterfaceWrapper) SubscriptionRoutesGetSubscription(c *gin.Cont
 	siw.Handler.SubscriptionRoutesGetSubscription(c, params)
 }
 
+// SubscriptionRoutesCancelSubscription operation middleware
+func (siw *ServerInterfaceWrapper) SubscriptionRoutesCancelSubscription(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubscriptionRoutesCancelSubscriptionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubscriptionRoutesCancelSubscription(c, params)
+}
+
+// SubscriptionRoutesChangePlan operation middleware
+func (siw *ServerInterfaceWrapper) SubscriptionRoutesChangePlan(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubscriptionRoutesChangePlanParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubscriptionRoutesChangePlan(c, params)
+}
+
 // SubscriptionRoutesListPlans operation middleware
 func (siw *ServerInterfaceWrapper) SubscriptionRoutesListPlans(c *gin.Context) {
 
@@ -1620,6 +1752,48 @@ func (siw *ServerInterfaceWrapper) SubscriptionRoutesListPlans(c *gin.Context) {
 	}
 
 	siw.Handler.SubscriptionRoutesListPlans(c, params)
+}
+
+// SubscriptionRoutesReactivateSubscription operation middleware
+func (siw *ServerInterfaceWrapper) SubscriptionRoutesReactivateSubscription(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SubscriptionRoutesReactivateSubscriptionParams
+
+	headers := c.Request.Header
+
+	// ------------- Required header parameter "authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandler(c, fmt.Errorf("Expected one value for authorization, got %d", n), http.StatusBadRequest)
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter authorization: %w", err), http.StatusBadRequest)
+			return
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Header parameter authorization is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SubscriptionRoutesReactivateSubscription(c, params)
 }
 
 // UsageRoutesGetUsage operation middleware
@@ -1765,7 +1939,10 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PATCH(options.BaseURL+"/v1/sessions/:id/resume", wrapper.RoutesResume)
 	router.POST(options.BaseURL+"/v1/sessions/:id/stop", wrapper.RoutesStop)
 	router.GET(options.BaseURL+"/v1/subscription", wrapper.SubscriptionRoutesGetSubscription)
+	router.POST(options.BaseURL+"/v1/subscription/cancel", wrapper.SubscriptionRoutesCancelSubscription)
+	router.POST(options.BaseURL+"/v1/subscription/change", wrapper.SubscriptionRoutesChangePlan)
 	router.GET(options.BaseURL+"/v1/subscription/plans", wrapper.SubscriptionRoutesListPlans)
+	router.POST(options.BaseURL+"/v1/subscription/reactivate", wrapper.SubscriptionRoutesReactivateSubscription)
 	router.GET(options.BaseURL+"/v1/usage", wrapper.UsageRoutesGetUsage)
 	router.GET(options.BaseURL+"/v1/usage/history", wrapper.UsageRoutesGetUsageHistory)
 }
@@ -2696,6 +2873,77 @@ func (response SubscriptionRoutesGetSubscription401JSONResponse) VisitSubscripti
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SubscriptionRoutesCancelSubscriptionRequestObject struct {
+	Params SubscriptionRoutesCancelSubscriptionParams
+}
+
+type SubscriptionRoutesCancelSubscriptionResponseObject interface {
+	VisitSubscriptionRoutesCancelSubscriptionResponse(w http.ResponseWriter) error
+}
+
+type SubscriptionRoutesCancelSubscription200JSONResponse SubscriptionCancelSubscriptionResponse
+
+func (response SubscriptionRoutesCancelSubscription200JSONResponse) VisitSubscriptionRoutesCancelSubscriptionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesCancelSubscription401JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesCancelSubscription401JSONResponse) VisitSubscriptionRoutesCancelSubscriptionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesChangePlanRequestObject struct {
+	Params SubscriptionRoutesChangePlanParams
+	Body   *SubscriptionRoutesChangePlanJSONRequestBody
+}
+
+type SubscriptionRoutesChangePlanResponseObject interface {
+	VisitSubscriptionRoutesChangePlanResponse(w http.ResponseWriter) error
+}
+
+type SubscriptionRoutesChangePlan200JSONResponse SubscriptionChangePlanResponse
+
+func (response SubscriptionRoutesChangePlan200JSONResponse) VisitSubscriptionRoutesChangePlanResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesChangePlan400JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesChangePlan400JSONResponse) VisitSubscriptionRoutesChangePlanResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesChangePlan401JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesChangePlan401JSONResponse) VisitSubscriptionRoutesChangePlanResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesChangePlan404JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesChangePlan404JSONResponse) VisitSubscriptionRoutesChangePlanResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type SubscriptionRoutesListPlansRequestObject struct {
 	Params SubscriptionRoutesListPlansParams
 }
@@ -2716,6 +2964,32 @@ func (response SubscriptionRoutesListPlans200JSONResponse) VisitSubscriptionRout
 type SubscriptionRoutesListPlans401JSONResponse CommonErrorResponse
 
 func (response SubscriptionRoutesListPlans401JSONResponse) VisitSubscriptionRoutesListPlansResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesReactivateSubscriptionRequestObject struct {
+	Params SubscriptionRoutesReactivateSubscriptionParams
+}
+
+type SubscriptionRoutesReactivateSubscriptionResponseObject interface {
+	VisitSubscriptionRoutesReactivateSubscriptionResponse(w http.ResponseWriter) error
+}
+
+type SubscriptionRoutesReactivateSubscription200JSONResponse SubscriptionSubscriptionResponse
+
+func (response SubscriptionRoutesReactivateSubscription200JSONResponse) VisitSubscriptionRoutesReactivateSubscriptionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubscriptionRoutesReactivateSubscription401JSONResponse CommonErrorResponse
+
+func (response SubscriptionRoutesReactivateSubscription401JSONResponse) VisitSubscriptionRoutesReactivateSubscriptionResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
 
@@ -2849,8 +3123,17 @@ type StrictServerInterface interface {
 	// (GET /v1/subscription)
 	SubscriptionRoutesGetSubscription(ctx context.Context, request SubscriptionRoutesGetSubscriptionRequestObject) (SubscriptionRoutesGetSubscriptionResponseObject, error)
 
+	// (POST /v1/subscription/cancel)
+	SubscriptionRoutesCancelSubscription(ctx context.Context, request SubscriptionRoutesCancelSubscriptionRequestObject) (SubscriptionRoutesCancelSubscriptionResponseObject, error)
+
+	// (POST /v1/subscription/change)
+	SubscriptionRoutesChangePlan(ctx context.Context, request SubscriptionRoutesChangePlanRequestObject) (SubscriptionRoutesChangePlanResponseObject, error)
+
 	// (GET /v1/subscription/plans)
 	SubscriptionRoutesListPlans(ctx context.Context, request SubscriptionRoutesListPlansRequestObject) (SubscriptionRoutesListPlansResponseObject, error)
+
+	// (POST /v1/subscription/reactivate)
+	SubscriptionRoutesReactivateSubscription(ctx context.Context, request SubscriptionRoutesReactivateSubscriptionRequestObject) (SubscriptionRoutesReactivateSubscriptionResponseObject, error)
 
 	// (GET /v1/usage)
 	UsageRoutesGetUsage(ctx context.Context, request UsageRoutesGetUsageRequestObject) (UsageRoutesGetUsageResponseObject, error)
@@ -3590,6 +3873,68 @@ func (sh *strictHandler) SubscriptionRoutesGetSubscription(ctx *gin.Context, par
 	}
 }
 
+// SubscriptionRoutesCancelSubscription operation middleware
+func (sh *strictHandler) SubscriptionRoutesCancelSubscription(ctx *gin.Context, params SubscriptionRoutesCancelSubscriptionParams) {
+	var request SubscriptionRoutesCancelSubscriptionRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubscriptionRoutesCancelSubscription(ctx, request.(SubscriptionRoutesCancelSubscriptionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubscriptionRoutesCancelSubscription")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SubscriptionRoutesCancelSubscriptionResponseObject); ok {
+		if err := validResponse.VisitSubscriptionRoutesCancelSubscriptionResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubscriptionRoutesChangePlan operation middleware
+func (sh *strictHandler) SubscriptionRoutesChangePlan(ctx *gin.Context, params SubscriptionRoutesChangePlanParams) {
+	var request SubscriptionRoutesChangePlanRequestObject
+
+	request.Params = params
+
+	var body SubscriptionRoutesChangePlanJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubscriptionRoutesChangePlan(ctx, request.(SubscriptionRoutesChangePlanRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubscriptionRoutesChangePlan")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SubscriptionRoutesChangePlanResponseObject); ok {
+		if err := validResponse.VisitSubscriptionRoutesChangePlanResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SubscriptionRoutesListPlans operation middleware
 func (sh *strictHandler) SubscriptionRoutesListPlans(ctx *gin.Context, params SubscriptionRoutesListPlansParams) {
 	var request SubscriptionRoutesListPlansRequestObject
@@ -3610,6 +3955,33 @@ func (sh *strictHandler) SubscriptionRoutesListPlans(ctx *gin.Context, params Su
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(SubscriptionRoutesListPlansResponseObject); ok {
 		if err := validResponse.VisitSubscriptionRoutesListPlansResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubscriptionRoutesReactivateSubscription operation middleware
+func (sh *strictHandler) SubscriptionRoutesReactivateSubscription(ctx *gin.Context, params SubscriptionRoutesReactivateSubscriptionParams) {
+	var request SubscriptionRoutesReactivateSubscriptionRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SubscriptionRoutesReactivateSubscription(ctx, request.(SubscriptionRoutesReactivateSubscriptionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubscriptionRoutesReactivateSubscription")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SubscriptionRoutesReactivateSubscriptionResponseObject); ok {
+		if err := validResponse.VisitSubscriptionRoutesReactivateSubscriptionResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -3674,70 +4046,73 @@ func (sh *strictHandler) UsageRoutesGetUsageHistory(ctx *gin.Context, params Usa
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"dkJburL0rwAAAP//8tZ/Jrx/AAA=",
+	"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",
+	"sVV1CZ25MnVlSlu5vfKvAAAA//8bt0KXoooAAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

@@ -189,3 +189,68 @@ func planToInfo(p *ent.Plan) *PlanInfo {
 		Features:              p.Features,
 	}
 }
+
+// ChangePlan changes the user's subscription plan.
+func (s *SubscriptionService) ChangePlan(ctx context.Context, userID uuid.UUID, newPlanID string) (*ent.Subscription, error) {
+	// Verify new plan exists
+	newPlan, err := s.client.Plan.Get(ctx, newPlanID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, ErrPlanNotFound
+		}
+		return nil, err
+	}
+
+	now := time.Now().UTC()
+	periodEnd := now.AddDate(0, 0, 30)
+
+	// Check for existing subscription
+	currentSub, err := s.GetSubscription(ctx, userID)
+	if err == nil {
+		// Update existing subscription
+		return s.client.Subscription.
+			UpdateOne(currentSub).
+			SetPlanID(newPlan.ID).
+			SetStatus(subscription.StatusActive).
+			SetCurrentPeriodStart(now).
+			SetCurrentPeriodEnd(periodEnd).
+			SetCancelAtPeriodEnd(false).
+			Save(ctx)
+	}
+
+	// Create new subscription if none exists
+	return s.client.Subscription.
+		Create().
+		SetUserID(userID).
+		SetPlanID(newPlan.ID).
+		SetStatus(subscription.StatusActive).
+		SetCurrentPeriodStart(now).
+		SetCurrentPeriodEnd(periodEnd).
+		Save(ctx)
+}
+
+// CancelSubscription marks the subscription to cancel at period end.
+func (s *SubscriptionService) CancelSubscription(ctx context.Context, userID uuid.UUID) (*ent.Subscription, error) {
+	sub, err := s.GetSubscription(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Subscription.
+		UpdateOne(sub).
+		SetCancelAtPeriodEnd(true).
+		Save(ctx)
+}
+
+// ReactivateSubscription removes the cancellation mark.
+func (s *SubscriptionService) ReactivateSubscription(ctx context.Context, userID uuid.UUID) (*ent.Subscription, error) {
+	sub, err := s.GetSubscription(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Subscription.
+		UpdateOne(sub).
+		SetCancelAtPeriodEnd(false).
+		Save(ctx)
+}
