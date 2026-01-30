@@ -27,13 +27,36 @@ func TestHandleMindmapGenerate_NoAIManager(t *testing.T) {
 		aiManager: nil, // No AI manager
 	}
 
+	// Create test user
+	user, err := client.User.Create().
+		SetEmail("test-noai-" + uuid.New().String() + "@example.com").
+		SetPasswordHash("hashed").
+		Save(ctx)
+	require.NoError(t, err)
+
+	// Create test session
+	sess, err := client.Session.Create().
+		SetUserID(user.ID).
+		SetSessionStatus(session.SessionStatusProcessing).
+		SetStartedAt(time.Now()).
+		Save(ctx)
+	require.NoError(t, err)
+
+	// Create mindmap_graph record in pending state
+	_, err = client.MindmapGraph.Create().
+		SetSessionID(sess.ID).
+		SetStatus("pending").
+		Save(ctx)
+	require.NoError(t, err)
+
 	// Create task payload
-	payload, _ := json.Marshal(queue.MindmapGeneratePayload{SessionID: uuid.New().String()})
+	payload, _ := json.Marshal(queue.MindmapGeneratePayload{SessionID: sess.ID.String()})
 	task := asynq.NewTask(queue.TypeMindmapGenerate, payload)
 
-	// Should return nil (skip) when AI manager is not configured
-	err := h.HandleMindmapGenerate(ctx, task)
-	assert.NoError(t, err)
+	// Should return error when AI manager is not configured
+	err = h.HandleMindmapGenerate(ctx, task)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ai manager not configured")
 }
 
 func TestHandleMindmapGenerate_InvalidPayload(t *testing.T) {
@@ -223,7 +246,14 @@ func TestHandleMindmapGenerate_WithSession(t *testing.T) {
 		Save(ctx)
 	require.NoError(t, err)
 
-	// Create handler without AI manager (will skip processing)
+	// Create mindmap_graph record in pending state
+	_, err = client.MindmapGraph.Create().
+		SetSessionID(sess.ID).
+		SetStatus("pending").
+		Save(ctx)
+	require.NoError(t, err)
+
+	// Create handler without AI manager (will return error)
 	h := &handlers{
 		client:    client,
 		aiManager: nil,
@@ -232,9 +262,10 @@ func TestHandleMindmapGenerate_WithSession(t *testing.T) {
 	payload, _ := json.Marshal(queue.MindmapGeneratePayload{SessionID: sess.ID.String()})
 	task := asynq.NewTask(queue.TypeMindmapGenerate, payload)
 
-	// Should skip without error since no AI manager
+	// Should return error since no AI manager is configured
 	err = h.HandleMindmapGenerate(ctx, task)
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "ai manager not configured")
 }
 
 func TestMindmapNodePositioning(t *testing.T) {
@@ -293,7 +324,7 @@ func TestConversionFunctions(t *testing.T) {
 	}
 	layout := service.MindmapLayout{
 		Type:   "galaxy",
-		Params: map[string]interface{}{"scale": 1.0},
+		Params: map[string]any{"scale": 1.0},
 	}
 
 	nodesMap := service.ConvertNodesToMaps(nodes)
