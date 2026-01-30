@@ -17,6 +17,14 @@ export function useMindmap(sessionId: string) {
     queryKey: mindmapKeys.detail(sessionId),
     queryFn: () => mindmapApi.get(sessionId),
     enabled: !!sessionId,
+    // Auto-poll every 2 seconds when status is pending or generating
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.status === "pending" || data?.status === "generating") {
+        return 2000; // Poll every 2 seconds
+      }
+      return false; // Stop polling when completed or failed
+    },
     retry: (failureCount, error) => {
       // Don't retry on 404 (mindmap not found)
       if ((error as { response?: { status?: number } })?.response?.status === 404) {
