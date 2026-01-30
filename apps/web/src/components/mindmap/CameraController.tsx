@@ -65,21 +65,6 @@ export function CameraController({
     animationProgress.current = 0;
   }, [camera, controls, focusDistance]);
 
-  const animateToDefault = useCallback(() => {
-    startPosition.current.copy(camera.position);
-    targetPosition.current.set(0, 0, 400);
-
-    if (controls && 'target' in controls) {
-      startTarget.current.copy((controls as { target: THREE.Vector3 }).target);
-    } else {
-      startTarget.current.set(0, 0, 0);
-    }
-    targetTarget.current.set(0, 0, 0);
-
-    isAnimating.current = true;
-    animationProgress.current = 0;
-  }, [camera, controls]);
-
   // Watch for selectedNode changes
   useEffect(() => {
     if (selectedNode) {
