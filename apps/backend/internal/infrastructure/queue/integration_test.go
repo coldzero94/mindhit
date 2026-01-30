@@ -127,14 +127,18 @@ func TestEndToEnd_EnqueueAndProcess_Integration(t *testing.T) {
 
 	redisAddr := getTestRedisAddr()
 
+	// Use a unique queue name to avoid conflicts with other workers
+	testQueue := "test-e2e-queue"
+
 	// Create client
 	client := NewClient(redisAddr)
 	defer func() { _ = client.Close() }()
 
-	// Create server with test handler
+	// Create server with test handler using isolated queue
 	server := NewServer(ServerConfig{
 		RedisAddr:   redisAddr,
 		Concurrency: 1,
+		Queues:      map[string]int{testQueue: 1},
 	})
 
 	processed := make(chan string, 1)
@@ -151,9 +155,9 @@ func TestEndToEnd_EnqueueAndProcess_Integration(t *testing.T) {
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 
-	// Enqueue task
+	// Enqueue task to the isolated test queue
 	task := asynq.NewTask("test:e2e", []byte("hello-world"))
-	_, err := client.Enqueue(task)
+	_, err := client.Enqueue(task, asynq.Queue(testQueue))
 	require.NoError(t, err)
 
 	// Wait for processing
