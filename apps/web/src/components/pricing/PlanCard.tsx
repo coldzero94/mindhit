@@ -53,7 +53,7 @@ export function PlanCard({
     if (!isLoggedIn) {
       if (plan.id === "free") return "무료 시작";
       if (plan.id === "enterprise") return "문의하기";
-      return "업그레이드";
+      return "시작하기"; // Pro 등 유료 플랜
     }
     if (isCurrentPlan) return "현재 플랜";
     if (plan.id === "enterprise") return "문의하기";
