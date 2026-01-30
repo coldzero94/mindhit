@@ -73,19 +73,8 @@ func (c *SubscriptionController) SubscriptionRoutesGetSubscription(ctx context.C
 }
 
 // SubscriptionRoutesListPlans handles GET /v1/subscription/plans.
-func (c *SubscriptionController) SubscriptionRoutesListPlans(ctx context.Context, request generated.SubscriptionRoutesListPlansRequestObject) (generated.SubscriptionRoutesListPlansResponseObject, error) {
-	_, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.SubscriptionRoutesListPlans401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
+// This endpoint is public and does not require authentication.
+func (c *SubscriptionController) SubscriptionRoutesListPlans(ctx context.Context, _ generated.SubscriptionRoutesListPlansRequestObject) (generated.SubscriptionRoutesListPlansResponseObject, error) {
 	plans, err := c.subscriptionService.GetAvailablePlans(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to get available plans", "error", err)

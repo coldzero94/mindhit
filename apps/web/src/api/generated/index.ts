@@ -206,8 +206,6 @@ export type {
   SubscriptionRoutesGetSubscriptionResponse,
   SubscriptionRoutesGetSubscriptionResponses,
   SubscriptionRoutesListPlansData,
-  SubscriptionRoutesListPlansError,
-  SubscriptionRoutesListPlansErrors,
   SubscriptionRoutesListPlansResponse,
   SubscriptionRoutesListPlansResponses,
   SubscriptionRoutesReactivateSubscriptionData,

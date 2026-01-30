@@ -82,7 +82,6 @@ import type {
   SubscriptionRoutesGetSubscriptionErrors,
   SubscriptionRoutesGetSubscriptionResponses,
   SubscriptionRoutesListPlansData,
-  SubscriptionRoutesListPlansErrors,
   SubscriptionRoutesListPlansResponses,
   SubscriptionRoutesReactivateSubscriptionData,
   SubscriptionRoutesReactivateSubscriptionErrors,
@@ -503,16 +502,16 @@ export const subscriptionRoutesChangePlan = <
   });
 
 /**
- * 사용 가능한 플랜 목록 조회
+ * 사용 가능한 플랜 목록 조회 (인증 불필요)
  */
 export const subscriptionRoutesListPlans = <
   ThrowOnError extends boolean = false,
 >(
-  options: Options<SubscriptionRoutesListPlansData, ThrowOnError>,
+  options?: Options<SubscriptionRoutesListPlansData, ThrowOnError>,
 ) =>
-  (options.client ?? client).get<
+  (options?.client ?? client).get<
     SubscriptionRoutesListPlansResponses,
-    SubscriptionRoutesListPlansErrors,
+    unknown,
     ThrowOnError
   >({ url: "/v1/subscription/plans", ...options });
 

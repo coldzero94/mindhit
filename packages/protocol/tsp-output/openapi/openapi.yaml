@@ -945,13 +945,8 @@ paths:
   /v1/subscription/plans:
     get:
       operationId: SubscriptionRoutes_listPlans
-      description: 사용 가능한 플랜 목록 조회
-      parameters:
-        - name: authorization
-          in: header
-          required: true
-          schema:
-            type: string
+      description: 사용 가능한 플랜 목록 조회 (인증 불필요)
+      parameters: []
       responses:
         '200':
           description: The request has succeeded.
@@ -959,12 +954,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Subscription.PlanListResponse'
-        '401':
-          description: Access is unauthorized.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Common.ErrorResponse'
   /v1/subscription/reactivate:
     post:
       operationId: SubscriptionRoutes_reactivateSubscription

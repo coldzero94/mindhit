@@ -807,9 +807,6 @@ export const zSubscriptionRoutesListPlansData = z.object({
   body: z.optional(z.never()),
   path: z.optional(z.never()),
   query: z.optional(z.never()),
-  headers: z.object({
-    authorization: z.string(),
-  }),
 });
 
 /**

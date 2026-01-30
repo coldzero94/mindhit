@@ -83,15 +83,10 @@ namespace SubscriptionRoutes {
 
   @get
   @route("/plans")
-  @doc("사용 가능한 플랜 목록 조회")
-  op listPlans(
-    @header authorization: string
-  ): {
+  @doc("사용 가능한 플랜 목록 조회 (인증 불필요)")
+  op listPlans(): {
     @statusCode statusCode: 200;
     @body body: PlanListResponse;
-  } | {
-    @statusCode statusCode: 401;
-    @body body: Common.ErrorResponse;
   };
 
   @post

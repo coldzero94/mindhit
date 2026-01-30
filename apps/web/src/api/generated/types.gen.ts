@@ -1393,23 +1393,10 @@ export type SubscriptionRoutesChangePlanResponse =
 
 export type SubscriptionRoutesListPlansData = {
   body?: never;
-  headers: {
-    authorization: string;
-  };
   path?: never;
   query?: never;
   url: "/v1/subscription/plans";
 };
-
-export type SubscriptionRoutesListPlansErrors = {
-  /**
-   * Access is unauthorized.
-   */
-  401: CommonErrorResponse;
-};
-
-export type SubscriptionRoutesListPlansError =
-  SubscriptionRoutesListPlansErrors[keyof SubscriptionRoutesListPlansErrors];
 
 export type SubscriptionRoutesListPlansResponses = {
   /**
