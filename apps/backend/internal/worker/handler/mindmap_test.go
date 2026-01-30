@@ -133,13 +133,18 @@ func TestBuildMindmapFromRelationship(t *testing.T) {
 	}
 
 	durationMsMap := make(map[string]int)
+	urlDataMap := make(map[string]urlData)
 	for _, topic := range response.Topics {
 		for _, page := range topic.Pages {
 			durationMsMap[page.URLID] = 30000 // 30 seconds
+			urlDataMap[page.URLID] = urlData{
+				URL:     "https://example.com/" + page.URLID,
+				Summary: "Test summary for " + page.Title,
+			}
 		}
 	}
 
-	result := buildMindmapFromRelationship(response, durationMsMap)
+	result := buildMindmapFromRelationship(response, durationMsMap, urlDataMap)
 
 	// Verify core node
 	assert.NotEmpty(t, result.Nodes)
@@ -178,7 +183,7 @@ func TestBuildMindmapFromRelationship_EmptyTopics(t *testing.T) {
 		Connections: nil,
 	}
 
-	result := buildMindmapFromRelationship(response, make(map[string]int))
+	result := buildMindmapFromRelationship(response, make(map[string]int), make(map[string]urlData))
 
 	// Should still have core node
 	assert.Len(t, result.Nodes, 1)
@@ -260,7 +265,7 @@ func TestMindmapNodePositioning(t *testing.T) {
 		},
 	}
 
-	result := buildMindmapFromRelationship(response, make(map[string]int))
+	result := buildMindmapFromRelationship(response, make(map[string]int), make(map[string]urlData))
 
 	// Core should be at center
 	assert.NotNil(t, result.Nodes[0].Position)

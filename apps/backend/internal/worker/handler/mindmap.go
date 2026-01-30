@@ -13,6 +13,7 @@ import (
 	"github.com/hibiken/asynq"
 
 	"github.com/mindhit/api/ent"
+	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/session"
 	"github.com/mindhit/api/internal/infrastructure/ai"
 	"github.com/mindhit/api/internal/infrastructure/metrics"
@@ -96,6 +97,12 @@ type RelationshipGraphResponse struct {
 	} `json:"connections"`
 }
 
+// urlData stores URL information for page nodes.
+type urlData struct {
+	URL     string
+	Summary string
+}
+
 // HandleMindmapGenerate processes mindmap generation for a session.
 func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) error {
 	start := time.Now()
@@ -113,15 +120,50 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 
 	slog.Info("generating mindmap", "session_id", payload.SessionID)
 
-	// Defer metrics recording
+	// Get the mindmap for this session
+	mindmap, err := h.client.MindmapGraph.Query().
+		Where(mindmapgraph.HasSessionWith(session.IDEQ(sessionID))).
+		Only(ctx)
+	if err != nil {
+		return fmt.Errorf("get mindmap: %w", err)
+	}
+
+	// Update status to generating
+	_, err = h.client.MindmapGraph.UpdateOneID(mindmap.ID).
+		SetStatus(mindmapgraph.StatusGenerating).
+		Save(ctx)
+	if err != nil {
+		return fmt.Errorf("update mindmap status to generating: %w", err)
+	}
+
+	// Defer metrics recording and error handling
+	var processingErr error
 	defer func() {
 		metrics.WorkerJobDuration.WithLabelValues(jobType).Observe(time.Since(start).Seconds())
+
+		// If there was a processing error, mark mindmap as failed
+		if processingErr != nil {
+			errMsg := processingErr.Error()
+			if len(errMsg) > 500 {
+				errMsg = errMsg[:500]
+			}
+			_, updateErr := h.client.MindmapGraph.UpdateOneID(mindmap.ID).
+				SetStatus(mindmapgraph.StatusFailed).
+				SetErrorMessage(errMsg).
+				Save(ctx)
+			if updateErr != nil {
+				slog.Error("failed to update mindmap status to failed", "error", updateErr)
+			}
+			metrics.WorkerJobsProcessed.WithLabelValues(jobType, "failure").Inc()
+			metrics.MindmapsGenerated.WithLabelValues("failure").Inc()
+		}
 	}()
 
 	// Check if AI manager is available
 	if h.aiManager == nil {
 		slog.Warn("ai manager not configured, skipping mindmap generation")
-		return nil
+		processingErr = fmt.Errorf("ai manager not configured")
+		return processingErr
 	}
 
 	// Get session with all related data
@@ -136,12 +178,14 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 		Only(ctx)
 
 	if err != nil {
-		return fmt.Errorf("get session: %w", err)
+		processingErr = fmt.Errorf("get session: %w", err)
+		return processingErr
 	}
 
 	// Build page data with keywords
 	var pageData strings.Builder
 	durationMsMap := make(map[string]int)
+	urlDataMap := make(map[string]urlData) // Store URL info for page nodes
 
 	for _, pv := range sess.Edges.PageVisits {
 		if pv.Edges.URL == nil {
@@ -154,6 +198,12 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 			durationMs = *pv.DurationMs
 		}
 		durationMsMap[u.ID.String()] = durationMs
+
+		// Store URL data for later use in page nodes
+		urlDataMap[u.ID.String()] = urlData{
+			URL:     u.URL,
+			Summary: u.Summary,
+		}
 
 		// Optimized: removed URL and Duration (not needed for AI analysis)
 		// Duration is tracked in durationMsMap for node sizing
@@ -201,7 +251,8 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 				"tokens_used", status.TokensUsed,
 				"token_limit", status.TokenLimit,
 			)
-			return fmt.Errorf("token limit exceeded: used %d/%d", status.TokensUsed, status.TokenLimit)
+			processingErr = fmt.Errorf("token limit exceeded: used %d/%d", status.TokensUsed, status.TokenLimit)
+			return processingErr
 		}
 	}
 
@@ -220,7 +271,8 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 
 	response, err := h.aiManager.Chat(ctx, ai.TaskMindmap, req)
 	if err != nil {
-		return fmt.Errorf("ai generate mindmap: %w", err)
+		processingErr = fmt.Errorf("ai generate mindmap: %w", err)
+		return processingErr
 	}
 
 	// Record token usage
@@ -238,28 +290,30 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 
 	var aiResp RelationshipGraphResponse
 	if err := json.Unmarshal([]byte(response.Content), &aiResp); err != nil {
-		return fmt.Errorf("parse ai response: %w", err)
+		processingErr = fmt.Errorf("parse ai response: %w", err)
+		return processingErr
 	}
 
 	// Convert AI response to mindmap data
-	mindmapData := buildMindmapFromRelationship(aiResp, durationMsMap)
+	mindmapData := buildMindmapFromRelationship(aiResp, durationMsMap, urlDataMap)
 
 	// Convert to storage format ([]map[string]interface{})
 	nodesData := service.ConvertNodesToMaps(mindmapData.Nodes)
 	edgesData := service.ConvertEdgesToMaps(mindmapData.Edges)
 	layoutData := service.ConvertLayoutToMap(mindmapData.Layout)
 
-	// Save mindmap to database
+	// Update mindmap with generated data and set status to completed
 	_, err = h.client.MindmapGraph.
-		Create().
-		SetSessionID(sessionID).
+		UpdateOneID(mindmap.ID).
+		SetStatus(mindmapgraph.StatusCompleted).
 		SetNodes(nodesData).
 		SetGraphEdges(edgesData).
 		SetLayout(layoutData).
 		Save(ctx)
 
 	if err != nil {
-		return fmt.Errorf("save mindmap: %w", err)
+		processingErr = fmt.Errorf("save mindmap: %w", err)
+		return processingErr
 	}
 
 	// Update session status to completed
@@ -269,7 +323,8 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 		Save(ctx)
 
 	if err != nil {
-		return fmt.Errorf("update session status: %w", err)
+		processingErr = fmt.Errorf("update session status: %w", err)
+		return processingErr
 	}
 
 	// Record success metrics
@@ -291,6 +346,7 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 func buildMindmapFromRelationship(
 	resp RelationshipGraphResponse,
 	durationMsMap map[string]int,
+	urlDataMap map[string]urlData,
 ) service.MindmapData {
 	var nodes []service.MindmapNode
 	var edges []service.MindmapEdge
@@ -359,6 +415,18 @@ func buildMindmapFromRelationship(
 			}
 			size *= (0.5 + page.Relevance*0.5)
 
+			// Get URL data for this page
+			pageData := map[string]interface{}{
+				"url_id":    page.URLID,
+				"relevance": page.Relevance,
+			}
+			if ud, ok := urlDataMap[page.URLID]; ok {
+				pageData["url"] = ud.URL
+				if ud.Summary != "" {
+					pageData["summary"] = ud.Summary
+				}
+			}
+
 			nodes = append(nodes, service.MindmapNode{
 				ID:    pageID,
 				Label: page.Title,
@@ -370,10 +438,7 @@ func buildMindmapFromRelationship(
 					Y: radius*math.Sin(angle) + subRadius*math.Sin(subAngle),
 					Z: 0,
 				},
-				Data: map[string]interface{}{
-					"url_id":    page.URLID,
-					"relevance": page.Relevance,
-				},
+				Data: pageData,
 			})
 
 			edges = append(edges, service.MindmapEdge{
