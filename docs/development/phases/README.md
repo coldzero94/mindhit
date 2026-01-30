@@ -34,6 +34,7 @@ phases/
 ├── phase-11.5-animation.md      # 애니메이션 및 인터랙션
 ├── phase-12-monitoring.md       # 프로덕션 모니터링
 ├── phase-13-deployment.md       # 배포 및 운영
+├── phase-14.1-subscription-ui.md # 구독 관리 UI (Stripe 없이)
 └── phase-14-billing.md          # Stripe 결제 연동
 ```
 
@@ -66,6 +67,7 @@ phases/
 | 11.5 | [애니메이션 및 인터랙션](./phase-11.5-animation.md) | ✅ 완료 | 2 steps |
 | 12 | [프로덕션 모니터링](./phase-12-monitoring.md) | ✅ 완료 | 4 steps |
 | 13 | [배포 및 운영](./phase-13-deployment.md) | ⬜ 대기 | 4 steps |
+| 14.1 | [구독 관리 UI (Stripe 없이)](./phase-14.1-subscription-ui.md) | ⬜ 대기 | 4 steps |
 | 14 | [Stripe 결제 연동](./phase-14-billing.md) | ⬜ 대기 | 3 steps |
 
 **상태 범례:**
@@ -131,7 +133,9 @@ flowchart TD
     P11_4 --> P12
     P11_5 --> P12
     P12 --> P13[Phase 13<br/>배포/운영]
-    P13 --> P14[Phase 14<br/>Stripe 결제]
+    P9 --> P14_1[Phase 14.1<br/>구독 관리 UI]
+    P11_4 --> P14_1
+    P14_1 --> P14[Phase 14<br/>Stripe 결제]
 
     style P0 fill:#e1f5fe
     style P1 fill:#e1f5fe
@@ -156,6 +160,7 @@ flowchart TD
     style P11_5 fill:#e1bee7
     style P12 fill:#efebe9
     style P13 fill:#efebe9
+    style P14_1 fill:#fff9c4
     style P14 fill:#fff9c4
 ```
 
@@ -242,7 +247,8 @@ flowchart TD
 
 ### 수익화
 
-23. Phase 14 (Stripe 결제)
+23. Phase 14.1 (구독 관리 UI) - Phase 9, 11.4 의존
+24. Phase 14 (Stripe 결제) - Phase 14.1 의존
 
 ---
 
