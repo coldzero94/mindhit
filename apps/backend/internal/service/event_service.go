@@ -156,11 +156,13 @@ func (s *EventService) processHighlight(
 	sessionID uuid.UUID,
 	event BatchEvent,
 ) error {
-	text, ok := event.Payload["text"].(string)
-	if !ok || text == "" {
+	// Text is stored in Content field by the controller
+	text := event.Content
+	if text == "" {
 		return nil
 	}
 
+	// Selector and color come from Payload map
 	selector, _ := event.Payload["selector"].(string)
 	color, _ := event.Payload["color"].(string)
 	if color == "" {

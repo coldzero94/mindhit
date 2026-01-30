@@ -70,8 +70,8 @@ func TestEventService_ProcessBatchEvents_WithHighlight(t *testing.T) {
 		{
 			Type:      "highlight",
 			Timestamp: time.Now().UnixMilli(),
+			Content:   "Important text",
 			Payload: map[string]interface{}{
-				"text":     "Important text",
 				"selector": "#main p",
 				"color":    "#FF0000",
 			},
@@ -179,7 +179,7 @@ func TestEventService_GetEventsBySession_Success(t *testing.T) {
 	events := []service.BatchEvent{
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/1"},
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/2"},
-		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Payload: map[string]interface{}{"text": "test"}},
+		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Content: "test"},
 	}
 	_, err = eventService.ProcessBatchEvents(ctx, sess.ID, events)
 	require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestEventService_GetEventsBySession_FilterByType(t *testing.T) {
 	events := []service.BatchEvent{
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/1"},
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/2"},
-		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Payload: map[string]interface{}{"text": "test"}},
+		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Content: "test"},
 	}
 	_, err = eventService.ProcessBatchEvents(ctx, sess.ID, events)
 	require.NoError(t, err)
@@ -266,8 +266,8 @@ func TestEventService_GetEventStats_Success(t *testing.T) {
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/1"},
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/2"},
 		{Type: "page_visit", Timestamp: time.Now().UnixMilli(), URL: "https://example.com/1"}, // duplicate URL
-		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Payload: map[string]interface{}{"text": "test1"}},
-		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Payload: map[string]interface{}{"text": "test2"}},
+		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Content: "test1"},
+		{Type: "highlight", Timestamp: time.Now().UnixMilli(), Content: "test2"},
 	}
 	_, err = eventService.ProcessBatchEvents(ctx, sess.ID, events)
 	require.NoError(t, err)

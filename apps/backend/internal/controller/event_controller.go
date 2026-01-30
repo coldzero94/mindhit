@@ -109,12 +109,22 @@ func (c *EventController) RoutesBatchEvents(ctx context.Context, request generat
 	// Convert generated events to service events
 	batchEvents := make([]service.BatchEvent, len(request.Body.Events))
 	for i, e := range request.Body.Events {
+		// Build payload map for additional fields (selector, color)
+		payload := make(map[string]interface{})
+		if e.Selector != nil {
+			payload["selector"] = *e.Selector
+		}
+		if e.Color != nil {
+			payload["color"] = *e.Color
+		}
+
 		batchEvents[i] = service.BatchEvent{
 			Type:      e.Type,
 			Timestamp: e.Timestamp,
 			URL:       ptrToString(e.Url),
 			Title:     ptrToString(e.Title),
 			Content:   ptrToString(e.Text),
+			Payload:   payload,
 		}
 	}
 
@@ -225,10 +235,16 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 			}
 			pageVisits = append(pageVisits, pv)
 		} else if e.EventType == "highlight" {
+			// Text is stored in "content" field (mapped from BatchEvent.Content)
+			text := getStringFromPayload(payload, "content")
+			color := getStringFromPayload(payload, "color")
+			if color == "" {
+				color = "#FFFF00"
+			}
 			h := generated.EventsHighlight{
 				Id:        e.ID.String(),
-				Text:      getStringFromPayload(payload, "text"),
-				Color:     "#FFFF00",
+				Text:      text,
+				Color:     color,
 				CreatedAt: e.CreatedAt,
 			}
 			highlights = append(highlights, h)
