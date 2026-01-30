@@ -10,6 +10,11 @@ tasks:
       cache: false
       persistent: true
 
+  clean:
+    command: rm -rf .next .turbo node_modules/.cache
+    options:
+      cache: false
+
   build:
     command: next build
     inputs:

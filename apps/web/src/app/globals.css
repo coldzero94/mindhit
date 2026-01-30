@@ -79,6 +79,13 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Landing page brand colors - single color theme */
+  --brand-primary: var(--primary); /* oklch(0.205 0 0) - dark */
+  --brand-primary-light: oklch(0.85 0 0); /* lighter tone */
+  --brand-primary-lighter: oklch(0.95 0 0); /* even lighter */
+  --brand-primary-dark: oklch(0.15 0 0); /* darker tone */
+  --brand-accent: var(--chart-1); /* oklch(0.646 0.222 41.116) - orange for highlights */
 }
 
 .dark {
@@ -121,5 +128,48 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Performance optimization for animations */
+  .will-animate {
+    will-change: transform, opacity;
+  }
+
+  /* Landing page section backgrounds (single color theme with tonal variations) */
+  .section-light {
+    background-color: oklch(1 0 0); /* pure white */
+  }
+
+  .section-lighter {
+    background-color: oklch(0.98 0 0); /* off-white */
+  }
+
+  .section-gray {
+    background-color: oklch(0.95 0 0); /* light gray */
+  }
+
+  .section-dark {
+    background-color: oklch(0.205 0 0); /* dark (brand primary) */
+    color: oklch(1 0 0); /* white text */
+  }
+
+  /* Gradient overlay for depth */
+  .gradient-overlay {
+    background: linear-gradient(
+      to bottom,
+      oklch(1 0 0 / 0),
+      oklch(0.95 0 0 / 0.5)
+    );
+  }
+
+  /* Brand accent highlight */
+  .text-brand-accent {
+    color: var(--brand-accent);
+  }
+
+  .bg-brand-accent {
+    background-color: var(--brand-accent);
   }
 }

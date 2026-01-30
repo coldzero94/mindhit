@@ -9,7 +9,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "src/api/generated/**"],
+    exclude: [
+      "node_modules",
+      ".next",
+      "src/api/generated/**",
+      "src/test/integration/**", // Integration tests require backend
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

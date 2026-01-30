@@ -45,8 +45,8 @@ describe("SubscriptionCard", () => {
       render(<SubscriptionCard />);
 
       await waitFor(() => {
-        // mockPlan.token_limit is 10000
-        expect(screen.getByText(/10,000 토큰/)).toBeInTheDocument();
+        // mockPlan.token_limit is 10000, displayed as "월 10,000 토큰 제공"
+        expect(screen.getByText(/월.*10,000.*토큰/)).toBeInTheDocument();
       });
     });
 

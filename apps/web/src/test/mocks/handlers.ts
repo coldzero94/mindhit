@@ -118,7 +118,7 @@ function createHandlers(apiUrl: string) {
 // Phase 11 Mock data
 
 export const mockPlan = {
-  id: "plan-free",
+  id: "free",
   name: "Free",
   description: "Free plan for individual users",
   token_limit: 10000,
@@ -128,7 +128,7 @@ export const mockPlan = {
 };
 
 export const mockProPlan = {
-  id: "plan-pro",
+  id: "pro",
   name: "Pro",
   description: "Pro plan for power users",
   token_limit: 100000,
@@ -140,11 +140,12 @@ export const mockProPlan = {
 export const mockSubscription = {
   id: "sub-1",
   user_id: "user-1",
-  plan_id: "plan-free",
+  plan_id: "free",
   plan: mockPlan,
   status: "active" as const,
   current_period_start: "2025-01-01T00:00:00Z",
   current_period_end: "2025-02-01T00:00:00Z",
+  cancel_at_period_end: false,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
@@ -292,10 +293,12 @@ export const mockMindmapEdges = [
 export const mockMindmap = {
   id: "mindmap-1",
   session_id: "session-1",
-  nodes: mockMindmapNodes,
-  edges: mockMindmapEdges,
-  layout: { type: "galaxy" as const, params: {} },
-  generated_at: "2025-01-01T12:00:00Z",
+  status: "completed" as const,
+  data: {
+    nodes: mockMindmapNodes,
+    edges: mockMindmapEdges,
+    layout: { type: "galaxy" as const, params: {} },
+  },
   created_at: "2025-01-01T12:00:00Z",
   updated_at: "2025-01-01T12:00:00Z",
 };
@@ -352,9 +355,8 @@ function createPhase11Handlers(apiUrl: string) {
       });
     }),
 
-    http.post(`${apiUrl}/sessions/:sessionId/mindmap/generate`, async ({ params, request }) => {
+    http.post(`${apiUrl}/sessions/:sessionId/mindmap/generate`, async ({ params }) => {
       const { sessionId } = params;
-      const body = await request.json() as { force?: boolean } | undefined;
 
       if (sessionId === "not-found") {
         return HttpResponse.json(
@@ -367,8 +369,7 @@ function createPhase11Handlers(apiUrl: string) {
         mindmap: {
           ...mockMindmap,
           session_id: sessionId as string,
-          generated_at: new Date().toISOString(),
-          ...(body?.force && { regenerated: true }),
+          updated_at: new Date().toISOString(),
         },
       });
     }),
