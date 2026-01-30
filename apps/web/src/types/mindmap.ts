@@ -6,6 +6,18 @@ export interface MindmapNodePosition {
 
 export type MindmapNodeType = 'core' | 'topic' | 'subtopic' | 'page';
 
+export interface MindmapNodeData {
+  description?: string;
+  urls?: string[];
+  keywords?: string[];
+  visitCount?: number;
+  totalDuration?: number;
+  url_id?: string;
+  url?: string;
+  summary?: string;
+  relevance?: number;
+}
+
 export interface MindmapNode {
   id: string;
   label: string;
@@ -13,13 +25,7 @@ export interface MindmapNode {
   size: number;
   color: string;
   position?: MindmapNodePosition;
-  data: {
-    description?: string;
-    urls?: string[];
-    visitCount?: number;
-    totalDuration?: number;
-    [key: string]: unknown;
-  };
+  data: MindmapNodeData;
 }
 
 export interface MindmapEdge {
