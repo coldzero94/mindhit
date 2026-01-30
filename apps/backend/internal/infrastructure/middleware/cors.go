@@ -11,8 +11,8 @@ import (
 func CORS() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			// Allow localhost:3000 for web app
-			if origin == "http://localhost:3000" {
+			// Allow localhost on any port for development
+			if strings.HasPrefix(origin, "http://localhost:") {
 				return true
 			}
 			// Allow any chrome-extension:// origin
