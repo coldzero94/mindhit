@@ -1,66 +1,116 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { MindmapNode } from '@/types/mindmap';
 
 interface CameraControllerProps {
   selectedNode: MindmapNode | null;
-  defaultPosition?: [number, number, number];
   focusDistance?: number;
-  lerpFactor?: number;
+  animationDuration?: number;
+  onAnimationComplete?: () => void;
 }
 
 export function CameraController({
   selectedNode,
-  defaultPosition = [0, 0, 500],
-  focusDistance = 150,
-  lerpFactor = 0.05,
+  focusDistance = 120,
+  animationDuration = 800,
+  onAnimationComplete,
 }: CameraControllerProps) {
-  const { camera } = useThree();
-  const targetPosition = useRef(new THREE.Vector3(...defaultPosition));
-  const targetLookAt = useRef(new THREE.Vector3(0, 0, 0));
+  const { camera, controls } = useThree();
+  const isAnimating = useRef(false);
+  const animationProgress = useRef(0);
+  const startPosition = useRef(new THREE.Vector3());
+  const targetPosition = useRef(new THREE.Vector3());
+  const startTarget = useRef(new THREE.Vector3());
+  const targetTarget = useRef(new THREE.Vector3());
 
-  useEffect(() => {
-    if (selectedNode && selectedNode.position) {
-      // Move camera towards selected node
-      const nodePos = new THREE.Vector3(
-        selectedNode.position.x,
-        selectedNode.position.y,
-        selectedNode.position.z
-      );
+  // Easing function for smooth animation
+  const easeOutCubic = (t: number): number => {
+    return 1 - Math.pow(1 - t, 3);
+  };
 
-      // Position camera at focusDistance from node
-      const direction = new THREE.Vector3()
-        .subVectors(camera.position, nodePos)
-        .normalize();
+  const animateToNode = useCallback((node: MindmapNode) => {
+    if (!node.position) return;
 
-      targetPosition.current.copy(nodePos).add(direction.multiplyScalar(focusDistance));
-      targetLookAt.current.copy(nodePos);
-    } else {
-      // Return to default position
-      targetPosition.current.set(...defaultPosition);
-      targetLookAt.current.set(0, 0, 0);
-    }
-  }, [selectedNode, camera.position, defaultPosition, focusDistance]);
-
-  useFrame(() => {
-    // Smooth camera movement (lerp)
-    camera.position.lerp(targetPosition.current, lerpFactor);
-
-    // Update camera look-at point
-    const currentLookAt = new THREE.Vector3();
-    camera.getWorldDirection(currentLookAt);
-
-    const targetDir = targetLookAt.current.clone().sub(camera.position).normalize();
-    currentLookAt.lerp(targetDir, lerpFactor);
-
-    camera.lookAt(
-      camera.position.x + currentLookAt.x,
-      camera.position.y + currentLookAt.y,
-      camera.position.z + currentLookAt.z
+    const nodePos = new THREE.Vector3(
+      node.position.x,
+      node.position.y,
+      node.position.z
     );
+
+    // Calculate camera position - move towards node but keep some distance
+    const direction = new THREE.Vector3()
+      .subVectors(camera.position, nodePos)
+      .normalize();
+
+    // If direction is near zero (camera at node), use default direction
+    if (direction.lengthSq() < 0.001) {
+      direction.set(0, 0, 1);
+    }
+
+    startPosition.current.copy(camera.position);
+    targetPosition.current.copy(nodePos).add(direction.multiplyScalar(focusDistance));
+
+    // Get current look-at target from controls
+    if (controls && 'target' in controls) {
+      startTarget.current.copy((controls as { target: THREE.Vector3 }).target);
+    } else {
+      startTarget.current.set(0, 0, 0);
+    }
+    targetTarget.current.copy(nodePos);
+
+    isAnimating.current = true;
+    animationProgress.current = 0;
+  }, [camera, controls, focusDistance]);
+
+  const animateToDefault = useCallback(() => {
+    startPosition.current.copy(camera.position);
+    targetPosition.current.set(0, 0, 400);
+
+    if (controls && 'target' in controls) {
+      startTarget.current.copy((controls as { target: THREE.Vector3 }).target);
+    } else {
+      startTarget.current.set(0, 0, 0);
+    }
+    targetTarget.current.set(0, 0, 0);
+
+    isAnimating.current = true;
+    animationProgress.current = 0;
+  }, [camera, controls]);
+
+  // Watch for selectedNode changes
+  useEffect(() => {
+    if (selectedNode) {
+      animateToNode(selectedNode);
+    }
+    // Don't auto-return to default when deselected - let user control
+  }, [selectedNode, animateToNode]);
+
+  useFrame((_, delta) => {
+    if (!isAnimating.current) return;
+
+    // Progress animation (delta is in seconds, animationDuration is in ms)
+    animationProgress.current += (delta * 1000) / animationDuration;
+
+    if (animationProgress.current >= 1) {
+      // Animation complete
+      animationProgress.current = 1;
+      isAnimating.current = false;
+      onAnimationComplete?.();
+    }
+
+    const t = easeOutCubic(animationProgress.current);
+
+    // Interpolate camera position
+    camera.position.lerpVectors(startPosition.current, targetPosition.current, t);
+
+    // Interpolate controls target
+    if (controls && 'target' in controls) {
+      const target = (controls as { target: THREE.Vector3 }).target;
+      target.lerpVectors(startTarget.current, targetTarget.current, t);
+    }
   });
 
   return null;
