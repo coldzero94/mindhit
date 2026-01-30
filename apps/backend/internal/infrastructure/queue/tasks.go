@@ -8,11 +8,12 @@ import (
 
 // Task types
 const (
-	TypeSessionProcess   = "session:process"
-	TypeSessionCleanup   = "session:cleanup"
-	TypeURLSummarize     = "url:summarize"
-	TypeURLTagExtraction = "url:tag_extraction"
-	TypeMindmapGenerate  = "mindmap:generate"
+	TypeSessionProcess        = "session:process"
+	TypeSessionCleanup        = "session:cleanup"
+	TypeURLSummarize          = "url:summarize"
+	TypeURLTagExtraction      = "url:tag_extraction"
+	TypeURLBatchTagExtraction = "url:batch_tag_extraction"
+	TypeMindmapGenerate       = "mindmap:generate"
 )
 
 // SessionProcessPayload is the payload for session processing.
@@ -73,6 +74,26 @@ func NewURLTagExtractionTask(urlID string) (*asynq.Task, error) {
 		return nil, err
 	}
 	return asynq.NewTask(TypeURLTagExtraction, payload), nil
+}
+
+// URLBatchTagExtractionPayload is the payload for batch URL tag extraction.
+type URLBatchTagExtractionPayload struct {
+	URLIDs    []string `json:"url_ids"`
+	SessionID string   `json:"session_id"`
+	UserID    string   `json:"user_id"`
+}
+
+// NewURLBatchTagExtractionTask creates a new batch URL tag extraction task.
+func NewURLBatchTagExtractionTask(urlIDs []string, sessionID, userID string) (*asynq.Task, error) {
+	payload, err := json.Marshal(URLBatchTagExtractionPayload{
+		URLIDs:    urlIDs,
+		SessionID: sessionID,
+		UserID:    userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TypeURLBatchTagExtraction, payload), nil
 }
 
 // MindmapGeneratePayload is the payload for mindmap generation.
