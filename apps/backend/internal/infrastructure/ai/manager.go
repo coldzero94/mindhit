@@ -86,6 +86,15 @@ func NewProviderManager(
 		slog.Info("initialized ai provider", "provider", "claude")
 	}
 
+	if cfg.GroqAPIKey != "" {
+		pm.providers[ProviderGroq] = NewGroqProvider(ProviderConfig{
+			Type:   ProviderGroq,
+			APIKey: cfg.GroqAPIKey,
+			Model:  DefaultGroqModel,
+		})
+		slog.Info("initialized ai provider", "provider", "groq")
+	}
+
 	if len(pm.providers) == 0 {
 		slog.Warn("no ai providers configured (missing API keys)")
 	} else {

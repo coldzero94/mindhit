@@ -13,6 +13,8 @@ const (
 	ProviderGemini ProviderType = "gemini"
 	// ProviderClaude represents the Anthropic Claude provider.
 	ProviderClaude ProviderType = "claude"
+	// ProviderGroq represents the Groq provider.
+	ProviderGroq ProviderType = "groq"
 )
 
 // Default models for each provider (centralized to avoid magic strings).
@@ -23,6 +25,8 @@ const (
 	DefaultGeminiModel = "gemini-2.0-flash"
 	// DefaultClaudeModel is the default model for Claude provider.
 	DefaultClaudeModel = "claude-sonnet-4-20250514"
+	// DefaultGroqModel is the default model for Groq provider.
+	DefaultGroqModel = "llama-3.3-70b-versatile"
 )
 
 // TaskType identifies the AI task for provider selection.
@@ -134,4 +138,5 @@ type Config struct {
 	OpenAIAPIKey string
 	GeminiAPIKey string
 	ClaudeAPIKey string
+	GroqAPIKey   string
 }

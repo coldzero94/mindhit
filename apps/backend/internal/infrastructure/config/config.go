@@ -29,6 +29,7 @@ type AIConfig struct {
 	OpenAIAPIKey string
 	GeminiAPIKey string
 	ClaudeAPIKey string
+	GroqAPIKey   string
 }
 
 // Load reads configuration from environment variables and returns a Config struct.
@@ -50,6 +51,7 @@ func Load() *Config {
 			OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
 			GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
 			ClaudeAPIKey: getEnv("CLAUDE_API_KEY", ""),
+			GroqAPIKey:   getEnv("GROQ_API_KEY", ""),
 		},
 	}
 }
