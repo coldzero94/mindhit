@@ -1,10 +1,4 @@
-import { vi, beforeAll, afterAll, afterEach } from "vitest";
-import { server } from "./mocks/server";
-
-// Setup MSW server
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+import { vi } from "vitest";
 
 // Mock chrome API
 const mockChrome = {

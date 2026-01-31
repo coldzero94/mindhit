@@ -201,8 +201,12 @@ func TestAILogService_GetUsageStats(t *testing.T) {
 	ctx := context.Background()
 	svc := NewAILogService(client)
 
+	// Get initial stats (may include data from other tests due to shared DB)
+	initialStats, err := svc.GetUsageStats(ctx)
+	require.NoError(t, err)
+
 	// Create multiple logs
-	_, err := svc.Log(ctx, AILogRequest{
+	_, err = svc.Log(ctx, AILogRequest{
 		TaskType: ai.TaskTagExtraction,
 		Request:  ai.ChatRequest{UserPrompt: "Test 1"},
 		Response: &ai.ChatResponse{
@@ -230,11 +234,11 @@ func TestAILogService_GetUsageStats(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Get usage stats
+	// Get final stats and verify the increase
 	stats, err := svc.GetUsageStats(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 850, stats.TotalTokens)
-	assert.Equal(t, 2, stats.RequestCount)
+	assert.Equal(t, initialStats.TotalTokens+850, stats.TotalTokens)
+	assert.Equal(t, initialStats.RequestCount+2, stats.RequestCount)
 }
 
 func TestAILogService_estimateCost(t *testing.T) {
