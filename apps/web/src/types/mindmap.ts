@@ -47,7 +47,7 @@ export interface MindmapData {
   layout: MindmapLayout;
 }
 
-// API Response 타입
+// API Response type
 export interface MindmapResponse {
   mindmap: MindmapData | null;
   session_id: string;

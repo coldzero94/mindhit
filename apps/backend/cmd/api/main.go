@@ -82,27 +82,18 @@ func run() error {
 	}()
 
 	// Services
-	jwtService := service.NewJWTService(cfg.JWTSecret)
-	authService := service.NewAuthService(client)
 	sessionService := service.NewSessionService(client, queueClient)
 	urlService := service.NewURLService(client)
 	eventService := service.NewEventService(client, urlService)
-	subscriptionService := service.NewSubscriptionService(client)
-	usageService := service.NewUsageService(client)
-	oauthService := service.NewOAuthService(client)
 	mindmapService := service.NewMindmapService(client)
 
 	// Controllers
-	authController := controller.NewAuthController(authService, jwtService)
-	sessionController := controller.NewSessionController(sessionService, jwtService)
-	eventController := controller.NewEventController(eventService, sessionService, jwtService)
-	subscriptionController := controller.NewSubscriptionController(subscriptionService, jwtService)
-	usageController := controller.NewUsageController(usageService, jwtService)
-	oauthController := controller.NewOAuthController(oauthService, jwtService, subscriptionService)
-	mindmapController := controller.NewMindmapController(mindmapService, jwtService, queueClient)
+	sessionController := controller.NewSessionController(sessionService)
+	eventController := controller.NewEventController(eventService, sessionService)
+	mindmapController := controller.NewMindmapController(mindmapService, queueClient)
 
 	// Combined handler implementing StrictServerInterface
-	handler := controller.NewHandler(authController, sessionController, eventController, subscriptionController, usageController, oauthController, mindmapController)
+	handler := controller.NewHandler(sessionController, eventController, mindmapController)
 
 	// Router
 	r := gin.New()
@@ -120,11 +111,13 @@ func run() error {
 	// Metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Register API handlers using generated code with rate limiting middleware
+	// Register API handlers using generated code with API key auth middleware
 	strictHandler := generated.NewStrictHandler(handler, nil)
 	generated.RegisterHandlersWithOptions(r, strictHandler, generated.GinServerOptions{
 		Middlewares: []generated.MiddlewareFunc{
-			middleware.AuthRateLimitMiddleware(),
+			func(c *gin.Context) {
+				middleware.APIKeyAuth()(c)
+			},
 		},
 	})
 

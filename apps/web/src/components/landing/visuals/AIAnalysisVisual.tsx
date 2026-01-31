@@ -33,8 +33,8 @@ export function AIAnalysisVisual() {
       {/* Orbiting Keywords (Simulated) */}
       {[
         { label: "AI", angle: 0, color: "from-blue-400 to-blue-600" },
-        { label: "태그", angle: 120, color: "from-green-400 to-green-600" },
-        { label: "분석", angle: 240, color: "from-yellow-400 to-yellow-600" },
+        { label: "Tags", angle: 120, color: "from-green-400 to-green-600" },
+        { label: "Analysis", angle: 240, color: "from-yellow-400 to-yellow-600" },
       ].map((keyword, i) => (
         <div
           key={i}

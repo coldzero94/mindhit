@@ -33,32 +33,32 @@ export function FinalCTASection() {
 
           {/* Headline */}
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 max-w-4xl">
-            오늘부터 더 스마트하게
+            Browse Smarter
             <br />
-            브라우징하세요
+            Starting Today
           </h2>
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-gray-300 mb-12 max-w-2xl">
-            수백만 개의 브라우징 데이터가 AI로 인사이트로 변환됩니다.
+            Take full control of your data with self-hosting.
             <br className="hidden sm:block" />
-            지금 바로 시작하세요.
+            Get started now.
           </p>
 
           {/* CTA Button with Glow */}
-          <Link href="/signup">
+          <Link href="/sessions">
             <Button
               size="lg"
               className="text-xl px-12 py-8 shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 animate-pulse"
             >
               <Sparkles className="w-6 h-6 mr-3" />
-              무료로 시작하기
+              Open Dashboard
             </Button>
           </Link>
 
           {/* Small note */}
           <p className="text-sm text-gray-400 mt-8">
-            신용카드 필요 없음 • 언제든지 취소 가능
+            Open Source • Full Data Ownership
           </p>
         </div>
       </div>

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -20,52 +19,19 @@ import (
 // MindmapController implements mindmap-related handlers from StrictServerInterface.
 type MindmapController struct {
 	mindmapService *service.MindmapService
-	jwtService     *service.JWTService
 	queueClient    *queue.Client
 }
 
 // NewMindmapController creates a new MindmapController.
-func NewMindmapController(mindmapService *service.MindmapService, jwtService *service.JWTService, queueClient *queue.Client) *MindmapController {
+func NewMindmapController(mindmapService *service.MindmapService, queueClient *queue.Client) *MindmapController {
 	return &MindmapController{
 		mindmapService: mindmapService,
-		jwtService:     jwtService,
 		queueClient:    queueClient,
 	}
 }
 
-// extractUserID extracts and validates user ID from authorization header.
-func (c *MindmapController) extractUserID(authHeader string) (uuid.UUID, error) {
-	if authHeader == "" {
-		return uuid.Nil, errors.New("authorization header is required")
-	}
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return uuid.Nil, errors.New("invalid authorization header format")
-	}
-
-	claims, err := c.jwtService.ValidateAccessToken(parts[1])
-	if err != nil {
-		return uuid.Nil, errors.New("invalid or expired access token")
-	}
-
-	return claims.UserID, nil
-}
-
 // MindmapRoutesGetMindmap handles GET /v1/sessions/{sessionId}/mindmap.
 func (c *MindmapController) MindmapRoutesGetMindmap(ctx context.Context, request generated.MindmapRoutesGetMindmapRequestObject) (generated.MindmapRoutesGetMindmapResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.MindmapRoutesGetMindmap401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.MindmapRoutesGetMindmap404JSONResponse{
@@ -78,7 +44,7 @@ func (c *MindmapController) MindmapRoutesGetMindmap(ctx context.Context, request
 		}, nil
 	}
 
-	mindmap, err := c.mindmapService.GetBySessionID(ctx, sessionID, userID)
+	mindmap, err := c.mindmapService.GetBySessionID(ctx, sessionID)
 	if err != nil {
 		return c.handleGetError(err)
 	}
@@ -90,18 +56,6 @@ func (c *MindmapController) MindmapRoutesGetMindmap(ctx context.Context, request
 
 // MindmapRoutesGenerateMindmap handles POST /v1/sessions/{sessionId}/mindmap/generate.
 func (c *MindmapController) MindmapRoutesGenerateMindmap(ctx context.Context, request generated.MindmapRoutesGenerateMindmapRequestObject) (generated.MindmapRoutesGenerateMindmapResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.MindmapRoutesGenerateMindmap401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.MindmapRoutesGenerateMindmap404JSONResponse{
@@ -115,7 +69,7 @@ func (c *MindmapController) MindmapRoutesGenerateMindmap(ctx context.Context, re
 	}
 
 	// Get or create mindmap
-	mindmap, created, err := c.mindmapService.GetOrCreateForSession(ctx, sessionID, userID)
+	mindmap, created, err := c.mindmapService.GetOrCreateForSession(ctx, sessionID)
 	if err != nil {
 		return c.handleGenerateError(err)
 	}
@@ -160,15 +114,6 @@ func (c *MindmapController) handleGetError(err error) (generated.MindmapRoutesGe
 				Message: "session not found",
 			},
 		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.MindmapRoutesGetMindmap403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
-			},
-		}, nil
 	case errors.Is(err, service.ErrMindmapNotFound):
 		return generated.MindmapRoutesGetMindmap404JSONResponse{
 			Error: struct {
@@ -193,15 +138,6 @@ func (c *MindmapController) handleGenerateError(err error) (generated.MindmapRou
 				Message string  `json:"message"`
 			}{
 				Message: "session not found",
-			},
-		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.MindmapRoutesGenerateMindmap403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
 			},
 		}, nil
 	case errors.Is(err, service.ErrSessionNotReady):

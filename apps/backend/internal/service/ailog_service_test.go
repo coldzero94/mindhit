@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -21,22 +20,13 @@ func TestAILogService_Log_Success(t *testing.T) {
 	ctx := context.Background()
 	svc := NewAILogService(client)
 
-	// Create test user
-	user, err := client.User.Create().
-		SetEmail("ailog-test-" + uuid.New().String() + "@example.com").
-		SetPasswordHash("hashed").
-		Save(ctx)
-	require.NoError(t, err)
-
 	// Create test session for FK constraint
 	sess, err := client.Session.Create().
-		SetUserID(user.ID).
 		SetStartedAt(time.Now()).
 		Save(ctx)
 	require.NoError(t, err)
 
 	log, err := svc.Log(ctx, AILogRequest{
-		UserID:    &user.ID,
 		SessionID: &sess.ID,
 		TaskType:  ai.TaskTagExtraction,
 		Request: ai.ChatRequest{
@@ -75,16 +65,8 @@ func TestAILogService_Log_Error(t *testing.T) {
 	ctx := context.Background()
 	svc := NewAILogService(client)
 
-	// Create test user
-	user, err := client.User.Create().
-		SetEmail("ailog-error-" + uuid.New().String() + "@example.com").
-		SetPasswordHash("hashed").
-		Save(ctx)
-	require.NoError(t, err)
-
 	// Log with partial response (has provider info but marked as error)
 	log, err := svc.Log(ctx, AILogRequest{
-		UserID:   &user.ID,
 		TaskType: ai.TaskMindmap,
 		Request: ai.ChatRequest{
 			UserPrompt: "Generate mindmap",
@@ -169,22 +151,13 @@ func TestAILogService_GetBySession(t *testing.T) {
 	ctx := context.Background()
 	svc := NewAILogService(client)
 
-	// Create test user
-	user, err := client.User.Create().
-		SetEmail("ailog-session-" + uuid.New().String() + "@example.com").
-		SetPasswordHash("hashed").
-		Save(ctx)
-	require.NoError(t, err)
-
 	// Create test sessions
 	sess1, err := client.Session.Create().
-		SetUserID(user.ID).
 		SetStartedAt(time.Now()).
 		Save(ctx)
 	require.NoError(t, err)
 
 	sess2, err := client.Session.Create().
-		SetUserID(user.ID).
 		SetStartedAt(time.Now()).
 		Save(ctx)
 	require.NoError(t, err)
@@ -228,16 +201,8 @@ func TestAILogService_GetUsageStats(t *testing.T) {
 	ctx := context.Background()
 	svc := NewAILogService(client)
 
-	// Create test user
-	user, err := client.User.Create().
-		SetEmail("usage-stats-" + uuid.New().String() + "@example.com").
-		SetPasswordHash("hashed").
-		Save(ctx)
-	require.NoError(t, err)
-
 	// Create multiple logs
-	_, err = svc.Log(ctx, AILogRequest{
-		UserID:   &user.ID,
+	_, err := svc.Log(ctx, AILogRequest{
 		TaskType: ai.TaskTagExtraction,
 		Request:  ai.ChatRequest{UserPrompt: "Test 1"},
 		Response: &ai.ChatResponse{
@@ -252,7 +217,6 @@ func TestAILogService_GetUsageStats(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = svc.Log(ctx, AILogRequest{
-		UserID:   &user.ID,
 		TaskType: ai.TaskMindmap,
 		Request:  ai.ChatRequest{UserPrompt: "Test 2"},
 		Response: &ai.ChatResponse{
@@ -267,7 +231,7 @@ func TestAILogService_GetUsageStats(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get usage stats
-	stats, err := svc.GetUsageStats(ctx, user.ID)
+	stats, err := svc.GetUsageStats(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, 850, stats.TotalTokens)
 	assert.Equal(t, 2, stats.RequestCount)

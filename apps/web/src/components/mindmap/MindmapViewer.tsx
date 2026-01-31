@@ -17,12 +17,12 @@ interface MindmapViewerProps {
   sessionId: string;
 }
 
-// Node type labels in Korean
+// Node type labels
 const NODE_TYPE_LABELS: Record<string, string> = {
-  core: '핵심 주제',
-  topic: '주제',
-  subtopic: '하위 주제',
-  page: '페이지',
+  core: 'Core Topic',
+  topic: 'Topic',
+  subtopic: 'Subtopic',
+  page: 'Page',
 };
 
 // Node type colors
@@ -62,7 +62,7 @@ function NodeDetailPanel({ node, onClose }: { node: MindmapNode; onClose: () => 
           {relevance && (
             <Badge variant="outline" className="text-xs">
               <Target className="w-3 h-3 mr-1" />
-              관련도 {Math.round(relevance * 100)}%
+              Relevance {Math.round(relevance * 100)}%
             </Badge>
           )}
         </div>
@@ -73,7 +73,7 @@ function NodeDetailPanel({ node, onClose }: { node: MindmapNode; onClose: () => 
         {/* Description */}
         {description && (
           <div>
-            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">설명</h4>
+            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Description</h4>
             <p className="text-sm text-gray-700 leading-relaxed">{description}</p>
           </div>
         )}
@@ -83,7 +83,7 @@ function NodeDetailPanel({ node, onClose }: { node: MindmapNode; onClose: () => 
           <div>
             <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
               <Tag className="w-3 h-3" />
-              키워드
+              Keywords
             </h4>
             <div className="flex flex-wrap gap-1.5">
               {keywords.map((keyword: string, idx: number) => (
@@ -99,7 +99,7 @@ function NodeDetailPanel({ node, onClose }: { node: MindmapNode; onClose: () => 
         {summary && (
           <div>
             <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-              AI 요약
+              AI Summary
             </h4>
             <p className="text-sm text-gray-700 leading-relaxed">{summary}</p>
           </div>
@@ -110,7 +110,7 @@ function NodeDetailPanel({ node, onClose }: { node: MindmapNode; onClose: () => 
           <div>
             <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
               <ExternalLink className="w-3 h-3" />
-              페이지 링크
+              Page Link
             </h4>
             <a
               href={url}
@@ -131,12 +131,12 @@ function NodeDetailPanel({ node, onClose }: { node: MindmapNode; onClose: () => 
               {node.data.visitCount && (
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {node.data.visitCount}회 방문
+                  {node.data.visitCount} visits
                 </span>
               )}
               {node.data.totalDuration && (
                 <span>
-                  총 {Math.round(node.data.totalDuration / 1000 / 60)}분 체류
+                  {Math.round(node.data.totalDuration / 1000 / 60)} min duration
                 </span>
               )}
             </div>
@@ -156,9 +156,9 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
   const handleGenerate = useCallback(async (force: boolean = false) => {
     try {
       await generateMindmap.mutateAsync({ sessionId, options: { force } });
-      toast.success(force ? '마인드맵을 재생성합니다.' : '마인드맵 생성을 시작합니다.');
+      toast.success(force ? 'Regenerating mindmap.' : 'Starting mindmap generation.');
     } catch {
-      toast.error('마인드맵 생성에 실패했습니다.');
+      toast.error('Failed to generate mindmap.');
     }
   }, [sessionId, generateMindmap]);
 
@@ -183,10 +183,10 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
       <Card>
         <CardContent className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <p className="text-red-500 mb-4">마인드맵을 불러오는데 실패했습니다.</p>
+          <p className="text-red-500 mb-4">Failed to load mindmap.</p>
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            다시 시도
+            Retry
           </Button>
         </CardContent>
       </Card>
@@ -200,10 +200,10 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
         <CardContent className="text-center py-12">
           <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            마인드맵이 아직 생성되지 않았습니다
+            Mindmap not yet generated
           </h3>
           <p className="text-gray-500 mb-6">
-            세션의 브라우징 데이터를 기반으로 AI가 마인드맵을 생성합니다.
+            AI will generate a mindmap based on your browsing data.
           </p>
           <Button
             onClick={() => handleGenerate(false)}
@@ -212,12 +212,12 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
             {generateMindmap.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                생성 요청 중...
+                Requesting generation...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                마인드맵 생성
+                Generate Mindmap
               </>
             )}
           </Button>
@@ -233,13 +233,13 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
         <CardContent className="text-center py-12">
           <Loader2 className="h-12 w-12 animate-spin text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            마인드맵 생성을 준비하고 있습니다
+            Preparing mindmap generation
           </h3>
           <p className="text-gray-500">
-            잠시 후 AI가 브라우징 데이터를 분석합니다.
+            AI will analyze your browsing data shortly.
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            자동으로 상태를 확인하고 있습니다...
+            Checking status automatically...
           </p>
         </CardContent>
       </Card>
@@ -253,13 +253,13 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
         <CardContent className="text-center py-12">
           <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            마인드맵을 생성하고 있습니다
+            Generating mindmap
           </h3>
           <p className="text-gray-500">
-            AI가 브라우징 데이터를 분석하고 있습니다. 잠시만 기다려주세요.
+            AI is analyzing your browsing data. Please wait.
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            자동으로 상태를 확인하고 있습니다...
+            Checking status automatically...
           </p>
         </CardContent>
       </Card>
@@ -273,10 +273,10 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
         <CardContent className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            마인드맵 생성에 실패했습니다
+            Failed to generate mindmap
           </h3>
           <p className="text-gray-500 mb-6">
-            {mindmap.error_message || '알 수 없는 오류가 발생했습니다.'}
+            {mindmap.error_message || 'An unknown error occurred.'}
           </p>
           <Button
             onClick={() => handleGenerate(true)}
@@ -285,12 +285,12 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
             {generateMindmap.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                재생성 중...
+                Regenerating...
               </>
             ) : (
               <>
                 <RefreshCw className="h-4 w-4 mr-2" />
-                다시 생성
+                Regenerate
               </>
             )}
           </Button>
@@ -308,17 +308,17 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
         <CardContent className="text-center py-12">
           <AlertCircle className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            마인드맵 데이터가 없습니다
+            No mindmap data
           </h3>
           <p className="text-gray-500 mb-6">
-            세션에 충분한 브라우징 데이터가 없을 수 있습니다.
+            The session may not have enough browsing data.
           </p>
           <Button
             onClick={() => handleGenerate(true)}
             disabled={generateMindmap.isPending}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
-            다시 생성
+            Regenerate
           </Button>
         </CardContent>
       </Card>
@@ -330,11 +330,11 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
       {/* Header with stats and regenerate button */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">마인드맵</h3>
+          <h3 className="text-lg font-medium text-gray-900">Mindmap</h3>
           <p className="text-sm text-gray-500">
-            {mindmapData.nodes.length}개 노드 · {mindmapData.edges.length}개 연결
+            {mindmapData.nodes.length} nodes · {mindmapData.edges.length} connections
             <span className="text-gray-400 ml-2">
-              | 클릭하여 상세 정보 보기
+              | Click to view details
             </span>
           </p>
         </div>
@@ -349,7 +349,7 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
           ) : (
             <RefreshCw className="h-4 w-4" />
           )}
-          <span className="ml-2">재생성</span>
+          <span className="ml-2">Regenerate</span>
         </Button>
       </div>
 
@@ -376,15 +376,15 @@ export function MindmapViewer({ sessionId }: MindmapViewerProps) {
       <div className="flex items-center justify-center gap-6 text-xs text-gray-500">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-yellow-500" />
-          <span>핵심 주제</span>
+          <span>Core Topic</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-blue-500" />
-          <span>주제</span>
+          <span>Topic</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-gray-400" />
-          <span>페이지</span>
+          <span>Page</span>
         </div>
       </div>
     </div>

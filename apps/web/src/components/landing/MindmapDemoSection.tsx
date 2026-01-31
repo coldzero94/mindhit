@@ -61,10 +61,10 @@ export function MindmapDemoSection() {
           {/* Title Overlay */}
           <div className="absolute top-8 left-8 z-10">
             <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              인터랙티브 3D 마인드맵
+              Interactive 3D Mindmap
             </h3>
             <p className="text-sm sm:text-base text-gray-400">
-              마우스로 회전, 노드 클릭으로 상세 정보 확인
+              Rotate with mouse, click nodes for details
             </p>
           </div>
 
@@ -76,7 +76,7 @@ export function MindmapDemoSection() {
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <Loader2 className="w-12 h-12 animate-spin text-white mx-auto mb-4" />
-                      <p className="text-white text-sm">3D 마인드맵 로딩 중...</p>
+                      <p className="text-white text-sm">Loading 3D Mindmap...</p>
                     </div>
                   </div>
                 }
@@ -96,7 +96,7 @@ export function MindmapDemoSection() {
                   <div className="w-32 h-32 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center">
                     <div className="w-24 h-24 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-full animate-pulse" />
                   </div>
-                  <p className="text-white text-sm">스크롤하여 3D 마인드맵 보기</p>
+                  <p className="text-white text-sm">Scroll to view 3D Mindmap</p>
                 </div>
               </div>
             )}
@@ -104,7 +104,7 @@ export function MindmapDemoSection() {
 
           {/* Bottom Hint */}
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center text-gray-400 text-xs sm:text-sm">
-            <p>실제 브라우징 데이터로 생성된 마인드맵 예시</p>
+            <p>Mindmap example generated from real browsing data</p>
           </div>
         </div>
     </section>

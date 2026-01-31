@@ -2,7 +2,6 @@
  * Storage keys used by Zustand persist stores.
  */
 export const STORAGE_KEYS = {
-  AUTH: "mindhit-auth",
   SESSION: "mindhit-session",
   SETTINGS: "mindhit-settings",
 } as const;
@@ -20,11 +19,9 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:9000/v1";
 
 /**
- * Google OAuth Client ID
+ * API Key for authentication (single-user self-hosted mode)
  */
-export const GOOGLE_CLIENT_ID =
-  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-  "103584871302-9il2udcima8pa77aigog7po7asdhdp61.apps.googleusercontent.com";
+export const API_KEY = import.meta.env.VITE_API_KEY || "";
 
 /**
  * Event batching configuration

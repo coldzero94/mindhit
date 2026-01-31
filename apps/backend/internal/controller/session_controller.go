@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -16,53 +15,22 @@ import (
 // SessionController implements session-related handlers from StrictServerInterface
 type SessionController struct {
 	sessionService *service.SessionService
-	jwtService     *service.JWTService
 }
 
 // NewSessionController creates a new SessionController
-func NewSessionController(sessionService *service.SessionService, jwtService *service.JWTService) *SessionController {
+func NewSessionController(sessionService *service.SessionService) *SessionController {
 	return &SessionController{
 		sessionService: sessionService,
-		jwtService:     jwtService,
 	}
-}
-
-// extractUserID extracts and validates user ID from authorization header
-func (c *SessionController) extractUserID(authHeader string) (uuid.UUID, error) {
-	if authHeader == "" {
-		return uuid.Nil, errors.New("authorization header is required")
-	}
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return uuid.Nil, errors.New("invalid authorization header format")
-	}
-
-	claims, err := c.jwtService.ValidateAccessToken(parts[1])
-	if err != nil {
-		return uuid.Nil, errors.New("invalid or expired access token")
-	}
-
-	return claims.UserID, nil
 }
 
 // RoutesStart handles POST /v1/sessions/start
 func (c *SessionController) RoutesStart(ctx context.Context, request generated.RoutesStartRequestObject) (generated.RoutesStartResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
+	// request parameter required by OpenAPI interface but not used in this endpoint
+	_ = request
+	sess, err := c.sessionService.Start(ctx)
 	if err != nil {
-		return generated.RoutesStart401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
-	sess, err := c.sessionService.Start(ctx, userID)
-	if err != nil {
-		slog.Error("failed to create session", "error", err, "user_id", userID)
+		slog.Error("failed to create session", "error", err)
 		return nil, err
 	}
 
@@ -73,18 +41,6 @@ func (c *SessionController) RoutesStart(ctx context.Context, request generated.R
 
 // RoutesList handles GET /v1/sessions
 func (c *SessionController) RoutesList(ctx context.Context, request generated.RoutesListRequestObject) (generated.RoutesListResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesList401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	limit := 20
 	offset := 0
 	if request.Params.Limit != nil {
@@ -94,9 +50,9 @@ func (c *SessionController) RoutesList(ctx context.Context, request generated.Ro
 		offset = int(*request.Params.Offset)
 	}
 
-	sessions, err := c.sessionService.ListByUser(ctx, userID, limit, offset)
+	sessions, err := c.sessionService.List(ctx, limit, offset)
 	if err != nil {
-		slog.Error("failed to list sessions", "error", err, "user_id", userID)
+		slog.Error("failed to list sessions", "error", err)
 		return nil, err
 	}
 
@@ -112,18 +68,6 @@ func (c *SessionController) RoutesList(ctx context.Context, request generated.Ro
 
 // RoutesGet handles GET /v1/sessions/{id}
 func (c *SessionController) RoutesGet(ctx context.Context, request generated.RoutesGetRequestObject) (generated.RoutesGetResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesGet401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesGet404JSONResponse{
@@ -136,7 +80,7 @@ func (c *SessionController) RoutesGet(ctx context.Context, request generated.Rou
 		}, nil
 	}
 
-	sess, err := c.sessionService.GetWithDetails(ctx, sessionID, userID)
+	sess, err := c.sessionService.GetWithDetails(ctx, sessionID)
 	if err != nil {
 		return c.handleGetError(err)
 	}
@@ -148,18 +92,6 @@ func (c *SessionController) RoutesGet(ctx context.Context, request generated.Rou
 
 // RoutesUpdate handles PUT /v1/sessions/{id}
 func (c *SessionController) RoutesUpdate(ctx context.Context, request generated.RoutesUpdateRequestObject) (generated.RoutesUpdateResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesUpdate401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesUpdate404JSONResponse{
@@ -172,7 +104,7 @@ func (c *SessionController) RoutesUpdate(ctx context.Context, request generated.
 		}, nil
 	}
 
-	sess, err := c.sessionService.Update(ctx, sessionID, userID, request.Body.Title, request.Body.Description)
+	sess, err := c.sessionService.Update(ctx, sessionID, request.Body.Title, request.Body.Description)
 	if err != nil {
 		return c.handleUpdateError(err)
 	}
@@ -184,18 +116,6 @@ func (c *SessionController) RoutesUpdate(ctx context.Context, request generated.
 
 // RoutesPause handles PATCH /v1/sessions/{id}/pause
 func (c *SessionController) RoutesPause(ctx context.Context, request generated.RoutesPauseRequestObject) (generated.RoutesPauseResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesPause401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesPause404JSONResponse{
@@ -208,7 +128,7 @@ func (c *SessionController) RoutesPause(ctx context.Context, request generated.R
 		}, nil
 	}
 
-	sess, err := c.sessionService.Pause(ctx, sessionID, userID)
+	sess, err := c.sessionService.Pause(ctx, sessionID)
 	if err != nil {
 		return c.handlePauseError(err)
 	}
@@ -220,18 +140,6 @@ func (c *SessionController) RoutesPause(ctx context.Context, request generated.R
 
 // RoutesResume handles PATCH /v1/sessions/{id}/resume
 func (c *SessionController) RoutesResume(ctx context.Context, request generated.RoutesResumeRequestObject) (generated.RoutesResumeResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesResume401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesResume404JSONResponse{
@@ -244,7 +152,7 @@ func (c *SessionController) RoutesResume(ctx context.Context, request generated.
 		}, nil
 	}
 
-	sess, err := c.sessionService.Resume(ctx, sessionID, userID)
+	sess, err := c.sessionService.Resume(ctx, sessionID)
 	if err != nil {
 		return c.handleResumeError(err)
 	}
@@ -256,18 +164,6 @@ func (c *SessionController) RoutesResume(ctx context.Context, request generated.
 
 // RoutesStop handles POST /v1/sessions/{id}/stop
 func (c *SessionController) RoutesStop(ctx context.Context, request generated.RoutesStopRequestObject) (generated.RoutesStopResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesStop401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesStop404JSONResponse{
@@ -280,7 +176,7 @@ func (c *SessionController) RoutesStop(ctx context.Context, request generated.Ro
 		}, nil
 	}
 
-	sess, err := c.sessionService.Stop(ctx, sessionID, userID)
+	sess, err := c.sessionService.Stop(ctx, sessionID)
 	if err != nil {
 		return c.handleStopError(err)
 	}
@@ -292,18 +188,6 @@ func (c *SessionController) RoutesStop(ctx context.Context, request generated.Ro
 
 // RoutesDelete handles DELETE /v1/sessions/{id}
 func (c *SessionController) RoutesDelete(ctx context.Context, request generated.RoutesDeleteRequestObject) (generated.RoutesDeleteResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesDelete401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: err.Error(),
-			},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesDelete404JSONResponse{
@@ -316,7 +200,7 @@ func (c *SessionController) RoutesDelete(ctx context.Context, request generated.
 		}, nil
 	}
 
-	err = c.sessionService.Delete(ctx, sessionID, userID)
+	err = c.sessionService.Delete(ctx, sessionID)
 	if err != nil {
 		return c.handleDeleteError(err)
 	}
@@ -327,8 +211,7 @@ func (c *SessionController) RoutesDelete(ctx context.Context, request generated.
 // Error handlers for different operations
 
 func (c *SessionController) handleGetError(err error) (generated.RoutesGetResponseObject, error) {
-	switch {
-	case errors.Is(err, service.ErrSessionNotFound):
+	if errors.Is(err, service.ErrSessionNotFound) {
 		return generated.RoutesGet404JSONResponse{
 			Error: struct {
 				Code    *string `json:"code,omitempty"`
@@ -337,24 +220,13 @@ func (c *SessionController) handleGetError(err error) (generated.RoutesGetRespon
 				Message: "session not found",
 			},
 		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.RoutesGet403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
-			},
-		}, nil
-	default:
-		slog.Error("session get failed", "error", err)
-		return nil, err
 	}
+	slog.Error("session get failed", "error", err)
+	return nil, err
 }
 
 func (c *SessionController) handleUpdateError(err error) (generated.RoutesUpdateResponseObject, error) {
-	switch {
-	case errors.Is(err, service.ErrSessionNotFound):
+	if errors.Is(err, service.ErrSessionNotFound) {
 		return generated.RoutesUpdate404JSONResponse{
 			Error: struct {
 				Code    *string `json:"code,omitempty"`
@@ -363,19 +235,9 @@ func (c *SessionController) handleUpdateError(err error) (generated.RoutesUpdate
 				Message: "session not found",
 			},
 		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.RoutesUpdate403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
-			},
-		}, nil
-	default:
-		slog.Error("session update failed", "error", err)
-		return nil, err
 	}
+	slog.Error("session update failed", "error", err)
+	return nil, err
 }
 
 func (c *SessionController) handlePauseError(err error) (generated.RoutesPauseResponseObject, error) {
@@ -387,15 +249,6 @@ func (c *SessionController) handlePauseError(err error) (generated.RoutesPauseRe
 				Message string  `json:"message"`
 			}{
 				Message: "session not found",
-			},
-		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.RoutesPause403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
 			},
 		}, nil
 	case errors.Is(err, service.ErrInvalidSessionState):
@@ -424,15 +277,6 @@ func (c *SessionController) handleResumeError(err error) (generated.RoutesResume
 				Message: "session not found",
 			},
 		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.RoutesResume403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
-			},
-		}, nil
 	case errors.Is(err, service.ErrInvalidSessionState):
 		return generated.RoutesResume400JSONResponse{
 			Error: struct {
@@ -459,15 +303,6 @@ func (c *SessionController) handleStopError(err error) (generated.RoutesStopResp
 				Message: "session not found",
 			},
 		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.RoutesStop403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
-			},
-		}, nil
 	case errors.Is(err, service.ErrInvalidSessionState):
 		return generated.RoutesStop400JSONResponse{
 			Error: struct {
@@ -484,8 +319,7 @@ func (c *SessionController) handleStopError(err error) (generated.RoutesStopResp
 }
 
 func (c *SessionController) handleDeleteError(err error) (generated.RoutesDeleteResponseObject, error) {
-	switch {
-	case errors.Is(err, service.ErrSessionNotFound):
+	if errors.Is(err, service.ErrSessionNotFound) {
 		return generated.RoutesDelete404JSONResponse{
 			Error: struct {
 				Code    *string `json:"code,omitempty"`
@@ -494,19 +328,9 @@ func (c *SessionController) handleDeleteError(err error) (generated.RoutesDelete
 				Message: "session not found",
 			},
 		}, nil
-	case errors.Is(err, service.ErrSessionNotOwned):
-		return generated.RoutesDelete403JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{
-				Message: "access denied",
-			},
-		}, nil
-	default:
-		slog.Error("session delete failed", "error", err)
-		return nil, err
 	}
+	slog.Error("session delete failed", "error", err)
+	return nil, err
 }
 
 // mapSession converts an ent.Session to generated.SessionSession

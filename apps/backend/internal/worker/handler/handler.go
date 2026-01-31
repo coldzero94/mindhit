@@ -5,7 +5,6 @@ import (
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/internal/infrastructure/ai"
 	"github.com/mindhit/api/internal/infrastructure/queue"
-	"github.com/mindhit/api/internal/service"
 )
 
 // RegisterHandlers registers all job handlers with the queue server.
@@ -13,14 +12,12 @@ func RegisterHandlers(
 	server *queue.Server,
 	client *ent.Client,
 	aiManager *ai.ProviderManager,
-	usageService *service.UsageService,
 	queueClient *queue.Client,
 ) {
 	h := &handlers{
-		client:       client,
-		aiManager:    aiManager,
-		usageService: usageService,
-		queueClient:  queueClient,
+		client:      client,
+		aiManager:   aiManager,
+		queueClient: queueClient,
 	}
 
 	server.HandleFunc(queue.TypeSessionProcess, h.HandleSessionProcess)
@@ -31,8 +28,7 @@ func RegisterHandlers(
 }
 
 type handlers struct {
-	client       *ent.Client
-	aiManager    *ai.ProviderManager
-	usageService *service.UsageService
-	queueClient  *queue.Client
+	client      *ent.Client
+	aiManager   *ai.ProviderManager
+	queueClient *queue.Client
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 
@@ -17,53 +16,21 @@ import (
 type EventController struct {
 	eventService   *service.EventService
 	sessionService *service.SessionService
-	jwtService     *service.JWTService
 }
 
 // NewEventController creates a new EventController.
 func NewEventController(
 	eventService *service.EventService,
 	sessionService *service.SessionService,
-	jwtService *service.JWTService,
 ) *EventController {
 	return &EventController{
 		eventService:   eventService,
 		sessionService: sessionService,
-		jwtService:     jwtService,
 	}
-}
-
-// extractUserID extracts and validates user ID from authorization header.
-func (c *EventController) extractUserID(authHeader string) (uuid.UUID, error) {
-	if authHeader == "" {
-		return uuid.Nil, errors.New("authorization header is required")
-	}
-
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return uuid.Nil, errors.New("invalid authorization header format")
-	}
-
-	claims, err := c.jwtService.ValidateAccessToken(parts[1])
-	if err != nil {
-		return uuid.Nil, errors.New("invalid or expired access token")
-	}
-
-	return claims.UserID, nil
 }
 
 // RoutesBatchEvents implements generated.StrictServerInterface
 func (c *EventController) RoutesBatchEvents(ctx context.Context, request generated.RoutesBatchEventsRequestObject) (generated.RoutesBatchEventsResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesBatchEvents401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{Message: err.Error()},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesBatchEvents400JSONResponse{
@@ -74,8 +41,8 @@ func (c *EventController) RoutesBatchEvents(ctx context.Context, request generat
 		}, nil
 	}
 
-	// Verify session ownership
-	_, err = c.sessionService.Get(ctx, sessionID, userID)
+	// Verify session exists
+	_, err = c.sessionService.Get(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, service.ErrSessionNotFound) {
 			return generated.RoutesBatchEvents404JSONResponse{
@@ -83,14 +50,6 @@ func (c *EventController) RoutesBatchEvents(ctx context.Context, request generat
 					Code    *string `json:"code,omitempty"`
 					Message string  `json:"message"`
 				}{Message: "session not found"},
-			}, nil
-		}
-		if errors.Is(err, service.ErrSessionNotOwned) {
-			return generated.RoutesBatchEvents403JSONResponse{
-				Error: struct {
-					Code    *string `json:"code,omitempty"`
-					Message string  `json:"message"`
-				}{Message: "access denied"},
 			}, nil
 		}
 		slog.ErrorContext(ctx, "failed to get session", "error", err)
@@ -150,16 +109,6 @@ func (c *EventController) RoutesBatchEvents(ctx context.Context, request generat
 
 // RoutesListEvents implements generated.StrictServerInterface
 func (c *EventController) RoutesListEvents(ctx context.Context, request generated.RoutesListEventsRequestObject) (generated.RoutesListEventsResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesListEvents401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{Message: err.Error()},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesListEvents404JSONResponse{
@@ -170,8 +119,8 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 		}, nil
 	}
 
-	// Verify session ownership
-	_, err = c.sessionService.Get(ctx, sessionID, userID)
+	// Verify session exists
+	_, err = c.sessionService.Get(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, service.ErrSessionNotFound) {
 			return generated.RoutesListEvents404JSONResponse{
@@ -179,14 +128,6 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 					Code    *string `json:"code,omitempty"`
 					Message string  `json:"message"`
 				}{Message: "session not found"},
-			}, nil
-		}
-		if errors.Is(err, service.ErrSessionNotOwned) {
-			return generated.RoutesListEvents403JSONResponse{
-				Error: struct {
-					Code    *string `json:"code,omitempty"`
-					Message string  `json:"message"`
-				}{Message: "access denied"},
 			}, nil
 		}
 		slog.ErrorContext(ctx, "failed to get session", "error", err)
@@ -281,16 +222,6 @@ func (c *EventController) RoutesListEvents(ctx context.Context, request generate
 
 // RoutesGetEventStats implements generated.StrictServerInterface
 func (c *EventController) RoutesGetEventStats(ctx context.Context, request generated.RoutesGetEventStatsRequestObject) (generated.RoutesGetEventStatsResponseObject, error) {
-	userID, err := c.extractUserID(request.Params.Authorization)
-	if err != nil {
-		return generated.RoutesGetEventStats401JSONResponse{
-			Error: struct {
-				Code    *string `json:"code,omitempty"`
-				Message string  `json:"message"`
-			}{Message: err.Error()},
-		}, nil
-	}
-
 	sessionID, err := uuid.Parse(request.Id)
 	if err != nil {
 		return generated.RoutesGetEventStats404JSONResponse{
@@ -301,8 +232,8 @@ func (c *EventController) RoutesGetEventStats(ctx context.Context, request gener
 		}, nil
 	}
 
-	// Verify session ownership
-	_, err = c.sessionService.Get(ctx, sessionID, userID)
+	// Verify session exists
+	_, err = c.sessionService.Get(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, service.ErrSessionNotFound) {
 			return generated.RoutesGetEventStats404JSONResponse{
@@ -310,14 +241,6 @@ func (c *EventController) RoutesGetEventStats(ctx context.Context, request gener
 					Code    *string `json:"code,omitempty"`
 					Message string  `json:"message"`
 				}{Message: "session not found"},
-			}, nil
-		}
-		if errors.Is(err, service.ErrSessionNotOwned) {
-			return generated.RoutesGetEventStats403JSONResponse{
-				Error: struct {
-					Code    *string `json:"code,omitempty"`
-					Message string  `json:"message"`
-				}{Message: "access denied"},
 			}, nil
 		}
 		slog.ErrorContext(ctx, "failed to get session", "error", err)

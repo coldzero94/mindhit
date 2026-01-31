@@ -46,17 +46,6 @@ func (h *handlers) HandleSessionProcess(ctx context.Context, t *asynq.Task) erro
 		return nil // Not an error, just skip
 	}
 
-	// Get session with user for userID
-	sess, err = h.client.Session.Query().
-		Where(session.IDEQ(sessionID)).
-		WithUser().
-		Only(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get session with user: %w", err)
-	}
-
-	userID := sess.Edges.User.ID.String()
-
 	// Get all URLs for this session via PageVisits
 	pageVisits, err := h.client.PageVisit.Query().
 		Where(pagevisit.HasSessionWith(session.IDEQ(sessionID))).
@@ -97,7 +86,7 @@ func (h *handlers) HandleSessionProcess(ctx context.Context, t *asynq.Task) erro
 			}
 			batch := urlIDs[i:end]
 
-			task, err := queue.NewURLBatchTagExtractionTask(batch, payload.SessionID, userID)
+			task, err := queue.NewURLBatchTagExtractionTask(batch, payload.SessionID, "")
 			if err != nil {
 				slog.Error("failed to create batch tag extraction task", "error", err)
 				continue

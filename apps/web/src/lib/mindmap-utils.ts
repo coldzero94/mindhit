@@ -1,14 +1,14 @@
 import type { MindmapNodeType } from '@/types/mindmap';
 
-// 노드 타입별 기본 색상
+// Default colors for node types
 export const NODE_TYPE_COLORS: Record<MindmapNodeType, string> = {
-  core: '#F59E0B',     // Amber - 중심 노드
-  topic: '#3B82F6',    // Blue - 주제
-  subtopic: '#10B981', // Emerald - 하위 주제
-  page: '#8B5CF6',     // Violet - 페이지
+  core: '#F59E0B',     // Amber - Core node
+  topic: '#3B82F6',    // Blue - Topic
+  subtopic: '#10B981', // Emerald - Subtopic
+  page: '#8B5CF6',     // Violet - Page
 };
 
-// 주제별 색상 팔레트
+// Topic color palette
 export const TOPIC_COLORS = [
   '#3B82F6', // Blue
   '#10B981', // Emerald
@@ -24,7 +24,7 @@ export function getTopicColor(index: number): string {
   return TOPIC_COLORS[index % TOPIC_COLORS.length];
 }
 
-// 노드 크기 계산
+// Calculate node size
 export function calculateNodeSize(
   type: MindmapNodeType,
   visitCount?: number,
@@ -39,12 +39,12 @@ export function calculateNodeSize(
 
   let size = baseSize[type];
 
-  // 방문 횟수에 따른 크기 조정
+  // Adjust size based on visit count
   if (visitCount && visitCount > 1) {
     size *= Math.min(1 + visitCount * 0.1, 1.5);
   }
 
-  // 체류 시간에 따른 크기 조정 (밀리초 → 분)
+  // Adjust size based on duration (milliseconds → minutes)
   if (totalDuration && totalDuration > 60000) {
     const minutes = totalDuration / 60000;
     size *= Math.min(1 + minutes * 0.05, 1.3);

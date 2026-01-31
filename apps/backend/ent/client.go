@@ -21,15 +21,9 @@ import (
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
-	"github.com/mindhit/api/ent/passwordresettoken"
-	"github.com/mindhit/api/ent/plan"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/subscription"
-	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/url"
-	"github.com/mindhit/api/ent/user"
-	"github.com/mindhit/api/ent/usersettings"
 )
 
 // Client is the client that holds all ent builders.
@@ -47,24 +41,12 @@ type Client struct {
 	MindmapGraph *MindmapGraphClient
 	// PageVisit is the client for interacting with the PageVisit builders.
 	PageVisit *PageVisitClient
-	// PasswordResetToken is the client for interacting with the PasswordResetToken builders.
-	PasswordResetToken *PasswordResetTokenClient
-	// Plan is the client for interacting with the Plan builders.
-	Plan *PlanClient
 	// RawEvent is the client for interacting with the RawEvent builders.
 	RawEvent *RawEventClient
 	// Session is the client for interacting with the Session builders.
 	Session *SessionClient
-	// Subscription is the client for interacting with the Subscription builders.
-	Subscription *SubscriptionClient
-	// TokenUsage is the client for interacting with the TokenUsage builders.
-	TokenUsage *TokenUsageClient
 	// URL is the client for interacting with the URL builders.
 	URL *URLClient
-	// User is the client for interacting with the User builders.
-	User *UserClient
-	// UserSettings is the client for interacting with the UserSettings builders.
-	UserSettings *UserSettingsClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -81,15 +63,9 @@ func (c *Client) init() {
 	c.Highlight = NewHighlightClient(c.config)
 	c.MindmapGraph = NewMindmapGraphClient(c.config)
 	c.PageVisit = NewPageVisitClient(c.config)
-	c.PasswordResetToken = NewPasswordResetTokenClient(c.config)
-	c.Plan = NewPlanClient(c.config)
 	c.RawEvent = NewRawEventClient(c.config)
 	c.Session = NewSessionClient(c.config)
-	c.Subscription = NewSubscriptionClient(c.config)
-	c.TokenUsage = NewTokenUsageClient(c.config)
 	c.URL = NewURLClient(c.config)
-	c.User = NewUserClient(c.config)
-	c.UserSettings = NewUserSettingsClient(c.config)
 }
 
 type (
@@ -180,22 +156,16 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                ctx,
-		config:             cfg,
-		AIConfig:           NewAIConfigClient(cfg),
-		AILog:              NewAILogClient(cfg),
-		Highlight:          NewHighlightClient(cfg),
-		MindmapGraph:       NewMindmapGraphClient(cfg),
-		PageVisit:          NewPageVisitClient(cfg),
-		PasswordResetToken: NewPasswordResetTokenClient(cfg),
-		Plan:               NewPlanClient(cfg),
-		RawEvent:           NewRawEventClient(cfg),
-		Session:            NewSessionClient(cfg),
-		Subscription:       NewSubscriptionClient(cfg),
-		TokenUsage:         NewTokenUsageClient(cfg),
-		URL:                NewURLClient(cfg),
-		User:               NewUserClient(cfg),
-		UserSettings:       NewUserSettingsClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		AIConfig:     NewAIConfigClient(cfg),
+		AILog:        NewAILogClient(cfg),
+		Highlight:    NewHighlightClient(cfg),
+		MindmapGraph: NewMindmapGraphClient(cfg),
+		PageVisit:    NewPageVisitClient(cfg),
+		RawEvent:     NewRawEventClient(cfg),
+		Session:      NewSessionClient(cfg),
+		URL:          NewURLClient(cfg),
 	}, nil
 }
 
@@ -213,22 +183,16 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                ctx,
-		config:             cfg,
-		AIConfig:           NewAIConfigClient(cfg),
-		AILog:              NewAILogClient(cfg),
-		Highlight:          NewHighlightClient(cfg),
-		MindmapGraph:       NewMindmapGraphClient(cfg),
-		PageVisit:          NewPageVisitClient(cfg),
-		PasswordResetToken: NewPasswordResetTokenClient(cfg),
-		Plan:               NewPlanClient(cfg),
-		RawEvent:           NewRawEventClient(cfg),
-		Session:            NewSessionClient(cfg),
-		Subscription:       NewSubscriptionClient(cfg),
-		TokenUsage:         NewTokenUsageClient(cfg),
-		URL:                NewURLClient(cfg),
-		User:               NewUserClient(cfg),
-		UserSettings:       NewUserSettingsClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		AIConfig:     NewAIConfigClient(cfg),
+		AILog:        NewAILogClient(cfg),
+		Highlight:    NewHighlightClient(cfg),
+		MindmapGraph: NewMindmapGraphClient(cfg),
+		PageVisit:    NewPageVisitClient(cfg),
+		RawEvent:     NewRawEventClient(cfg),
+		Session:      NewSessionClient(cfg),
+		URL:          NewURLClient(cfg),
 	}, nil
 }
 
@@ -258,9 +222,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AIConfig, c.AILog, c.Highlight, c.MindmapGraph, c.PageVisit,
-		c.PasswordResetToken, c.Plan, c.RawEvent, c.Session, c.Subscription,
-		c.TokenUsage, c.URL, c.User, c.UserSettings,
+		c.AIConfig, c.AILog, c.Highlight, c.MindmapGraph, c.PageVisit, c.RawEvent,
+		c.Session, c.URL,
 	} {
 		n.Use(hooks...)
 	}
@@ -270,9 +233,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AIConfig, c.AILog, c.Highlight, c.MindmapGraph, c.PageVisit,
-		c.PasswordResetToken, c.Plan, c.RawEvent, c.Session, c.Subscription,
-		c.TokenUsage, c.URL, c.User, c.UserSettings,
+		c.AIConfig, c.AILog, c.Highlight, c.MindmapGraph, c.PageVisit, c.RawEvent,
+		c.Session, c.URL,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -291,24 +253,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.MindmapGraph.mutate(ctx, m)
 	case *PageVisitMutation:
 		return c.PageVisit.mutate(ctx, m)
-	case *PasswordResetTokenMutation:
-		return c.PasswordResetToken.mutate(ctx, m)
-	case *PlanMutation:
-		return c.Plan.mutate(ctx, m)
 	case *RawEventMutation:
 		return c.RawEvent.mutate(ctx, m)
 	case *SessionMutation:
 		return c.Session.mutate(ctx, m)
-	case *SubscriptionMutation:
-		return c.Subscription.mutate(ctx, m)
-	case *TokenUsageMutation:
-		return c.TokenUsage.mutate(ctx, m)
 	case *URLMutation:
 		return c.URL.mutate(ctx, m)
-	case *UserMutation:
-		return c.User.mutate(ctx, m)
-	case *UserSettingsMutation:
-		return c.UserSettings.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -553,22 +503,6 @@ func (c *AILogClient) GetX(ctx context.Context, id uuid.UUID) *AILog {
 		panic(err)
 	}
 	return obj
-}
-
-// QueryUser queries the user edge of a AILog.
-func (c *AILogClient) QueryUser(_m *AILog) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(ailog.Table, ailog.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ailog.UserTable, ailog.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // QuerySession queries the session edge of a AILog.
@@ -1091,304 +1025,6 @@ func (c *PageVisitClient) mutate(ctx context.Context, m *PageVisitMutation) (Val
 	}
 }
 
-// PasswordResetTokenClient is a client for the PasswordResetToken schema.
-type PasswordResetTokenClient struct {
-	config
-}
-
-// NewPasswordResetTokenClient returns a client for the PasswordResetToken from the given config.
-func NewPasswordResetTokenClient(c config) *PasswordResetTokenClient {
-	return &PasswordResetTokenClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `passwordresettoken.Hooks(f(g(h())))`.
-func (c *PasswordResetTokenClient) Use(hooks ...Hook) {
-	c.hooks.PasswordResetToken = append(c.hooks.PasswordResetToken, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `passwordresettoken.Intercept(f(g(h())))`.
-func (c *PasswordResetTokenClient) Intercept(interceptors ...Interceptor) {
-	c.inters.PasswordResetToken = append(c.inters.PasswordResetToken, interceptors...)
-}
-
-// Create returns a builder for creating a PasswordResetToken entity.
-func (c *PasswordResetTokenClient) Create() *PasswordResetTokenCreate {
-	mutation := newPasswordResetTokenMutation(c.config, OpCreate)
-	return &PasswordResetTokenCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of PasswordResetToken entities.
-func (c *PasswordResetTokenClient) CreateBulk(builders ...*PasswordResetTokenCreate) *PasswordResetTokenCreateBulk {
-	return &PasswordResetTokenCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *PasswordResetTokenClient) MapCreateBulk(slice any, setFunc func(*PasswordResetTokenCreate, int)) *PasswordResetTokenCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &PasswordResetTokenCreateBulk{err: fmt.Errorf("calling to PasswordResetTokenClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*PasswordResetTokenCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &PasswordResetTokenCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for PasswordResetToken.
-func (c *PasswordResetTokenClient) Update() *PasswordResetTokenUpdate {
-	mutation := newPasswordResetTokenMutation(c.config, OpUpdate)
-	return &PasswordResetTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *PasswordResetTokenClient) UpdateOne(_m *PasswordResetToken) *PasswordResetTokenUpdateOne {
-	mutation := newPasswordResetTokenMutation(c.config, OpUpdateOne, withPasswordResetToken(_m))
-	return &PasswordResetTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *PasswordResetTokenClient) UpdateOneID(id uuid.UUID) *PasswordResetTokenUpdateOne {
-	mutation := newPasswordResetTokenMutation(c.config, OpUpdateOne, withPasswordResetTokenID(id))
-	return &PasswordResetTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for PasswordResetToken.
-func (c *PasswordResetTokenClient) Delete() *PasswordResetTokenDelete {
-	mutation := newPasswordResetTokenMutation(c.config, OpDelete)
-	return &PasswordResetTokenDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *PasswordResetTokenClient) DeleteOne(_m *PasswordResetToken) *PasswordResetTokenDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PasswordResetTokenClient) DeleteOneID(id uuid.UUID) *PasswordResetTokenDeleteOne {
-	builder := c.Delete().Where(passwordresettoken.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &PasswordResetTokenDeleteOne{builder}
-}
-
-// Query returns a query builder for PasswordResetToken.
-func (c *PasswordResetTokenClient) Query() *PasswordResetTokenQuery {
-	return &PasswordResetTokenQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypePasswordResetToken},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a PasswordResetToken entity by its id.
-func (c *PasswordResetTokenClient) Get(ctx context.Context, id uuid.UUID) (*PasswordResetToken, error) {
-	return c.Query().Where(passwordresettoken.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *PasswordResetTokenClient) GetX(ctx context.Context, id uuid.UUID) *PasswordResetToken {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryUser queries the user edge of a PasswordResetToken.
-func (c *PasswordResetTokenClient) QueryUser(_m *PasswordResetToken) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(passwordresettoken.Table, passwordresettoken.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, passwordresettoken.UserTable, passwordresettoken.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *PasswordResetTokenClient) Hooks() []Hook {
-	return c.hooks.PasswordResetToken
-}
-
-// Interceptors returns the client interceptors.
-func (c *PasswordResetTokenClient) Interceptors() []Interceptor {
-	return c.inters.PasswordResetToken
-}
-
-func (c *PasswordResetTokenClient) mutate(ctx context.Context, m *PasswordResetTokenMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&PasswordResetTokenCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&PasswordResetTokenUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&PasswordResetTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&PasswordResetTokenDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown PasswordResetToken mutation op: %q", m.Op())
-	}
-}
-
-// PlanClient is a client for the Plan schema.
-type PlanClient struct {
-	config
-}
-
-// NewPlanClient returns a client for the Plan from the given config.
-func NewPlanClient(c config) *PlanClient {
-	return &PlanClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `plan.Hooks(f(g(h())))`.
-func (c *PlanClient) Use(hooks ...Hook) {
-	c.hooks.Plan = append(c.hooks.Plan, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `plan.Intercept(f(g(h())))`.
-func (c *PlanClient) Intercept(interceptors ...Interceptor) {
-	c.inters.Plan = append(c.inters.Plan, interceptors...)
-}
-
-// Create returns a builder for creating a Plan entity.
-func (c *PlanClient) Create() *PlanCreate {
-	mutation := newPlanMutation(c.config, OpCreate)
-	return &PlanCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of Plan entities.
-func (c *PlanClient) CreateBulk(builders ...*PlanCreate) *PlanCreateBulk {
-	return &PlanCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *PlanClient) MapCreateBulk(slice any, setFunc func(*PlanCreate, int)) *PlanCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &PlanCreateBulk{err: fmt.Errorf("calling to PlanClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*PlanCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &PlanCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for Plan.
-func (c *PlanClient) Update() *PlanUpdate {
-	mutation := newPlanMutation(c.config, OpUpdate)
-	return &PlanUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *PlanClient) UpdateOne(_m *Plan) *PlanUpdateOne {
-	mutation := newPlanMutation(c.config, OpUpdateOne, withPlan(_m))
-	return &PlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *PlanClient) UpdateOneID(id string) *PlanUpdateOne {
-	mutation := newPlanMutation(c.config, OpUpdateOne, withPlanID(id))
-	return &PlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for Plan.
-func (c *PlanClient) Delete() *PlanDelete {
-	mutation := newPlanMutation(c.config, OpDelete)
-	return &PlanDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *PlanClient) DeleteOne(_m *Plan) *PlanDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PlanClient) DeleteOneID(id string) *PlanDeleteOne {
-	builder := c.Delete().Where(plan.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &PlanDeleteOne{builder}
-}
-
-// Query returns a query builder for Plan.
-func (c *PlanClient) Query() *PlanQuery {
-	return &PlanQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypePlan},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a Plan entity by its id.
-func (c *PlanClient) Get(ctx context.Context, id string) (*Plan, error) {
-	return c.Query().Where(plan.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *PlanClient) GetX(ctx context.Context, id string) *Plan {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QuerySubscriptions queries the subscriptions edge of a Plan.
-func (c *PlanClient) QuerySubscriptions(_m *Plan) *SubscriptionQuery {
-	query := (&SubscriptionClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(plan.Table, plan.FieldID, id),
-			sqlgraph.To(subscription.Table, subscription.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, plan.SubscriptionsTable, plan.SubscriptionsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *PlanClient) Hooks() []Hook {
-	return c.hooks.Plan
-}
-
-// Interceptors returns the client interceptors.
-func (c *PlanClient) Interceptors() []Interceptor {
-	return c.inters.Plan
-}
-
-func (c *PlanClient) mutate(ctx context.Context, m *PlanMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&PlanCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&PlanUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&PlanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&PlanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown Plan mutation op: %q", m.Op())
-	}
-}
-
 // RawEventClient is a client for the RawEvent schema.
 type RawEventClient struct {
 	config
@@ -1646,22 +1282,6 @@ func (c *SessionClient) GetX(ctx context.Context, id uuid.UUID) *Session {
 	return obj
 }
 
-// QueryUser queries the user edge of a Session.
-func (c *SessionClient) QueryUser(_m *Session) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(session.Table, session.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, session.UserTable, session.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryPageVisits queries the page_visits edge of a Session.
 func (c *SessionClient) QueryPageVisits(_m *Session) *PageVisitQuery {
 	query := (&PageVisitClient{config: c.config}).Query()
@@ -1726,22 +1346,6 @@ func (c *SessionClient) QueryMindmap(_m *Session) *MindmapGraphQuery {
 	return query
 }
 
-// QueryTokenUsage queries the token_usage edge of a Session.
-func (c *SessionClient) QueryTokenUsage(_m *Session) *TokenUsageQuery {
-	query := (&TokenUsageClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(session.Table, session.FieldID, id),
-			sqlgraph.To(tokenusage.Table, tokenusage.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, session.TokenUsageTable, session.TokenUsageColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryAiLogs queries the ai_logs edge of a Session.
 func (c *SessionClient) QueryAiLogs(_m *Session) *AILogQuery {
 	query := (&AILogClient{config: c.config}).Query()
@@ -1780,336 +1384,6 @@ func (c *SessionClient) mutate(ctx context.Context, m *SessionMutation) (Value, 
 		return (&SessionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Session mutation op: %q", m.Op())
-	}
-}
-
-// SubscriptionClient is a client for the Subscription schema.
-type SubscriptionClient struct {
-	config
-}
-
-// NewSubscriptionClient returns a client for the Subscription from the given config.
-func NewSubscriptionClient(c config) *SubscriptionClient {
-	return &SubscriptionClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `subscription.Hooks(f(g(h())))`.
-func (c *SubscriptionClient) Use(hooks ...Hook) {
-	c.hooks.Subscription = append(c.hooks.Subscription, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `subscription.Intercept(f(g(h())))`.
-func (c *SubscriptionClient) Intercept(interceptors ...Interceptor) {
-	c.inters.Subscription = append(c.inters.Subscription, interceptors...)
-}
-
-// Create returns a builder for creating a Subscription entity.
-func (c *SubscriptionClient) Create() *SubscriptionCreate {
-	mutation := newSubscriptionMutation(c.config, OpCreate)
-	return &SubscriptionCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of Subscription entities.
-func (c *SubscriptionClient) CreateBulk(builders ...*SubscriptionCreate) *SubscriptionCreateBulk {
-	return &SubscriptionCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *SubscriptionClient) MapCreateBulk(slice any, setFunc func(*SubscriptionCreate, int)) *SubscriptionCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &SubscriptionCreateBulk{err: fmt.Errorf("calling to SubscriptionClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*SubscriptionCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &SubscriptionCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for Subscription.
-func (c *SubscriptionClient) Update() *SubscriptionUpdate {
-	mutation := newSubscriptionMutation(c.config, OpUpdate)
-	return &SubscriptionUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *SubscriptionClient) UpdateOne(_m *Subscription) *SubscriptionUpdateOne {
-	mutation := newSubscriptionMutation(c.config, OpUpdateOne, withSubscription(_m))
-	return &SubscriptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *SubscriptionClient) UpdateOneID(id uuid.UUID) *SubscriptionUpdateOne {
-	mutation := newSubscriptionMutation(c.config, OpUpdateOne, withSubscriptionID(id))
-	return &SubscriptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for Subscription.
-func (c *SubscriptionClient) Delete() *SubscriptionDelete {
-	mutation := newSubscriptionMutation(c.config, OpDelete)
-	return &SubscriptionDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *SubscriptionClient) DeleteOne(_m *Subscription) *SubscriptionDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *SubscriptionClient) DeleteOneID(id uuid.UUID) *SubscriptionDeleteOne {
-	builder := c.Delete().Where(subscription.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &SubscriptionDeleteOne{builder}
-}
-
-// Query returns a query builder for Subscription.
-func (c *SubscriptionClient) Query() *SubscriptionQuery {
-	return &SubscriptionQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeSubscription},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a Subscription entity by its id.
-func (c *SubscriptionClient) Get(ctx context.Context, id uuid.UUID) (*Subscription, error) {
-	return c.Query().Where(subscription.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *SubscriptionClient) GetX(ctx context.Context, id uuid.UUID) *Subscription {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryUser queries the user edge of a Subscription.
-func (c *SubscriptionClient) QueryUser(_m *Subscription) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(subscription.Table, subscription.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, subscription.UserTable, subscription.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryPlan queries the plan edge of a Subscription.
-func (c *SubscriptionClient) QueryPlan(_m *Subscription) *PlanQuery {
-	query := (&PlanClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(subscription.Table, subscription.FieldID, id),
-			sqlgraph.To(plan.Table, plan.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, subscription.PlanTable, subscription.PlanColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *SubscriptionClient) Hooks() []Hook {
-	return c.hooks.Subscription
-}
-
-// Interceptors returns the client interceptors.
-func (c *SubscriptionClient) Interceptors() []Interceptor {
-	return c.inters.Subscription
-}
-
-func (c *SubscriptionClient) mutate(ctx context.Context, m *SubscriptionMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&SubscriptionCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&SubscriptionUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&SubscriptionUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&SubscriptionDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown Subscription mutation op: %q", m.Op())
-	}
-}
-
-// TokenUsageClient is a client for the TokenUsage schema.
-type TokenUsageClient struct {
-	config
-}
-
-// NewTokenUsageClient returns a client for the TokenUsage from the given config.
-func NewTokenUsageClient(c config) *TokenUsageClient {
-	return &TokenUsageClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `tokenusage.Hooks(f(g(h())))`.
-func (c *TokenUsageClient) Use(hooks ...Hook) {
-	c.hooks.TokenUsage = append(c.hooks.TokenUsage, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `tokenusage.Intercept(f(g(h())))`.
-func (c *TokenUsageClient) Intercept(interceptors ...Interceptor) {
-	c.inters.TokenUsage = append(c.inters.TokenUsage, interceptors...)
-}
-
-// Create returns a builder for creating a TokenUsage entity.
-func (c *TokenUsageClient) Create() *TokenUsageCreate {
-	mutation := newTokenUsageMutation(c.config, OpCreate)
-	return &TokenUsageCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of TokenUsage entities.
-func (c *TokenUsageClient) CreateBulk(builders ...*TokenUsageCreate) *TokenUsageCreateBulk {
-	return &TokenUsageCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *TokenUsageClient) MapCreateBulk(slice any, setFunc func(*TokenUsageCreate, int)) *TokenUsageCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &TokenUsageCreateBulk{err: fmt.Errorf("calling to TokenUsageClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*TokenUsageCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &TokenUsageCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for TokenUsage.
-func (c *TokenUsageClient) Update() *TokenUsageUpdate {
-	mutation := newTokenUsageMutation(c.config, OpUpdate)
-	return &TokenUsageUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *TokenUsageClient) UpdateOne(_m *TokenUsage) *TokenUsageUpdateOne {
-	mutation := newTokenUsageMutation(c.config, OpUpdateOne, withTokenUsage(_m))
-	return &TokenUsageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *TokenUsageClient) UpdateOneID(id uuid.UUID) *TokenUsageUpdateOne {
-	mutation := newTokenUsageMutation(c.config, OpUpdateOne, withTokenUsageID(id))
-	return &TokenUsageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for TokenUsage.
-func (c *TokenUsageClient) Delete() *TokenUsageDelete {
-	mutation := newTokenUsageMutation(c.config, OpDelete)
-	return &TokenUsageDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *TokenUsageClient) DeleteOne(_m *TokenUsage) *TokenUsageDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *TokenUsageClient) DeleteOneID(id uuid.UUID) *TokenUsageDeleteOne {
-	builder := c.Delete().Where(tokenusage.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &TokenUsageDeleteOne{builder}
-}
-
-// Query returns a query builder for TokenUsage.
-func (c *TokenUsageClient) Query() *TokenUsageQuery {
-	return &TokenUsageQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeTokenUsage},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a TokenUsage entity by its id.
-func (c *TokenUsageClient) Get(ctx context.Context, id uuid.UUID) (*TokenUsage, error) {
-	return c.Query().Where(tokenusage.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *TokenUsageClient) GetX(ctx context.Context, id uuid.UUID) *TokenUsage {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryUser queries the user edge of a TokenUsage.
-func (c *TokenUsageClient) QueryUser(_m *TokenUsage) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tokenusage.Table, tokenusage.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, tokenusage.UserTable, tokenusage.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QuerySession queries the session edge of a TokenUsage.
-func (c *TokenUsageClient) QuerySession(_m *TokenUsage) *SessionQuery {
-	query := (&SessionClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(tokenusage.Table, tokenusage.FieldID, id),
-			sqlgraph.To(session.Table, session.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, tokenusage.SessionTable, tokenusage.SessionColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *TokenUsageClient) Hooks() []Hook {
-	return c.hooks.TokenUsage
-}
-
-// Interceptors returns the client interceptors.
-func (c *TokenUsageClient) Interceptors() []Interceptor {
-	return c.inters.TokenUsage
-}
-
-func (c *TokenUsageClient) mutate(ctx context.Context, m *TokenUsageMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&TokenUsageCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&TokenUsageUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&TokenUsageUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&TokenUsageDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown TokenUsage mutation op: %q", m.Op())
 	}
 }
 
@@ -2262,393 +1536,14 @@ func (c *URLClient) mutate(ctx context.Context, m *URLMutation) (Value, error) {
 	}
 }
 
-// UserClient is a client for the User schema.
-type UserClient struct {
-	config
-}
-
-// NewUserClient returns a client for the User from the given config.
-func NewUserClient(c config) *UserClient {
-	return &UserClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `user.Hooks(f(g(h())))`.
-func (c *UserClient) Use(hooks ...Hook) {
-	c.hooks.User = append(c.hooks.User, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `user.Intercept(f(g(h())))`.
-func (c *UserClient) Intercept(interceptors ...Interceptor) {
-	c.inters.User = append(c.inters.User, interceptors...)
-}
-
-// Create returns a builder for creating a User entity.
-func (c *UserClient) Create() *UserCreate {
-	mutation := newUserMutation(c.config, OpCreate)
-	return &UserCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of User entities.
-func (c *UserClient) CreateBulk(builders ...*UserCreate) *UserCreateBulk {
-	return &UserCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *UserClient) MapCreateBulk(slice any, setFunc func(*UserCreate, int)) *UserCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &UserCreateBulk{err: fmt.Errorf("calling to UserClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*UserCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &UserCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for User.
-func (c *UserClient) Update() *UserUpdate {
-	mutation := newUserMutation(c.config, OpUpdate)
-	return &UserUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *UserClient) UpdateOne(_m *User) *UserUpdateOne {
-	mutation := newUserMutation(c.config, OpUpdateOne, withUser(_m))
-	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *UserClient) UpdateOneID(id uuid.UUID) *UserUpdateOne {
-	mutation := newUserMutation(c.config, OpUpdateOne, withUserID(id))
-	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for User.
-func (c *UserClient) Delete() *UserDelete {
-	mutation := newUserMutation(c.config, OpDelete)
-	return &UserDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *UserClient) DeleteOne(_m *User) *UserDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *UserClient) DeleteOneID(id uuid.UUID) *UserDeleteOne {
-	builder := c.Delete().Where(user.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &UserDeleteOne{builder}
-}
-
-// Query returns a query builder for User.
-func (c *UserClient) Query() *UserQuery {
-	return &UserQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeUser},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a User entity by its id.
-func (c *UserClient) Get(ctx context.Context, id uuid.UUID) (*User, error) {
-	return c.Query().Where(user.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QuerySettings queries the settings edge of a User.
-func (c *UserClient) QuerySettings(_m *User) *UserSettingsQuery {
-	query := (&UserSettingsClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(usersettings.Table, usersettings.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, user.SettingsTable, user.SettingsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QuerySessions queries the sessions edge of a User.
-func (c *UserClient) QuerySessions(_m *User) *SessionQuery {
-	query := (&SessionClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(session.Table, session.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.SessionsTable, user.SessionsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryPasswordResetTokens queries the password_reset_tokens edge of a User.
-func (c *UserClient) QueryPasswordResetTokens(_m *User) *PasswordResetTokenQuery {
-	query := (&PasswordResetTokenClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(passwordresettoken.Table, passwordresettoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.PasswordResetTokensTable, user.PasswordResetTokensColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QuerySubscriptions queries the subscriptions edge of a User.
-func (c *UserClient) QuerySubscriptions(_m *User) *SubscriptionQuery {
-	query := (&SubscriptionClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(subscription.Table, subscription.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.SubscriptionsTable, user.SubscriptionsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryTokenUsage queries the token_usage edge of a User.
-func (c *UserClient) QueryTokenUsage(_m *User) *TokenUsageQuery {
-	query := (&TokenUsageClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(tokenusage.Table, tokenusage.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.TokenUsageTable, user.TokenUsageColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryAiLogs queries the ai_logs edge of a User.
-func (c *UserClient) QueryAiLogs(_m *User) *AILogQuery {
-	query := (&AILogClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(user.Table, user.FieldID, id),
-			sqlgraph.To(ailog.Table, ailog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.AiLogsTable, user.AiLogsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *UserClient) Hooks() []Hook {
-	return c.hooks.User
-}
-
-// Interceptors returns the client interceptors.
-func (c *UserClient) Interceptors() []Interceptor {
-	return c.inters.User
-}
-
-func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&UserCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&UserUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&UserDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown User mutation op: %q", m.Op())
-	}
-}
-
-// UserSettingsClient is a client for the UserSettings schema.
-type UserSettingsClient struct {
-	config
-}
-
-// NewUserSettingsClient returns a client for the UserSettings from the given config.
-func NewUserSettingsClient(c config) *UserSettingsClient {
-	return &UserSettingsClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `usersettings.Hooks(f(g(h())))`.
-func (c *UserSettingsClient) Use(hooks ...Hook) {
-	c.hooks.UserSettings = append(c.hooks.UserSettings, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `usersettings.Intercept(f(g(h())))`.
-func (c *UserSettingsClient) Intercept(interceptors ...Interceptor) {
-	c.inters.UserSettings = append(c.inters.UserSettings, interceptors...)
-}
-
-// Create returns a builder for creating a UserSettings entity.
-func (c *UserSettingsClient) Create() *UserSettingsCreate {
-	mutation := newUserSettingsMutation(c.config, OpCreate)
-	return &UserSettingsCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of UserSettings entities.
-func (c *UserSettingsClient) CreateBulk(builders ...*UserSettingsCreate) *UserSettingsCreateBulk {
-	return &UserSettingsCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *UserSettingsClient) MapCreateBulk(slice any, setFunc func(*UserSettingsCreate, int)) *UserSettingsCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &UserSettingsCreateBulk{err: fmt.Errorf("calling to UserSettingsClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*UserSettingsCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &UserSettingsCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for UserSettings.
-func (c *UserSettingsClient) Update() *UserSettingsUpdate {
-	mutation := newUserSettingsMutation(c.config, OpUpdate)
-	return &UserSettingsUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *UserSettingsClient) UpdateOne(_m *UserSettings) *UserSettingsUpdateOne {
-	mutation := newUserSettingsMutation(c.config, OpUpdateOne, withUserSettings(_m))
-	return &UserSettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *UserSettingsClient) UpdateOneID(id uuid.UUID) *UserSettingsUpdateOne {
-	mutation := newUserSettingsMutation(c.config, OpUpdateOne, withUserSettingsID(id))
-	return &UserSettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for UserSettings.
-func (c *UserSettingsClient) Delete() *UserSettingsDelete {
-	mutation := newUserSettingsMutation(c.config, OpDelete)
-	return &UserSettingsDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *UserSettingsClient) DeleteOne(_m *UserSettings) *UserSettingsDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *UserSettingsClient) DeleteOneID(id uuid.UUID) *UserSettingsDeleteOne {
-	builder := c.Delete().Where(usersettings.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &UserSettingsDeleteOne{builder}
-}
-
-// Query returns a query builder for UserSettings.
-func (c *UserSettingsClient) Query() *UserSettingsQuery {
-	return &UserSettingsQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeUserSettings},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a UserSettings entity by its id.
-func (c *UserSettingsClient) Get(ctx context.Context, id uuid.UUID) (*UserSettings, error) {
-	return c.Query().Where(usersettings.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *UserSettingsClient) GetX(ctx context.Context, id uuid.UUID) *UserSettings {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryUser queries the user edge of a UserSettings.
-func (c *UserSettingsClient) QueryUser(_m *UserSettings) *UserQuery {
-	query := (&UserClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(usersettings.Table, usersettings.FieldID, id),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, usersettings.UserTable, usersettings.UserColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *UserSettingsClient) Hooks() []Hook {
-	return c.hooks.UserSettings
-}
-
-// Interceptors returns the client interceptors.
-func (c *UserSettingsClient) Interceptors() []Interceptor {
-	return c.inters.UserSettings
-}
-
-func (c *UserSettingsClient) mutate(ctx context.Context, m *UserSettingsMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&UserSettingsCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&UserSettingsUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&UserSettingsUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&UserSettingsDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown UserSettings mutation op: %q", m.Op())
-	}
-}
-
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AIConfig, AILog, Highlight, MindmapGraph, PageVisit, PasswordResetToken, Plan,
-		RawEvent, Session, Subscription, TokenUsage, URL, User, UserSettings []ent.Hook
+		AIConfig, AILog, Highlight, MindmapGraph, PageVisit, RawEvent, Session,
+		URL []ent.Hook
 	}
 	inters struct {
-		AIConfig, AILog, Highlight, MindmapGraph, PageVisit, PasswordResetToken, Plan,
-		RawEvent, Session, Subscription, TokenUsage, URL, User,
-		UserSettings []ent.Interceptor
+		AIConfig, AILog, Highlight, MindmapGraph, PageVisit, RawEvent, Session,
+		URL []ent.Interceptor
 	}
 )

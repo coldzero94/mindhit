@@ -12,31 +12,31 @@ import Link from "next/link";
 export function Footer() {
   const footerLinks = {
     product: {
-      title: "제품",
+      title: "Product",
       links: [
-        { label: "세션", href: "/sessions" },
-        { label: "가격", href: "/pricing" },
+        { label: "Sessions", href: "/sessions" },
+        { label: "Documentation", href: "https://github.com/coldzero94/mindhit#readme" },
       ],
     },
     company: {
-      title: "회사",
+      title: "Company",
       links: [
-        { label: "소개", href: "#" },
-        { label: "블로그", href: "#" },
+        { label: "About", href: "#" },
+        { label: "Blog", href: "#" },
       ],
     },
     support: {
-      title: "지원",
+      title: "Support",
       links: [
-        { label: "도움말", href: "#" },
-        { label: "문의하기", href: "mailto:support@mindhit.dev" },
+        { label: "Help", href: "#" },
+        { label: "Contact", href: "mailto:support@mindhit.dev" },
       ],
     },
     legal: {
-      title: "법적",
+      title: "Legal",
       links: [
-        { label: "개인정보처리방침", href: "#" },
-        { label: "이용약관", href: "#" },
+        { label: "Privacy Policy", href: "#" },
+        { label: "Terms of Service", href: "#" },
       ],
     },
   };

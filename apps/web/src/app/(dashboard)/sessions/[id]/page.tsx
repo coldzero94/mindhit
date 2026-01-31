@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow, format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { ArrowLeft, Trash2, Clock, Globe, FileText, Network } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,11 +35,11 @@ import { SessionTitleEdit } from "@/components/sessions/SessionTitleEdit";
 import type { SessionSessionStatus } from "@/api/generated/types.gen";
 
 const statusLabels: Record<SessionSessionStatus, string> = {
-  recording: "녹화 중",
-  paused: "일시정지",
-  processing: "처리 중",
-  completed: "완료",
-  failed: "실패",
+  recording: "Recording",
+  paused: "Paused",
+  processing: "Processing",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 function formatDuration(ms: number): string {
@@ -48,12 +48,12 @@ function formatDuration(ms: number): string {
   const hours = Math.floor(minutes / 60);
 
   if (hours > 0) {
-    return `${hours}시간 ${minutes % 60}분`;
+    return `${hours}h ${minutes % 60}m`;
   }
   if (minutes > 0) {
-    return `${minutes}분 ${seconds % 60}초`;
+    return `${minutes}m ${seconds % 60}s`;
   }
-  return `${seconds}초`;
+  return `${seconds}s`;
 }
 
 export default function SessionDetailPage() {
@@ -71,10 +71,10 @@ export default function SessionDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteSession.mutateAsync(sessionId);
-      toast.success("세션이 삭제되었습니다.");
+      toast.success("Session deleted successfully.");
       router.push("/sessions");
     } catch {
-      toast.error("세션을 삭제하는데 실패했습니다.");
+      toast.error("Failed to delete session.");
     }
   };
 
@@ -83,7 +83,7 @@ export default function SessionDetailPage() {
       id: sessionId,
       data: { title: newTitle },
     });
-    toast.success("제목이 수정되었습니다.");
+    toast.success("Title updated successfully.");
   };
 
   if (isLoading) {
@@ -103,9 +103,9 @@ export default function SessionDetailPage() {
   if (error || !session) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500 mb-4">세션을 찾을 수 없습니다.</p>
+        <p className="text-red-500 mb-4">Session not found.</p>
         <Button variant="outline" onClick={() => router.push("/sessions")}>
-          목록으로 돌아가기
+          Back to List
         </Button>
       </div>
     );
@@ -125,17 +125,17 @@ export default function SessionDetailPage() {
           </Button>
           <div>
             <SessionTitleEdit
-              title={session.title || "제목 없음"}
+              title={session.title || "Untitled"}
               onSave={handleTitleUpdate}
             />
             <p className="text-sm text-gray-500 ml-2">
-              {format(new Date(session.started_at), "yyyy년 MM월 dd일 HH:mm", {
-                locale: ko,
+              {format(new Date(session.started_at), "MMM dd, yyyy HH:mm", {
+                locale: enUS,
               })}
               {" · "}
               {formatDistanceToNow(new Date(session.started_at), {
                 addSuffix: true,
-                locale: ko,
+                locale: enUS,
               })}
             </p>
           </div>
@@ -156,16 +156,16 @@ export default function SessionDetailPage() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>세션을 삭제하시겠습니까?</AlertDialogTitle>
+                <AlertDialogTitle>Delete this session?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  이 작업은 되돌릴 수 없습니다. 세션과 관련된 모든 데이터가
-                  영구적으로 삭제됩니다.
+                  This action cannot be undone. All data related to this session
+                  will be permanently deleted.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>취소</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDelete}>
-                  삭제
+                  Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -184,7 +184,7 @@ export default function SessionDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              방문한 페이지
+              Pages Visited
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -197,7 +197,7 @@ export default function SessionDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              하이라이트
+              Highlights
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -210,7 +210,7 @@ export default function SessionDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              고유 URL
+              Unique URLs
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -221,7 +221,7 @@ export default function SessionDetailPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              총 이벤트
+              Total Events
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -237,11 +237,11 @@ export default function SessionDetailPage() {
         <TabsList>
           <TabsTrigger value="events" className="flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            이벤트
+            Events
           </TabsTrigger>
           <TabsTrigger value="mindmap" className="flex items-center gap-2">
             <Network className="h-4 w-4" />
-            마인드맵
+            Mindmap
           </TabsTrigger>
         </TabsList>
 
@@ -250,12 +250,12 @@ export default function SessionDetailPage() {
           {/* Page Visits */}
           <Card>
             <CardHeader>
-              <CardTitle>방문한 페이지</CardTitle>
+              <CardTitle>Visited Pages</CardTitle>
             </CardHeader>
             <CardContent>
               {!events?.page_visits.length ? (
                 <p className="text-gray-500 text-center py-4">
-                  방문한 페이지가 없습니다.
+                  No pages visited.
                 </p>
               ) : (
                 <ul className="divide-y">
@@ -300,7 +300,7 @@ export default function SessionDetailPage() {
                         <div className="text-right ml-4 shrink-0">
                           {visit.visit_count && visit.visit_count > 1 && (
                             <p className="text-sm font-medium text-blue-600">
-                              {visit.visit_count}회 방문
+                              {visit.visit_count} visits
                             </p>
                           )}
                           <p className="text-sm text-gray-400">
@@ -323,7 +323,7 @@ export default function SessionDetailPage() {
           {events?.highlights && events.highlights.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>하이라이트</CardTitle>
+                <CardTitle>Highlights</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">

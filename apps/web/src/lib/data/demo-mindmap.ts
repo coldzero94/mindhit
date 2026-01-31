@@ -15,8 +15,8 @@ export const demoMindmapData: MindmapData = {
       color: "#FFD700",
       position: { x: 0, y: 0, z: 0 },
       data: {
-        keywords: ["웹", "개발", "프로그래밍"],
-        description: "웹 개발의 핵심 주제",
+        keywords: ["web", "development", "programming"],
+        description: "Core topics of web development",
       },
     },
 
@@ -29,8 +29,8 @@ export const demoMindmapData: MindmapData = {
       color: "#61DAFB",
       position: { x: 80, y: 30, z: 20 },
       data: {
-        keywords: ["리액트", "프론트엔드", "컴포넌트"],
-        description: "모던 프론트엔드 라이브러리",
+        keywords: ["react", "frontend", "component"],
+        description: "Modern frontend library",
       },
     },
     {
@@ -41,8 +41,8 @@ export const demoMindmapData: MindmapData = {
       color: "#3178C6",
       position: { x: -80, y: 30, z: -20 },
       data: {
-        keywords: ["타입스크립트", "정적타입", "자바스크립트"],
-        description: "타입 안정성을 제공하는 JavaScript 슈퍼셋",
+        keywords: ["typescript", "static-typing", "javascript"],
+        description: "JavaScript superset with type safety",
       },
     },
     {
@@ -53,8 +53,8 @@ export const demoMindmapData: MindmapData = {
       color: "#68A063",
       position: { x: 0, y: -60, z: 40 },
       data: {
-        keywords: ["노드", "백엔드", "서버"],
-        description: "JavaScript 런타임 환경",
+        keywords: ["node", "backend", "server"],
+        description: "JavaScript runtime environment",
       },
     },
 
@@ -68,7 +68,7 @@ export const demoMindmapData: MindmapData = {
       position: { x: 120, y: 50, z: 40 },
       data: {
         keywords: ["hooks", "useState", "useEffect"],
-        description: "함수형 컴포넌트에서 상태 관리",
+        description: "State management in functional components",
         url: "https://react.dev/reference/react",
       },
     },
@@ -80,8 +80,8 @@ export const demoMindmapData: MindmapData = {
       color: "#9BA3AF",
       position: { x: 100, y: 0, z: -30 },
       data: {
-        keywords: ["넥스트", "SSR", "프레임워크"],
-        description: "React 기반 풀스택 프레임워크",
+        keywords: ["nextjs", "SSR", "framework"],
+        description: "React-based fullstack framework",
         url: "https://nextjs.org",
       },
     },
@@ -93,8 +93,8 @@ export const demoMindmapData: MindmapData = {
       color: "#9BA3AF",
       position: { x: -110, y: 10, z: 30 },
       data: {
-        keywords: ["타입", "인터페이스", "제네릭"],
-        description: "TypeScript 기초 문법",
+        keywords: ["types", "interface", "generics"],
+        description: "TypeScript fundamentals",
         url: "https://www.typescriptlang.org/docs",
       },
     },
@@ -106,8 +106,8 @@ export const demoMindmapData: MindmapData = {
       color: "#9BA3AF",
       position: { x: -30, y: -80, z: 60 },
       data: {
-        keywords: ["익스프레스", "API", "미들웨어"],
-        description: "Node.js 웹 프레임워크",
+        keywords: ["express", "API", "middleware"],
+        description: "Node.js web framework",
         url: "https://expressjs.com",
       },
     },

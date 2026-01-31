@@ -34,8 +34,6 @@ const (
 	FieldStartedAt = "started_at"
 	// FieldEndedAt holds the string denoting the ended_at field in the database.
 	FieldEndedAt = "ended_at"
-	// EdgeUser holds the string denoting the user edge name in mutations.
-	EdgeUser = "user"
 	// EdgePageVisits holds the string denoting the page_visits edge name in mutations.
 	EdgePageVisits = "page_visits"
 	// EdgeHighlights holds the string denoting the highlights edge name in mutations.
@@ -44,19 +42,10 @@ const (
 	EdgeRawEvents = "raw_events"
 	// EdgeMindmap holds the string denoting the mindmap edge name in mutations.
 	EdgeMindmap = "mindmap"
-	// EdgeTokenUsage holds the string denoting the token_usage edge name in mutations.
-	EdgeTokenUsage = "token_usage"
 	// EdgeAiLogs holds the string denoting the ai_logs edge name in mutations.
 	EdgeAiLogs = "ai_logs"
 	// Table holds the table name of the session in the database.
 	Table = "sessions"
-	// UserTable is the table that holds the user relation/edge.
-	UserTable = "sessions"
-	// UserInverseTable is the table name for the User entity.
-	// It exists in this package in order to avoid circular dependency with the "user" package.
-	UserInverseTable = "users"
-	// UserColumn is the table column denoting the user relation/edge.
-	UserColumn = "user_sessions"
 	// PageVisitsTable is the table that holds the page_visits relation/edge.
 	PageVisitsTable = "page_visits"
 	// PageVisitsInverseTable is the table name for the PageVisit entity.
@@ -85,13 +74,6 @@ const (
 	MindmapInverseTable = "mindmap_graphs"
 	// MindmapColumn is the table column denoting the mindmap relation/edge.
 	MindmapColumn = "session_mindmap"
-	// TokenUsageTable is the table that holds the token_usage relation/edge.
-	TokenUsageTable = "token_usages"
-	// TokenUsageInverseTable is the table name for the TokenUsage entity.
-	// It exists in this package in order to avoid circular dependency with the "tokenusage" package.
-	TokenUsageInverseTable = "token_usages"
-	// TokenUsageColumn is the table column denoting the token_usage relation/edge.
-	TokenUsageColumn = "session_token_usage"
 	// AiLogsTable is the table that holds the ai_logs relation/edge.
 	AiLogsTable = "ai_logs"
 	// AiLogsInverseTable is the table name for the AILog entity.
@@ -115,21 +97,10 @@ var Columns = []string{
 	FieldEndedAt,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "sessions"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"user_sessions",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -257,13 +228,6 @@ func ByEndedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEndedAt, opts...).ToFunc()
 }
 
-// ByUserField orders the results by user field.
-func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newUserStep(), sql.OrderByField(field, opts...))
-	}
-}
-
 // ByPageVisitsCount orders the results by page_visits count.
 func ByPageVisitsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -313,20 +277,6 @@ func ByMindmapField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByTokenUsageCount orders the results by token_usage count.
-func ByTokenUsageCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newTokenUsageStep(), opts...)
-	}
-}
-
-// ByTokenUsage orders the results by token_usage terms.
-func ByTokenUsage(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newTokenUsageStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByAiLogsCount orders the results by ai_logs count.
 func ByAiLogsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -339,13 +289,6 @@ func ByAiLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newAiLogsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
-}
-func newUserStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(UserInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-	)
 }
 func newPageVisitsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
@@ -373,13 +316,6 @@ func newMindmapStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(MindmapInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, false, MindmapTable, MindmapColumn),
-	)
-}
-func newTokenUsageStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TokenUsageInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, TokenUsageTable, TokenUsageColumn),
 	)
 }
 func newAiLogsStep() *sqlgraph.Step {

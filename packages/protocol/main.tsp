@@ -3,11 +3,8 @@ import "@typespec/rest";
 import "@typespec/openapi";
 
 import "./src/common/errors.tsp";
-import "./src/auth/auth.tsp";
 import "./src/session/session.tsp";
 import "./src/events/events.tsp";
-import "./src/subscription/subscription.tsp";
-import "./src/usage/usage.tsp";
 import "./src/mindmap/mindmap.tsp";
 
 using TypeSpec.Http;

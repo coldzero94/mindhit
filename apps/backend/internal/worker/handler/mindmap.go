@@ -174,7 +174,6 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 			q.WithURL()
 		}).
 		WithHighlights().
-		WithUser().
 		Only(ctx)
 
 	if err != nil {
@@ -234,28 +233,6 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 		highlights.WriteString("(No highlights)")
 	}
 
-	// Get user ID for metadata and usage tracking
-	var userID uuid.UUID
-	if sess.Edges.User != nil {
-		userID = sess.Edges.User.ID
-	}
-
-	// Check usage limit before AI call
-	if h.usageService != nil && userID != uuid.Nil {
-		status, err := h.usageService.CheckLimit(ctx, userID)
-		if err != nil {
-			slog.Warn("failed to check usage limit", "error", err)
-		} else if !status.CanUseAI {
-			slog.Warn("user token limit exceeded, skipping mindmap generation",
-				"user_id", userID,
-				"tokens_used", status.TokensUsed,
-				"token_limit", status.TokenLimit,
-			)
-			processingErr = fmt.Errorf("token limit exceeded: used %d/%d", status.TokensUsed, status.TokenLimit)
-			return processingErr
-		}
-	}
-
 	// Generate relationship graph using AI
 	req := ai.ChatRequest{
 		UserPrompt: fmt.Sprintf(relationshipGraphPrompt, pageData.String(), highlights.String()),
@@ -265,7 +242,6 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 		},
 		Metadata: map[string]string{
 			"session_id": sessionID.String(),
-			"user_id":    userID.String(),
 		},
 	}
 
@@ -273,19 +249,6 @@ func (h *handlers) HandleMindmapGenerate(ctx context.Context, t *asynq.Task) err
 	if err != nil {
 		processingErr = fmt.Errorf("ai generate mindmap: %w", err)
 		return processingErr
-	}
-
-	// Record token usage
-	if h.usageService != nil && userID != uuid.Nil {
-		if err := h.usageService.RecordUsage(ctx, service.UsageRecord{
-			UserID:    userID,
-			SessionID: sessionID,
-			Operation: "mindmap",
-			Tokens:    response.TotalTokens,
-			AIModel:   response.Model,
-		}); err != nil {
-			slog.Error("failed to record usage", "error", err)
-		}
 	}
 
 	var aiResp RelationshipGraphResponse

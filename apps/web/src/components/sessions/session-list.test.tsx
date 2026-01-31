@@ -22,7 +22,7 @@ describe("SessionList", () => {
     await waitFor(() => {
       const hasContent =
         screen.queryByText("Test Session") ||
-        screen.queryByText("아직 녹화된 세션이 없습니다.");
+        screen.queryByText("No recorded sessions yet.");
       expect(hasContent).toBeInTheDocument();
     });
   });
@@ -45,7 +45,7 @@ describe("SessionList", () => {
       // Either shows sessions or empty state
       const hasContent =
         screen.queryByText("Test Session") ||
-        screen.queryByText("아직 녹화된 세션이 없습니다.");
+        screen.queryByText("No recorded sessions yet.");
       expect(hasContent).toBeInTheDocument();
     });
   });
@@ -54,7 +54,7 @@ describe("SessionList", () => {
     render(<SessionList page={2} onPageChange={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText("페이지 2")).toBeInTheDocument();
+      expect(screen.getByText("Page 2")).toBeInTheDocument();
     });
   });
 
@@ -65,10 +65,10 @@ describe("SessionList", () => {
     render(<SessionList page={2} onPageChange={onPageChange} />);
 
     await waitFor(() => {
-      expect(screen.getByText("페이지 2")).toBeInTheDocument();
+      expect(screen.getByText("Page 2")).toBeInTheDocument();
     });
 
-    const prevButton = screen.getByRole("button", { name: /이전/ });
+    const prevButton = screen.getByRole("button", { name: /previous/i });
     await user.click(prevButton);
 
     expect(onPageChange).toHaveBeenCalledWith(1);
@@ -79,7 +79,7 @@ describe("SessionList", () => {
 
     await waitFor(() => {
       // Wait for data to load - if there's data and pagination shows
-      const prevButton = screen.queryByRole("button", { name: /이전/ });
+      const prevButton = screen.queryByRole("button", { name: /previous/i });
       if (prevButton) {
         expect(prevButton).toBeDisabled();
       }

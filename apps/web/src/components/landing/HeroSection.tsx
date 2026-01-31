@@ -31,14 +31,14 @@ export function HeroSection() {
           {/* Headline with text reveal */}
           <div className="text-center mb-8 sm:mb-12">
             <TextReveal
-              text="브라우징을 인사이트로 변환하세요"
+              text="Transform Your Browsing into Insights"
               as="h1"
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-4 sm:mb-6"
               delay={0.1}
             />
             <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-              AI가 당신의 브라우징 히스토리를 분석하여 <br className="hidden sm:block" />
-              아름다운 3D 마인드맵으로 시각화합니다
+              AI analyzes your browsing history and visualizes it <br className="hidden sm:block" />
+              as beautiful 3D mindmaps
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export function HeroSection() {
                     </div>
 
                     <p className="mt-6 text-sm text-muted-foreground">
-                      3D 마인드맵 프리뷰
+                      3D Mindmap Preview
                     </p>
                   </div>
                 </div>
@@ -85,9 +85,9 @@ export function HeroSection() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center gap-4 mb-12">
-            <Link href="/signup">
+            <Link href="/sessions">
               <Button size="lg" className="text-lg px-8 py-6">
-                무료로 시작하기
+                Open Dashboard
               </Button>
             </Link>
             <Button
@@ -96,7 +96,7 @@ export function HeroSection() {
               className="text-lg px-8 py-6"
               onClick={handleScrollDown}
             >
-              자세히 알아보기
+              Learn More
             </Button>
           </div>
 

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -11,12 +10,10 @@ import { Button } from "@/components/ui/button";
  * Features:
  * - Fixed positioning at top
  * - Transparent initially, becomes opaque on scroll
- * - Auth-aware: Shows different links for logged-in users
  * - Smooth background transition
  */
 export function LandingNavbar() {
   const { scrollY } = useScroll();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   // Background opacity increases as user scrolls down
   // 0-50px scroll: opacity 0 → 1
@@ -48,25 +45,9 @@ export function LandingNavbar() {
 
           {/* Navigation Links */}
           <div className="flex items-center gap-4">
-            {isAuthenticated ? (
-              <>
-                <Link href="/sessions">
-                  <Button variant="ghost">대시보드</Button>
-                </Link>
-                <Link href="/account">
-                  <Button variant="ghost">계정</Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost">로그인</Button>
-                </Link>
-                <Link href="/signup">
-                  <Button>시작하기</Button>
-                </Link>
-              </>
-            )}
+            <Link href="/sessions">
+              <Button>Dashboard</Button>
+            </Link>
           </div>
         </div>
       </div>

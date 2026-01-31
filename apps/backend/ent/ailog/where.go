@@ -56,11 +56,6 @@ func IDLTE(id uuid.UUID) predicate.AILog {
 	return predicate.AILog(sql.FieldLTE(FieldID, id))
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v uuid.UUID) predicate.AILog {
-	return predicate.AILog(sql.FieldEQ(FieldUserID, v))
-}
-
 // SessionID applies equality check predicate on the "session_id" field. It's identical to SessionIDEQ.
 func SessionID(v uuid.UUID) predicate.AILog {
 	return predicate.AILog(sql.FieldEQ(FieldSessionID, v))
@@ -144,36 +139,6 @@ func EstimatedCostCents(v int) predicate.AILog {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.AILog {
 	return predicate.AILog(sql.FieldEQ(FieldCreatedAt, v))
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v uuid.UUID) predicate.AILog {
-	return predicate.AILog(sql.FieldEQ(FieldUserID, v))
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v uuid.UUID) predicate.AILog {
-	return predicate.AILog(sql.FieldNEQ(FieldUserID, v))
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...uuid.UUID) predicate.AILog {
-	return predicate.AILog(sql.FieldIn(FieldUserID, vs...))
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...uuid.UUID) predicate.AILog {
-	return predicate.AILog(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDIsNil applies the IsNil predicate on the "user_id" field.
-func UserIDIsNil() predicate.AILog {
-	return predicate.AILog(sql.FieldIsNull(FieldUserID))
-}
-
-// UserIDNotNil applies the NotNil predicate on the "user_id" field.
-func UserIDNotNil() predicate.AILog {
-	return predicate.AILog(sql.FieldNotNull(FieldUserID))
 }
 
 // SessionIDEQ applies the EQ predicate on the "session_id" field.
@@ -1159,29 +1124,6 @@ func CreatedAtLT(v time.Time) predicate.AILog {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.AILog {
 	return predicate.AILog(sql.FieldLTE(FieldCreatedAt, v))
-}
-
-// HasUser applies the HasEdge predicate on the "user" edge.
-func HasUser() predicate.AILog {
-	return predicate.AILog(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.AILog {
-	return predicate.AILog(func(s *sql.Selector) {
-		step := newUserStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
 }
 
 // HasSession applies the HasEdge predicate on the "session" edge.

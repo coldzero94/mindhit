@@ -1,9 +1,9 @@
 /**
  * Sessions API Integration Tests
- * 실제 백엔드 서버와 통신하여 세션 플로우 검증
+ * Tests session flow by communicating with the actual backend server
  *
- * 실행 전 필수: 백엔드 서버가 실행 중이어야 함
- * moonx backend:dev-api-test (rate limiting 비활성화)
+ * Prerequisites: Backend server must be running
+ * moonx backend:dev-api-test (disables rate limiting)
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { AxiosInstance } from "axios";
@@ -28,12 +28,12 @@ describe("Sessions API Integration", () => {
   });
 
   afterAll(async () => {
-    // 테스트에서 생성한 모든 유저 정리
+    // Clean up all users created during tests
     await userManager.cleanup();
   });
 
   beforeEach(async () => {
-    // 각 테스트마다 새 유저 생성
+    // Create a new user for each test
     const user = await userManager.createUser("session_test");
     authClient = createAuthenticatedClient(user.token);
   });
@@ -208,7 +208,7 @@ describe("Sessions API Integration", () => {
           typeof error.response === "object" &&
           "status" in error.response
         ) {
-          // 다른 유저의 세션은 404 (보안상 403 대신 404 반환)
+          // Other user's session returns 404 (for security, 404 instead of 403)
           expect([403, 404]).toContain(error.response.status);
         }
       }

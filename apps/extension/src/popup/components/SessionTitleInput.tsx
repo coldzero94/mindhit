@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { useAuthStore } from "@/stores/auth-store";
 import { useSessionStore } from "@/stores/session-store";
 import { api } from "@/lib/api";
 
@@ -9,7 +8,6 @@ interface SessionTitleInputProps {
 }
 
 export function SessionTitleInput({ sessionId, className }: SessionTitleInputProps) {
-  const { token } = useAuthStore();
   const { sessionTitle, setSessionTitle } = useSessionStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(sessionTitle || "");
@@ -30,7 +28,7 @@ export function SessionTitleInput({ sessionId, className }: SessionTitleInputPro
   }, [isEditing]);
 
   const handleSave = async () => {
-    if (!token || !sessionId) return;
+    if (!sessionId) return;
 
     const trimmedValue = editValue.trim();
     if (trimmedValue === (sessionTitle || "")) {
@@ -40,7 +38,7 @@ export function SessionTitleInput({ sessionId, className }: SessionTitleInputPro
 
     setIsSaving(true);
     try {
-      await api.updateSession(token, sessionId, { title: trimmedValue || undefined });
+      await api.updateSession(sessionId, { title: trimmedValue || undefined });
       setSessionTitle(trimmedValue || null);
       setIsEditing(false);
     } catch (err) {

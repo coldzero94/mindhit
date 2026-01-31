@@ -11,16 +11,10 @@ import (
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
-	"github.com/mindhit/api/ent/passwordresettoken"
-	"github.com/mindhit/api/ent/plan"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/schema"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/subscription"
-	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/url"
-	"github.com/mindhit/api/ent/user"
-	"github.com/mindhit/api/ent/usersettings"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -74,43 +68,43 @@ func init() {
 	ailogFields := schema.AILog{}.Fields()
 	_ = ailogFields
 	// ailogDescTaskType is the schema descriptor for task_type field.
-	ailogDescTaskType := ailogFields[3].Descriptor()
+	ailogDescTaskType := ailogFields[2].Descriptor()
 	// ailog.TaskTypeValidator is a validator for the "task_type" field. It is called by the builders before save.
 	ailog.TaskTypeValidator = ailogDescTaskType.Validators[0].(func(string) error)
 	// ailogDescProvider is the schema descriptor for provider field.
-	ailogDescProvider := ailogFields[4].Descriptor()
+	ailogDescProvider := ailogFields[3].Descriptor()
 	// ailog.ProviderValidator is a validator for the "provider" field. It is called by the builders before save.
 	ailog.ProviderValidator = ailogDescProvider.Validators[0].(func(string) error)
 	// ailogDescModel is the schema descriptor for model field.
-	ailogDescModel := ailogFields[5].Descriptor()
+	ailogDescModel := ailogFields[4].Descriptor()
 	// ailog.ModelValidator is a validator for the "model" field. It is called by the builders before save.
 	ailog.ModelValidator = ailogDescModel.Validators[0].(func(string) error)
 	// ailogDescInputTokens is the schema descriptor for input_tokens field.
-	ailogDescInputTokens := ailogFields[10].Descriptor()
+	ailogDescInputTokens := ailogFields[9].Descriptor()
 	// ailog.DefaultInputTokens holds the default value on creation for the input_tokens field.
 	ailog.DefaultInputTokens = ailogDescInputTokens.Default.(int)
 	// ailogDescOutputTokens is the schema descriptor for output_tokens field.
-	ailogDescOutputTokens := ailogFields[11].Descriptor()
+	ailogDescOutputTokens := ailogFields[10].Descriptor()
 	// ailog.DefaultOutputTokens holds the default value on creation for the output_tokens field.
 	ailog.DefaultOutputTokens = ailogDescOutputTokens.Default.(int)
 	// ailogDescThinkingTokens is the schema descriptor for thinking_tokens field.
-	ailogDescThinkingTokens := ailogFields[12].Descriptor()
+	ailogDescThinkingTokens := ailogFields[11].Descriptor()
 	// ailog.DefaultThinkingTokens holds the default value on creation for the thinking_tokens field.
 	ailog.DefaultThinkingTokens = ailogDescThinkingTokens.Default.(int)
 	// ailogDescTotalTokens is the schema descriptor for total_tokens field.
-	ailogDescTotalTokens := ailogFields[13].Descriptor()
+	ailogDescTotalTokens := ailogFields[12].Descriptor()
 	// ailog.DefaultTotalTokens holds the default value on creation for the total_tokens field.
 	ailog.DefaultTotalTokens = ailogDescTotalTokens.Default.(int)
 	// ailogDescLatencyMs is the schema descriptor for latency_ms field.
-	ailogDescLatencyMs := ailogFields[14].Descriptor()
+	ailogDescLatencyMs := ailogFields[13].Descriptor()
 	// ailog.DefaultLatencyMs holds the default value on creation for the latency_ms field.
 	ailog.DefaultLatencyMs = ailogDescLatencyMs.Default.(int64)
 	// ailogDescEstimatedCostCents is the schema descriptor for estimated_cost_cents field.
-	ailogDescEstimatedCostCents := ailogFields[18].Descriptor()
+	ailogDescEstimatedCostCents := ailogFields[17].Descriptor()
 	// ailog.DefaultEstimatedCostCents holds the default value on creation for the estimated_cost_cents field.
 	ailog.DefaultEstimatedCostCents = ailogDescEstimatedCostCents.Default.(int)
 	// ailogDescCreatedAt is the schema descriptor for created_at field.
-	ailogDescCreatedAt := ailogFields[20].Descriptor()
+	ailogDescCreatedAt := ailogFields[19].Descriptor()
 	// ailog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	ailog.DefaultCreatedAt = ailogDescCreatedAt.Default.(func() time.Time)
 	// ailogDescID is the schema descriptor for id field.
@@ -198,46 +192,6 @@ func init() {
 	pagevisitDescID := pagevisitMixinFields0[0].Descriptor()
 	// pagevisit.DefaultID holds the default value on creation for the id field.
 	pagevisit.DefaultID = pagevisitDescID.Default.(func() uuid.UUID)
-	passwordresettokenFields := schema.PasswordResetToken{}.Fields()
-	_ = passwordresettokenFields
-	// passwordresettokenDescToken is the schema descriptor for token field.
-	passwordresettokenDescToken := passwordresettokenFields[1].Descriptor()
-	// passwordresettoken.TokenValidator is a validator for the "token" field. It is called by the builders before save.
-	passwordresettoken.TokenValidator = passwordresettokenDescToken.Validators[0].(func(string) error)
-	// passwordresettokenDescCreatedAt is the schema descriptor for created_at field.
-	passwordresettokenDescCreatedAt := passwordresettokenFields[4].Descriptor()
-	// passwordresettoken.DefaultCreatedAt holds the default value on creation for the created_at field.
-	passwordresettoken.DefaultCreatedAt = passwordresettokenDescCreatedAt.Default.(func() time.Time)
-	// passwordresettokenDescUsed is the schema descriptor for used field.
-	passwordresettokenDescUsed := passwordresettokenFields[5].Descriptor()
-	// passwordresettoken.DefaultUsed holds the default value on creation for the used field.
-	passwordresettoken.DefaultUsed = passwordresettokenDescUsed.Default.(bool)
-	// passwordresettokenDescID is the schema descriptor for id field.
-	passwordresettokenDescID := passwordresettokenFields[0].Descriptor()
-	// passwordresettoken.DefaultID holds the default value on creation for the id field.
-	passwordresettoken.DefaultID = passwordresettokenDescID.Default.(func() uuid.UUID)
-	planFields := schema.Plan{}.Fields()
-	_ = planFields
-	// planDescName is the schema descriptor for name field.
-	planDescName := planFields[1].Descriptor()
-	// plan.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	plan.NameValidator = planDescName.Validators[0].(func(string) error)
-	// planDescPriceCents is the schema descriptor for price_cents field.
-	planDescPriceCents := planFields[2].Descriptor()
-	// plan.DefaultPriceCents holds the default value on creation for the price_cents field.
-	plan.DefaultPriceCents = planDescPriceCents.Default.(int)
-	// planDescBillingPeriod is the schema descriptor for billing_period field.
-	planDescBillingPeriod := planFields[3].Descriptor()
-	// plan.DefaultBillingPeriod holds the default value on creation for the billing_period field.
-	plan.DefaultBillingPeriod = planDescBillingPeriod.Default.(string)
-	// planDescFeatures is the schema descriptor for features field.
-	planDescFeatures := planFields[7].Descriptor()
-	// plan.DefaultFeatures holds the default value on creation for the features field.
-	plan.DefaultFeatures = planDescFeatures.Default.(map[string]bool)
-	// planDescCreatedAt is the schema descriptor for created_at field.
-	planDescCreatedAt := planFields[8].Descriptor()
-	// plan.DefaultCreatedAt holds the default value on creation for the created_at field.
-	plan.DefaultCreatedAt = planDescCreatedAt.Default.(func() time.Time)
 	raweventMixin := schema.RawEvent{}.Mixin()
 	raweventMixinFields0 := raweventMixin[0].Fields()
 	_ = raweventMixinFields0
@@ -290,56 +244,6 @@ func init() {
 	sessionDescID := sessionMixinFields0[0].Descriptor()
 	// session.DefaultID holds the default value on creation for the id field.
 	session.DefaultID = sessionDescID.Default.(func() uuid.UUID)
-	subscriptionMixin := schema.Subscription{}.Mixin()
-	subscriptionMixinFields0 := subscriptionMixin[0].Fields()
-	_ = subscriptionMixinFields0
-	subscriptionFields := schema.Subscription{}.Fields()
-	_ = subscriptionFields
-	// subscriptionDescCreatedAt is the schema descriptor for created_at field.
-	subscriptionDescCreatedAt := subscriptionMixinFields0[1].Descriptor()
-	// subscription.DefaultCreatedAt holds the default value on creation for the created_at field.
-	subscription.DefaultCreatedAt = subscriptionDescCreatedAt.Default.(func() time.Time)
-	// subscriptionDescUpdatedAt is the schema descriptor for updated_at field.
-	subscriptionDescUpdatedAt := subscriptionMixinFields0[2].Descriptor()
-	// subscription.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	subscription.DefaultUpdatedAt = subscriptionDescUpdatedAt.Default.(func() time.Time)
-	// subscription.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	subscription.UpdateDefaultUpdatedAt = subscriptionDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// subscriptionDescCancelAtPeriodEnd is the schema descriptor for cancel_at_period_end field.
-	subscriptionDescCancelAtPeriodEnd := subscriptionFields[3].Descriptor()
-	// subscription.DefaultCancelAtPeriodEnd holds the default value on creation for the cancel_at_period_end field.
-	subscription.DefaultCancelAtPeriodEnd = subscriptionDescCancelAtPeriodEnd.Default.(bool)
-	// subscriptionDescID is the schema descriptor for id field.
-	subscriptionDescID := subscriptionMixinFields0[0].Descriptor()
-	// subscription.DefaultID holds the default value on creation for the id field.
-	subscription.DefaultID = subscriptionDescID.Default.(func() uuid.UUID)
-	tokenusageMixin := schema.TokenUsage{}.Mixin()
-	tokenusageMixinFields0 := tokenusageMixin[0].Fields()
-	_ = tokenusageMixinFields0
-	tokenusageFields := schema.TokenUsage{}.Fields()
-	_ = tokenusageFields
-	// tokenusageDescCreatedAt is the schema descriptor for created_at field.
-	tokenusageDescCreatedAt := tokenusageMixinFields0[1].Descriptor()
-	// tokenusage.DefaultCreatedAt holds the default value on creation for the created_at field.
-	tokenusage.DefaultCreatedAt = tokenusageDescCreatedAt.Default.(func() time.Time)
-	// tokenusageDescUpdatedAt is the schema descriptor for updated_at field.
-	tokenusageDescUpdatedAt := tokenusageMixinFields0[2].Descriptor()
-	// tokenusage.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	tokenusage.DefaultUpdatedAt = tokenusageDescUpdatedAt.Default.(func() time.Time)
-	// tokenusage.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	tokenusage.UpdateDefaultUpdatedAt = tokenusageDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// tokenusageDescOperation is the schema descriptor for operation field.
-	tokenusageDescOperation := tokenusageFields[0].Descriptor()
-	// tokenusage.OperationValidator is a validator for the "operation" field. It is called by the builders before save.
-	tokenusage.OperationValidator = tokenusageDescOperation.Validators[0].(func(string) error)
-	// tokenusageDescTokensUsed is the schema descriptor for tokens_used field.
-	tokenusageDescTokensUsed := tokenusageFields[1].Descriptor()
-	// tokenusage.TokensUsedValidator is a validator for the "tokens_used" field. It is called by the builders before save.
-	tokenusage.TokensUsedValidator = tokenusageDescTokensUsed.Validators[0].(func(int) error)
-	// tokenusageDescID is the schema descriptor for id field.
-	tokenusageDescID := tokenusageMixinFields0[0].Descriptor()
-	// tokenusage.DefaultID holds the default value on creation for the id field.
-	tokenusage.DefaultID = tokenusageDescID.Default.(func() uuid.UUID)
 	urlMixin := schema.URL{}.Mixin()
 	urlMixinFields0 := urlMixin[0].Fields()
 	_ = urlMixinFields0
@@ -367,68 +271,4 @@ func init() {
 	urlDescID := urlMixinFields0[0].Descriptor()
 	// url.DefaultID holds the default value on creation for the id field.
 	url.DefaultID = urlDescID.Default.(func() uuid.UUID)
-	userMixin := schema.User{}.Mixin()
-	userMixinFields0 := userMixin[0].Fields()
-	_ = userMixinFields0
-	userMixinFields1 := userMixin[1].Fields()
-	_ = userMixinFields1
-	userFields := schema.User{}.Fields()
-	_ = userFields
-	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userMixinFields0[1].Descriptor()
-	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
-	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
-	// userDescUpdatedAt is the schema descriptor for updated_at field.
-	userDescUpdatedAt := userMixinFields0[2].Descriptor()
-	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
-	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	user.UpdateDefaultUpdatedAt = userDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// userDescEmail is the schema descriptor for email field.
-	userDescEmail := userFields[0].Descriptor()
-	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
-	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
-	// userDescID is the schema descriptor for id field.
-	userDescID := userMixinFields0[0].Descriptor()
-	// user.DefaultID holds the default value on creation for the id field.
-	user.DefaultID = userDescID.Default.(func() uuid.UUID)
-	usersettingsMixin := schema.UserSettings{}.Mixin()
-	usersettingsMixinFields0 := usersettingsMixin[0].Fields()
-	_ = usersettingsMixinFields0
-	usersettingsFields := schema.UserSettings{}.Fields()
-	_ = usersettingsFields
-	// usersettingsDescCreatedAt is the schema descriptor for created_at field.
-	usersettingsDescCreatedAt := usersettingsMixinFields0[1].Descriptor()
-	// usersettings.DefaultCreatedAt holds the default value on creation for the created_at field.
-	usersettings.DefaultCreatedAt = usersettingsDescCreatedAt.Default.(func() time.Time)
-	// usersettingsDescUpdatedAt is the schema descriptor for updated_at field.
-	usersettingsDescUpdatedAt := usersettingsMixinFields0[2].Descriptor()
-	// usersettings.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	usersettings.DefaultUpdatedAt = usersettingsDescUpdatedAt.Default.(func() time.Time)
-	// usersettings.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	usersettings.UpdateDefaultUpdatedAt = usersettingsDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// usersettingsDescEmailNotifications is the schema descriptor for email_notifications field.
-	usersettingsDescEmailNotifications := usersettingsFields[1].Descriptor()
-	// usersettings.DefaultEmailNotifications holds the default value on creation for the email_notifications field.
-	usersettings.DefaultEmailNotifications = usersettingsDescEmailNotifications.Default.(bool)
-	// usersettingsDescBrowserNotifications is the schema descriptor for browser_notifications field.
-	usersettingsDescBrowserNotifications := usersettingsFields[2].Descriptor()
-	// usersettings.DefaultBrowserNotifications holds the default value on creation for the browser_notifications field.
-	usersettings.DefaultBrowserNotifications = usersettingsDescBrowserNotifications.Default.(bool)
-	// usersettingsDescLanguage is the schema descriptor for language field.
-	usersettingsDescLanguage := usersettingsFields[3].Descriptor()
-	// usersettings.DefaultLanguage holds the default value on creation for the language field.
-	usersettings.DefaultLanguage = usersettingsDescLanguage.Default.(string)
-	// usersettingsDescSessionTimeoutMinutes is the schema descriptor for session_timeout_minutes field.
-	usersettingsDescSessionTimeoutMinutes := usersettingsFields[4].Descriptor()
-	// usersettings.DefaultSessionTimeoutMinutes holds the default value on creation for the session_timeout_minutes field.
-	usersettings.DefaultSessionTimeoutMinutes = usersettingsDescSessionTimeoutMinutes.Default.(int)
-	// usersettingsDescAutoSummarize is the schema descriptor for auto_summarize field.
-	usersettingsDescAutoSummarize := usersettingsFields[5].Descriptor()
-	// usersettings.DefaultAutoSummarize holds the default value on creation for the auto_summarize field.
-	usersettings.DefaultAutoSummarize = usersettingsDescAutoSummarize.Default.(bool)
-	// usersettingsDescID is the schema descriptor for id field.
-	usersettingsDescID := usersettingsMixinFields0[0].Descriptor()
-	// usersettings.DefaultID holds the default value on creation for the id field.
-	usersettings.DefaultID = usersettingsDescID.Default.(func() uuid.UUID)
 }

@@ -18,8 +18,8 @@ export function ProblemSection() {
         <div className="flex flex-col items-center justify-center min-h-screen py-20">
           {/* Headline */}
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center text-foreground mb-8 sm:mb-12">
-            정보의 홍수 속에서 <br className="hidden sm:block" />
-            길을 잃으셨나요?
+            Lost in the <br className="hidden sm:block" />
+            Information Flood?
           </h2>
 
           {/* Center Visual - Information Overload */}
@@ -69,8 +69,8 @@ export function ProblemSection() {
 
           {/* Description */}
           <p className="text-lg sm:text-xl text-center text-muted-foreground max-w-2xl">
-            매일 수많은 웹페이지를 방문하지만, <br className="hidden sm:block" />
-            정작 중요한 인사이트는 놓치고 계십니다.
+            You visit countless web pages every day, <br className="hidden sm:block" />
+            but miss the important insights that matter.
           </p>
         </div>
       </div>

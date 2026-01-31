@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -16,55 +17,40 @@ import (
 	"github.com/mindhit/api/internal/testutil"
 )
 
+const testAPIKey = "test-api-secret-key"
+
+func getAuthHeader() string {
+	// Use env var if set (for CI), otherwise use default
+	key := os.Getenv("API_SECRET_KEY")
+	if key == "" {
+		key = testAPIKey
+	}
+	return "Bearer " + key
+}
+
 // TestSessionFlow_CreatePauseResumeStop tests the complete session lifecycle:
-// 1. User signs up and logs in
-// 2. User starts a session
-// 3. User pauses the session
-// 4. User resumes the session
-// 5. User stops the session
-// 6. Session appears in list
+// 1. Start a session
+// 2. Pause the session
+// 3. Resume the session
+// 4. Stop the session
+// 5. Session appears in list
 func TestSessionFlow_CreatePauseResumeStop(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
 	// Setup services
-	authService := service.NewAuthService(client)
-	jwtService := service.NewJWTService("test-secret")
 	sessionService := service.NewSessionService(client, nil) // nil queue for test
-
-	authController := controller.NewAuthController(authService, jwtService)
-	sessionController := controller.NewSessionController(sessionService, jwtService)
+	sessionController := controller.NewSessionController(sessionService)
 
 	ctx := context.Background()
-	email := uniqueEmail("session_flow")
-	password := "password123!"
-
-	// Setup: Create user and get token
-	var accessToken string
-
-	t.Run("Setup: Create user", func(t *testing.T) {
-		req := generated.RoutesSignupRequestObject{
-			Body: &generated.RoutesSignupJSONRequestBody{
-				Email:    email,
-				Password: password,
-			},
-		}
-
-		resp, err := authController.RoutesSignup(ctx, req)
-		require.NoError(t, err)
-
-		signupResp, ok := resp.(generated.RoutesSignup201JSONResponse)
-		require.True(t, ok)
-
-		accessToken = "Bearer " + signupResp.Token
-	})
+	authHeader := getAuthHeader()
 
 	// Step 1: Start session
 	var sessionID string
 	t.Run("Step 1: Start session", func(t *testing.T) {
 		req := generated.RoutesStartRequestObject{
 			Params: generated.RoutesStartParams{
-				Authorization: accessToken,
+				Authorization: authHeader,
 			},
 		}
 
@@ -82,7 +68,7 @@ func TestSessionFlow_CreatePauseResumeStop(t *testing.T) {
 	t.Run("Step 2: Pause session", func(t *testing.T) {
 		req := generated.RoutesPauseRequestObject{
 			Params: generated.RoutesPauseParams{
-				Authorization: accessToken,
+				Authorization: authHeader,
 			},
 			Id: sessionID,
 		}
@@ -99,7 +85,7 @@ func TestSessionFlow_CreatePauseResumeStop(t *testing.T) {
 	t.Run("Step 3: Resume session", func(t *testing.T) {
 		req := generated.RoutesResumeRequestObject{
 			Params: generated.RoutesResumeParams{
-				Authorization: accessToken,
+				Authorization: authHeader,
 			},
 			Id: sessionID,
 		}
@@ -116,7 +102,7 @@ func TestSessionFlow_CreatePauseResumeStop(t *testing.T) {
 	t.Run("Step 4: Stop session", func(t *testing.T) {
 		req := generated.RoutesStopRequestObject{
 			Params: generated.RoutesStopParams{
-				Authorization: accessToken,
+				Authorization: authHeader,
 			},
 			Id: sessionID,
 		}
@@ -137,7 +123,7 @@ func TestSessionFlow_CreatePauseResumeStop(t *testing.T) {
 	t.Run("Step 5: Session appears in list", func(t *testing.T) {
 		req := generated.RoutesListRequestObject{
 			Params: generated.RoutesListParams{
-				Authorization: accessToken,
+				Authorization: authHeader,
 			},
 		}
 
@@ -165,37 +151,18 @@ func TestSessionFlow_UpdateAndDelete(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
-	authService := service.NewAuthService(client)
-	jwtService := service.NewJWTService("test-secret")
 	sessionService := service.NewSessionService(client, nil)
-
-	authController := controller.NewAuthController(authService, jwtService)
-	sessionController := controller.NewSessionController(sessionService, jwtService)
+	sessionController := controller.NewSessionController(sessionService)
 
 	ctx := context.Background()
-	email := uniqueEmail("session_update")
-	password := "password123!"
+	authHeader := getAuthHeader()
 
-	// Setup
-	var accessToken string
+	// Setup: Create session
 	var sessionID string
 
-	t.Run("Setup", func(t *testing.T) {
-		// Create user
-		signupReq := generated.RoutesSignupRequestObject{
-			Body: &generated.RoutesSignupJSONRequestBody{
-				Email:    email,
-				Password: password,
-			},
-		}
-		resp, err := authController.RoutesSignup(ctx, signupReq)
-		require.NoError(t, err)
-		signupResp := resp.(generated.RoutesSignup201JSONResponse)
-		accessToken = "Bearer " + signupResp.Token
-
-		// Create session
+	t.Run("Setup: Create session", func(t *testing.T) {
 		startReq := generated.RoutesStartRequestObject{
-			Params: generated.RoutesStartParams{Authorization: accessToken},
+			Params: generated.RoutesStartParams{Authorization: authHeader},
 		}
 		startResp, err := sessionController.RoutesStart(ctx, startReq)
 		require.NoError(t, err)
@@ -207,7 +174,7 @@ func TestSessionFlow_UpdateAndDelete(t *testing.T) {
 		newTitle := "Updated Title"
 		newDesc := "Session description"
 		req := generated.RoutesUpdateRequestObject{
-			Params: generated.RoutesUpdateParams{Authorization: accessToken},
+			Params: generated.RoutesUpdateParams{Authorization: authHeader},
 			Id:     sessionID,
 			Body: &generated.RoutesUpdateJSONRequestBody{
 				Title:       &newTitle,
@@ -227,7 +194,7 @@ func TestSessionFlow_UpdateAndDelete(t *testing.T) {
 	// Step 2: Get session to verify
 	t.Run("Step 2: Get session", func(t *testing.T) {
 		req := generated.RoutesGetRequestObject{
-			Params: generated.RoutesGetParams{Authorization: accessToken},
+			Params: generated.RoutesGetParams{Authorization: authHeader},
 			Id:     sessionID,
 		}
 
@@ -242,7 +209,7 @@ func TestSessionFlow_UpdateAndDelete(t *testing.T) {
 	// Step 3: Delete session
 	t.Run("Step 3: Delete session", func(t *testing.T) {
 		req := generated.RoutesDeleteRequestObject{
-			Params: generated.RoutesDeleteParams{Authorization: accessToken},
+			Params: generated.RoutesDeleteParams{Authorization: authHeader},
 			Id:     sessionID,
 		}
 
@@ -256,7 +223,7 @@ func TestSessionFlow_UpdateAndDelete(t *testing.T) {
 	// Step 4: Verify session is deleted
 	t.Run("Step 4: Session not found", func(t *testing.T) {
 		req := generated.RoutesGetRequestObject{
-			Params: generated.RoutesGetParams{Authorization: accessToken},
+			Params: generated.RoutesGetParams{Authorization: authHeader},
 			Id:     sessionID,
 		}
 
@@ -273,33 +240,15 @@ func TestSessionFlow_MultipleActiveSessions(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
-	authService := service.NewAuthService(client)
-	jwtService := service.NewJWTService("test-secret")
 	sessionService := service.NewSessionService(client, nil)
-
-	authController := controller.NewAuthController(authService, jwtService)
-	sessionController := controller.NewSessionController(sessionService, jwtService)
+	sessionController := controller.NewSessionController(sessionService)
 
 	ctx := context.Background()
-
-	// Setup user
-	email := uniqueEmail("multi_session")
-	var accessToken string
-
-	signupReq := generated.RoutesSignupRequestObject{
-		Body: &generated.RoutesSignupJSONRequestBody{
-			Email:    email,
-			Password: "password123!",
-		},
-	}
-	resp, err := authController.RoutesSignup(ctx, signupReq)
-	require.NoError(t, err)
-	signupResp := resp.(generated.RoutesSignup201JSONResponse)
-	accessToken = "Bearer " + signupResp.Token
+	authHeader := getAuthHeader()
 
 	// Create first session
 	startReq1 := generated.RoutesStartRequestObject{
-		Params: generated.RoutesStartParams{Authorization: accessToken},
+		Params: generated.RoutesStartParams{Authorization: authHeader},
 	}
 	resp1, err := sessionController.RoutesStart(ctx, startReq1)
 	require.NoError(t, err)
@@ -310,7 +259,7 @@ func TestSessionFlow_MultipleActiveSessions(t *testing.T) {
 
 	// Create second session
 	startReq2 := generated.RoutesStartRequestObject{
-		Params: generated.RoutesStartParams{Authorization: accessToken},
+		Params: generated.RoutesStartParams{Authorization: authHeader},
 	}
 	resp2, err := sessionController.RoutesStart(ctx, startReq2)
 	require.NoError(t, err)
@@ -319,7 +268,7 @@ func TestSessionFlow_MultipleActiveSessions(t *testing.T) {
 	// Both sessions should be in list
 	t.Run("Both sessions in list", func(t *testing.T) {
 		listReq := generated.RoutesListRequestObject{
-			Params: generated.RoutesListParams{Authorization: accessToken},
+			Params: generated.RoutesListParams{Authorization: authHeader},
 		}
 
 		listResp, err := sessionController.RoutesList(ctx, listReq)
@@ -341,7 +290,7 @@ func TestSessionFlow_MultipleActiveSessions(t *testing.T) {
 	t.Run("Sessions operate independently", func(t *testing.T) {
 		// Pause session 1
 		pauseReq := generated.RoutesPauseRequestObject{
-			Params: generated.RoutesPauseParams{Authorization: accessToken},
+			Params: generated.RoutesPauseParams{Authorization: authHeader},
 			Id:     session1ID,
 		}
 		pauseResp, err := sessionController.RoutesPause(ctx, pauseReq)
@@ -350,7 +299,7 @@ func TestSessionFlow_MultipleActiveSessions(t *testing.T) {
 
 		// Session 2 should still be recording
 		getReq := generated.RoutesGetRequestObject{
-			Params: generated.RoutesGetParams{Authorization: accessToken},
+			Params: generated.RoutesGetParams{Authorization: authHeader},
 			Id:     session2ID,
 		}
 		getResp, err := sessionController.RoutesGet(ctx, getReq)

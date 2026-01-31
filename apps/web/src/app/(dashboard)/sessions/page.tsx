@@ -12,7 +12,7 @@ export default function SessionsPage() {
       <div className="space-y-6">
         <FadeIn>
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-foreground">내 세션</h1>
+            <h1 className="text-2xl font-bold text-foreground">My Sessions</h1>
           </div>
         </FadeIn>
         <SessionList page={page} onPageChange={setPage} />

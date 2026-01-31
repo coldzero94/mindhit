@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"entgo.io/ent"
-	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
@@ -47,17 +46,11 @@ func (Session) Fields() []ent.Field {
 
 func (Session) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("user", User.Type).
-			Ref("sessions").
-			Unique().
-			Required().
-			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("page_visits", PageVisit.Type),
 		edge.To("highlights", Highlight.Type),
 		edge.To("raw_events", RawEvent.Type),
 		edge.To("mindmap", MindmapGraph.Type).
 			Unique(),
-		edge.To("token_usage", TokenUsage.Type),
 		edge.To("ai_logs", AILog.Type),
 	}
 }

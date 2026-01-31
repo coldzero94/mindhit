@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 )
 
 // Session is the model entity for the Session schema.
@@ -41,15 +40,12 @@ type Session struct {
 	EndedAt *time.Time `json:"ended_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the SessionQuery when eager-loading is set.
-	Edges         SessionEdges `json:"edges"`
-	user_sessions *uuid.UUID
-	selectValues  sql.SelectValues
+	Edges        SessionEdges `json:"edges"`
+	selectValues sql.SelectValues
 }
 
 // SessionEdges holds the relations/edges for other nodes in the graph.
 type SessionEdges struct {
-	// User holds the value of the user edge.
-	User *User `json:"user,omitempty"`
 	// PageVisits holds the value of the page_visits edge.
 	PageVisits []*PageVisit `json:"page_visits,omitempty"`
 	// Highlights holds the value of the highlights edge.
@@ -58,30 +54,17 @@ type SessionEdges struct {
 	RawEvents []*RawEvent `json:"raw_events,omitempty"`
 	// Mindmap holds the value of the mindmap edge.
 	Mindmap *MindmapGraph `json:"mindmap,omitempty"`
-	// TokenUsage holds the value of the token_usage edge.
-	TokenUsage []*TokenUsage `json:"token_usage,omitempty"`
 	// AiLogs holds the value of the ai_logs edge.
 	AiLogs []*AILog `json:"ai_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
-}
-
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e SessionEdges) UserOrErr() (*User, error) {
-	if e.User != nil {
-		return e.User, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "user"}
+	loadedTypes [5]bool
 }
 
 // PageVisitsOrErr returns the PageVisits value or an error if the edge
 // was not loaded in eager-loading.
 func (e SessionEdges) PageVisitsOrErr() ([]*PageVisit, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[0] {
 		return e.PageVisits, nil
 	}
 	return nil, &NotLoadedError{edge: "page_visits"}
@@ -90,7 +73,7 @@ func (e SessionEdges) PageVisitsOrErr() ([]*PageVisit, error) {
 // HighlightsOrErr returns the Highlights value or an error if the edge
 // was not loaded in eager-loading.
 func (e SessionEdges) HighlightsOrErr() ([]*Highlight, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[1] {
 		return e.Highlights, nil
 	}
 	return nil, &NotLoadedError{edge: "highlights"}
@@ -99,7 +82,7 @@ func (e SessionEdges) HighlightsOrErr() ([]*Highlight, error) {
 // RawEventsOrErr returns the RawEvents value or an error if the edge
 // was not loaded in eager-loading.
 func (e SessionEdges) RawEventsOrErr() ([]*RawEvent, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		return e.RawEvents, nil
 	}
 	return nil, &NotLoadedError{edge: "raw_events"}
@@ -110,25 +93,16 @@ func (e SessionEdges) RawEventsOrErr() ([]*RawEvent, error) {
 func (e SessionEdges) MindmapOrErr() (*MindmapGraph, error) {
 	if e.Mindmap != nil {
 		return e.Mindmap, nil
-	} else if e.loadedTypes[4] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: mindmapgraph.Label}
 	}
 	return nil, &NotLoadedError{edge: "mindmap"}
 }
 
-// TokenUsageOrErr returns the TokenUsage value or an error if the edge
-// was not loaded in eager-loading.
-func (e SessionEdges) TokenUsageOrErr() ([]*TokenUsage, error) {
-	if e.loadedTypes[5] {
-		return e.TokenUsage, nil
-	}
-	return nil, &NotLoadedError{edge: "token_usage"}
-}
-
 // AiLogsOrErr returns the AiLogs value or an error if the edge
 // was not loaded in eager-loading.
 func (e SessionEdges) AiLogsOrErr() ([]*AILog, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[4] {
 		return e.AiLogs, nil
 	}
 	return nil, &NotLoadedError{edge: "ai_logs"}
@@ -145,8 +119,6 @@ func (*Session) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case session.FieldID:
 			values[i] = new(uuid.UUID)
-		case session.ForeignKeys[0]: // user_sessions
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -226,13 +198,6 @@ func (_m *Session) assignValues(columns []string, values []any) error {
 				_m.EndedAt = new(time.Time)
 				*_m.EndedAt = value.Time
 			}
-		case session.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_sessions", values[i])
-			} else if value.Valid {
-				_m.user_sessions = new(uuid.UUID)
-				*_m.user_sessions = *value.S.(*uuid.UUID)
-			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -244,11 +209,6 @@ func (_m *Session) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Session) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryUser queries the "user" edge of the Session entity.
-func (_m *Session) QueryUser() *UserQuery {
-	return NewSessionClient(_m.config).QueryUser(_m)
 }
 
 // QueryPageVisits queries the "page_visits" edge of the Session entity.
@@ -269,11 +229,6 @@ func (_m *Session) QueryRawEvents() *RawEventQuery {
 // QueryMindmap queries the "mindmap" edge of the Session entity.
 func (_m *Session) QueryMindmap() *MindmapGraphQuery {
 	return NewSessionClient(_m.config).QueryMindmap(_m)
-}
-
-// QueryTokenUsage queries the "token_usage" edge of the Session entity.
-func (_m *Session) QueryTokenUsage() *TokenUsageQuery {
-	return NewSessionClient(_m.config).QueryTokenUsage(_m)
 }
 
 // QueryAiLogs queries the "ai_logs" edge of the Session entity.

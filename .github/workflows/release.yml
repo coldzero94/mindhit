@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build extension
+        run: pnpm run --filter @mindhit/extension build
+        env:
+          VITE_API_URL: https://api.mindhit.dev/v1
+          VITE_WEB_APP_URL: https://mindhit.dev
+          VITE_API_KEY: ""
+
+      - name: Create extension zip
+        run: |
+          cd apps/extension
+          zip -r ../../mindhit-extension.zip dist/
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mindhit-extension
+          path: mindhit-extension.zip
+
+  create-release:
+    needs: [build-extension]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download extension artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mindhit-extension
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: mindhit-extension.zip
+          body: |
+            ## MindHit Extension Release
+
+            ### Installation
+            1. Download `mindhit-extension.zip`
+            2. Unzip the file
+            3. Go to `chrome://extensions`
+            4. Enable "Developer mode"
+            5. Click "Load unpacked"
+            6. Select the unzipped `dist` folder
+
+            ### Configuration
+            Before using the extension, you need to configure your API endpoint:
+            1. Right-click the MindHit extension icon
+            2. Click "Options" or "Settings"
+            3. Enter your API URL and API Key
+
+            For full documentation, see [EXTENSION_INSTALL.md](https://github.com/coldzero94/mindhit/blob/main/docs/EXTENSION_INSTALL.md)
+          draft: false
+          prerelease: false

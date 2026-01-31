@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ko } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { SessionSession, SessionSessionStatus } from "@/api/generated/types.gen";
@@ -13,27 +13,27 @@ const statusConfig: Record<
   { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }
 > = {
   recording: {
-    label: "녹화 중",
+    label: "Recording",
     variant: "default",
     icon: <Circle className="h-3 w-3 fill-current animate-pulse" />,
   },
   paused: {
-    label: "일시정지",
+    label: "Paused",
     variant: "secondary",
     icon: <Pause className="h-3 w-3" />,
   },
   processing: {
-    label: "처리 중",
+    label: "Processing",
     variant: "outline",
     icon: <Loader2 className="h-3 w-3 animate-spin" />,
   },
   completed: {
-    label: "완료",
+    label: "Completed",
     variant: "default",
     icon: <CheckCircle className="h-3 w-3" />,
   },
   failed: {
-    label: "실패",
+    label: "Failed",
     variant: "destructive",
     icon: <XCircle className="h-3 w-3" />,
   },
@@ -47,7 +47,7 @@ export function SessionCard({ session }: SessionCardProps) {
   const status = statusConfig[session.session_status];
   const timeAgo = formatDistanceToNow(new Date(session.started_at), {
     addSuffix: true,
-    locale: ko,
+    locale: enUS,
   });
 
   return (
@@ -56,7 +56,7 @@ export function SessionCard({ session }: SessionCardProps) {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-lg truncate flex-1">
-              {session.title || "제목 없음"}
+              {session.title || "Untitled"}
             </CardTitle>
             <Badge variant={status.variant} className="shrink-0">
               {status.icon}

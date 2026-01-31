@@ -16,23 +16,23 @@ import { MindmapVisual } from "./visuals/MindmapVisual";
 export function FeaturesSection() {
   const features = [
     {
-      title: "자동 히스토리 수집",
+      title: "Automatic History Collection",
       description:
-        "Chrome Extension이 백그라운드에서 자동으로 브라우징 히스토리를 추적합니다. 별도의 입력 없이 모든 방문 기록이 안전하게 수집됩니다.",
+        "The Chrome Extension automatically tracks your browsing history in the background. All visit records are collected securely without any manual input.",
       visual: <AutoCollectVisual />,
       bgClassName: "section-light",
     },
     {
-      title: "AI 기반 태그 추출 & 관계 그래프",
+      title: "AI-Powered Tag Extraction & Relationship Graph",
       description:
-        "강력한 AI가 방문한 페이지들을 분석하여 핵심 키워드를 추출하고, 페이지 간의 연관성을 파악하여 지식 그래프를 자동으로 구축합니다.",
+        "Powerful AI analyzes visited pages to extract key keywords and identifies relationships between pages to automatically build a knowledge graph.",
       visual: <AIAnalysisVisual />,
       bgClassName: "section-gray",
     },
     {
-      title: "3D 인터랙티브 마인드맵",
+      title: "3D Interactive Mindmap",
       description:
-        "수집된 데이터가 아름다운 3D 마인드맵으로 시각화됩니다. 마우스로 회전하고 노드를 클릭하여 인사이트를 탐색하세요.",
+        "Collected data is visualized as a beautiful 3D mindmap. Rotate with your mouse and click nodes to explore insights.",
       visual: <MindmapVisual />,
       bgClassName: "section-lighter",
     },

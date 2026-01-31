@@ -14,55 +14,25 @@ import type {
   RoutesBatchEventsResponses,
   RoutesDeleteData,
   RoutesDeleteErrors,
-  RoutesDeleteMeData,
-  RoutesDeleteMeErrors,
-  RoutesDeleteMeResponses,
   RoutesDeleteResponses,
-  RoutesForgotPasswordData,
-  RoutesForgotPasswordErrors,
-  RoutesForgotPasswordResponses,
   RoutesGetData,
   RoutesGetErrors,
   RoutesGetEventStatsData,
   RoutesGetEventStatsErrors,
   RoutesGetEventStatsResponses,
   RoutesGetResponses,
-  RoutesGoogleAuthCodeData,
-  RoutesGoogleAuthCodeErrors,
-  RoutesGoogleAuthCodeResponses,
-  RoutesGoogleAuthData,
-  RoutesGoogleAuthErrors,
-  RoutesGoogleAuthResponses,
   RoutesListData,
   RoutesListErrors,
   RoutesListEventsData,
   RoutesListEventsErrors,
   RoutesListEventsResponses,
   RoutesListResponses,
-  RoutesLoginData,
-  RoutesLoginErrors,
-  RoutesLoginResponses,
-  RoutesLogoutData,
-  RoutesLogoutErrors,
-  RoutesLogoutResponses,
-  RoutesMeData,
-  RoutesMeErrors,
-  RoutesMeResponses,
   RoutesPauseData,
   RoutesPauseErrors,
   RoutesPauseResponses,
-  RoutesRefreshData,
-  RoutesRefreshErrors,
-  RoutesRefreshResponses,
-  RoutesResetPasswordData,
-  RoutesResetPasswordErrors,
-  RoutesResetPasswordResponses,
   RoutesResumeData,
   RoutesResumeErrors,
   RoutesResumeResponses,
-  RoutesSignupData,
-  RoutesSignupErrors,
-  RoutesSignupResponses,
   RoutesStartData,
   RoutesStartErrors,
   RoutesStartResponses,
@@ -72,26 +42,6 @@ import type {
   RoutesUpdateData,
   RoutesUpdateErrors,
   RoutesUpdateResponses,
-  SubscriptionRoutesCancelSubscriptionData,
-  SubscriptionRoutesCancelSubscriptionErrors,
-  SubscriptionRoutesCancelSubscriptionResponses,
-  SubscriptionRoutesChangePlanData,
-  SubscriptionRoutesChangePlanErrors,
-  SubscriptionRoutesChangePlanResponses,
-  SubscriptionRoutesGetSubscriptionData,
-  SubscriptionRoutesGetSubscriptionErrors,
-  SubscriptionRoutesGetSubscriptionResponses,
-  SubscriptionRoutesListPlansData,
-  SubscriptionRoutesListPlansResponses,
-  SubscriptionRoutesReactivateSubscriptionData,
-  SubscriptionRoutesReactivateSubscriptionErrors,
-  SubscriptionRoutesReactivateSubscriptionResponses,
-  UsageRoutesGetUsageData,
-  UsageRoutesGetUsageErrors,
-  UsageRoutesGetUsageHistoryData,
-  UsageRoutesGetUsageHistoryErrors,
-  UsageRoutesGetUsageHistoryResponses,
-  UsageRoutesGetUsageResponses,
 } from "./types.gen";
 
 export type Options<
@@ -110,168 +60,6 @@ export type Options<
    */
   meta?: Record<string, unknown>;
 };
-
-/**
- * 비밀번호 재설정 이메일 요청
- */
-export const routesForgotPassword = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesForgotPasswordData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesForgotPasswordResponses,
-    RoutesForgotPasswordErrors,
-    ThrowOnError
-  >({
-    url: "/v1/auth/forgot-password",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * Google OAuth 로그인
- */
-export const routesGoogleAuth = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesGoogleAuthData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesGoogleAuthResponses,
-    RoutesGoogleAuthErrors,
-    ThrowOnError
-  >({
-    url: "/v1/auth/google",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * Google OAuth Authorization Code Exchange (Chrome Extension용)
- */
-export const routesGoogleAuthCode = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesGoogleAuthCodeData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesGoogleAuthCodeResponses,
-    RoutesGoogleAuthCodeErrors,
-    ThrowOnError
-  >({
-    url: "/v1/auth/google/code",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * 로그인
- */
-export const routesLogin = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesLoginData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesLoginResponses,
-    RoutesLoginErrors,
-    ThrowOnError
-  >({
-    url: "/v1/auth/login",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * 로그아웃
- */
-export const routesLogout = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesLogoutData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesLogoutResponses,
-    RoutesLogoutErrors,
-    ThrowOnError
-  >({ url: "/v1/auth/logout", ...options });
-
-/**
- * 계정 삭제. hard=true인 경우 DB에서 완전 삭제 (테스트 환경에서만 허용)
- */
-export const routesDeleteMe = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesDeleteMeData, ThrowOnError>,
-) =>
-  (options.client ?? client).delete<
-    RoutesDeleteMeResponses,
-    RoutesDeleteMeErrors,
-    ThrowOnError
-  >({ url: "/v1/auth/me", ...options });
-
-/**
- * 현재 사용자 정보 조회
- */
-export const routesMe = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesMeData, ThrowOnError>,
-) =>
-  (options.client ?? client).get<
-    RoutesMeResponses,
-    RoutesMeErrors,
-    ThrowOnError
-  >({ url: "/v1/auth/me", ...options });
-
-/**
- * 토큰 갱신
- */
-export const routesRefresh = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesRefreshData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesRefreshResponses,
-    RoutesRefreshErrors,
-    ThrowOnError
-  >({ url: "/v1/auth/refresh", ...options });
-
-/**
- * 비밀번호 재설정 완료
- */
-export const routesResetPassword = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesResetPasswordData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesResetPasswordResponses,
-    RoutesResetPasswordErrors,
-    ThrowOnError
-  >({
-    url: "/v1/auth/reset-password",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * 회원가입
- */
-export const routesSignup = <ThrowOnError extends boolean = false>(
-  options: Options<RoutesSignupData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    RoutesSignupResponses,
-    RoutesSignupErrors,
-    ThrowOnError
-  >({
-    url: "/v1/auth/signup",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
 
 /**
  * 세션 목록 조회
@@ -451,106 +239,3 @@ export const routesStop = <ThrowOnError extends boolean = false>(
     RoutesStopErrors,
     ThrowOnError
   >({ url: "/v1/sessions/{id}/stop", ...options });
-
-/**
- * 현재 구독 정보 조회
- */
-export const subscriptionRoutesGetSubscription = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<SubscriptionRoutesGetSubscriptionData, ThrowOnError>,
-) =>
-  (options.client ?? client).get<
-    SubscriptionRoutesGetSubscriptionResponses,
-    SubscriptionRoutesGetSubscriptionErrors,
-    ThrowOnError
-  >({ url: "/v1/subscription", ...options });
-
-/**
- * 구독 취소 (기간 종료 시 Free로 전환)
- */
-export const subscriptionRoutesCancelSubscription = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<SubscriptionRoutesCancelSubscriptionData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    SubscriptionRoutesCancelSubscriptionResponses,
-    SubscriptionRoutesCancelSubscriptionErrors,
-    ThrowOnError
-  >({ url: "/v1/subscription/cancel", ...options });
-
-/**
- * 플랜 변경
- */
-export const subscriptionRoutesChangePlan = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<SubscriptionRoutesChangePlanData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    SubscriptionRoutesChangePlanResponses,
-    SubscriptionRoutesChangePlanErrors,
-    ThrowOnError
-  >({
-    url: "/v1/subscription/change",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-/**
- * 사용 가능한 플랜 목록 조회 (인증 불필요)
- */
-export const subscriptionRoutesListPlans = <
-  ThrowOnError extends boolean = false,
->(
-  options?: Options<SubscriptionRoutesListPlansData, ThrowOnError>,
-) =>
-  (options?.client ?? client).get<
-    SubscriptionRoutesListPlansResponses,
-    unknown,
-    ThrowOnError
-  >({ url: "/v1/subscription/plans", ...options });
-
-/**
- * 구독 취소 철회
- */
-export const subscriptionRoutesReactivateSubscription = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<SubscriptionRoutesReactivateSubscriptionData, ThrowOnError>,
-) =>
-  (options.client ?? client).post<
-    SubscriptionRoutesReactivateSubscriptionResponses,
-    SubscriptionRoutesReactivateSubscriptionErrors,
-    ThrowOnError
-  >({ url: "/v1/subscription/reactivate", ...options });
-
-/**
- * 현재 사용량 조회
- */
-export const usageRoutesGetUsage = <ThrowOnError extends boolean = false>(
-  options: Options<UsageRoutesGetUsageData, ThrowOnError>,
-) =>
-  (options.client ?? client).get<
-    UsageRoutesGetUsageResponses,
-    UsageRoutesGetUsageErrors,
-    ThrowOnError
-  >({ url: "/v1/usage", ...options });
-
-/**
- * 사용량 히스토리 조회
- */
-export const usageRoutesGetUsageHistory = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<UsageRoutesGetUsageHistoryData, ThrowOnError>,
-) =>
-  (options.client ?? client).get<
-    UsageRoutesGetUsageHistoryResponses,
-    UsageRoutesGetUsageHistoryErrors,
-    ThrowOnError
-  >({ url: "/v1/usage/history", ...options });

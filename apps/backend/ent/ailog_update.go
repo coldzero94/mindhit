@@ -14,7 +14,6 @@ import (
 	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 )
 
 // AILogUpdate is the builder for updating AILog entities.
@@ -27,26 +26,6 @@ type AILogUpdate struct {
 // Where appends a list predicates to the AILogUpdate builder.
 func (_u *AILogUpdate) Where(ps ...predicate.AILog) *AILogUpdate {
 	_u.mutation.Where(ps...)
-	return _u
-}
-
-// SetUserID sets the "user_id" field.
-func (_u *AILogUpdate) SetUserID(v uuid.UUID) *AILogUpdate {
-	_u.mutation.SetUserID(v)
-	return _u
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_u *AILogUpdate) SetNillableUserID(v *uuid.UUID) *AILogUpdate {
-	if v != nil {
-		_u.SetUserID(*v)
-	}
-	return _u
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (_u *AILogUpdate) ClearUserID() *AILogUpdate {
-	_u.mutation.ClearUserID()
 	return _u
 }
 
@@ -384,11 +363,6 @@ func (_u *AILogUpdate) ClearMetadata() *AILogUpdate {
 	return _u
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_u *AILogUpdate) SetUser(v *User) *AILogUpdate {
-	return _u.SetUserID(v.ID)
-}
-
 // SetSession sets the "session" edge to the Session entity.
 func (_u *AILogUpdate) SetSession(v *Session) *AILogUpdate {
 	return _u.SetSessionID(v.ID)
@@ -397,12 +371,6 @@ func (_u *AILogUpdate) SetSession(v *Session) *AILogUpdate {
 // Mutation returns the AILogMutation object of the builder.
 func (_u *AILogUpdate) Mutation() *AILogMutation {
 	return _u.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (_u *AILogUpdate) ClearUser() *AILogUpdate {
-	_u.mutation.ClearUser()
-	return _u
 }
 
 // ClearSession clears the "session" edge to the Session entity.
@@ -565,35 +533,6 @@ func (_u *AILogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(ailog.FieldMetadata, field.TypeJSON)
 	}
-	if _u.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   ailog.UserTable,
-			Columns: []string{ailog.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   ailog.UserTable,
-			Columns: []string{ailog.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
 	if _u.mutation.SessionCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -641,26 +580,6 @@ type AILogUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *AILogMutation
-}
-
-// SetUserID sets the "user_id" field.
-func (_u *AILogUpdateOne) SetUserID(v uuid.UUID) *AILogUpdateOne {
-	_u.mutation.SetUserID(v)
-	return _u
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_u *AILogUpdateOne) SetNillableUserID(v *uuid.UUID) *AILogUpdateOne {
-	if v != nil {
-		_u.SetUserID(*v)
-	}
-	return _u
-}
-
-// ClearUserID clears the value of the "user_id" field.
-func (_u *AILogUpdateOne) ClearUserID() *AILogUpdateOne {
-	_u.mutation.ClearUserID()
-	return _u
 }
 
 // SetSessionID sets the "session_id" field.
@@ -997,11 +916,6 @@ func (_u *AILogUpdateOne) ClearMetadata() *AILogUpdateOne {
 	return _u
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_u *AILogUpdateOne) SetUser(v *User) *AILogUpdateOne {
-	return _u.SetUserID(v.ID)
-}
-
 // SetSession sets the "session" edge to the Session entity.
 func (_u *AILogUpdateOne) SetSession(v *Session) *AILogUpdateOne {
 	return _u.SetSessionID(v.ID)
@@ -1010,12 +924,6 @@ func (_u *AILogUpdateOne) SetSession(v *Session) *AILogUpdateOne {
 // Mutation returns the AILogMutation object of the builder.
 func (_u *AILogUpdateOne) Mutation() *AILogMutation {
 	return _u.mutation
-}
-
-// ClearUser clears the "user" edge to the User entity.
-func (_u *AILogUpdateOne) ClearUser() *AILogUpdateOne {
-	_u.mutation.ClearUser()
-	return _u
 }
 
 // ClearSession clears the "session" edge to the Session entity.
@@ -1207,35 +1115,6 @@ func (_u *AILogUpdateOne) sqlSave(ctx context.Context) (_node *AILog, err error)
 	}
 	if _u.mutation.MetadataCleared() {
 		_spec.ClearField(ailog.FieldMetadata, field.TypeJSON)
-	}
-	if _u.mutation.UserCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   ailog.UserTable,
-			Columns: []string{ailog.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   ailog.UserTable,
-			Columns: []string{ailog.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.SessionCleared() {
 		edge := &sqlgraph.EdgeSpec{

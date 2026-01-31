@@ -1,0 +1,64 @@
+# MindHit Self-Hosting Docker Compose
+# Quick start: docker-compose up -d
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: mindhit-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-mindhit}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis Queue
+  redis:
+    image: redis:7
+    container_name: mindhit-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Asynqmon - Queue monitoring UI (optional)
+  asynqmon:
+    image: hibiken/asynqmon:latest
+    container_name: mindhit-asynqmon
+    ports:
+      - "9090:9090"
+    command:
+      - "--port=9090"
+      - "--redis-addr=redis:6379"
+    depends_on:
+      - redis
+    profiles:
+      - monitoring
+
+volumes:
+  postgres_data:
+  redis_data:
+
+# Usage:
+#
+# Basic (postgres + redis only):
+#   docker-compose up -d
+#
+# With monitoring:
+#   docker-compose --profile monitoring up -d
+#
+# For full monitoring stack (Prometheus, Grafana, Loki):
+#   See infra/docker/docker-compose.yml

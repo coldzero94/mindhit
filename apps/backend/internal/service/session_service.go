@@ -11,7 +11,6 @@ import (
 
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 	"github.com/mindhit/api/internal/infrastructure/metrics"
 	"github.com/mindhit/api/internal/infrastructure/queue"
 )
@@ -22,7 +21,6 @@ const sessionStatusInactive = "inactive"
 // Session service errors
 var (
 	ErrSessionNotFound     = errors.New("session not found")
-	ErrSessionNotOwned     = errors.New("session not owned by user")
 	ErrInvalidSessionState = errors.New("invalid session state transition")
 )
 
@@ -46,10 +44,9 @@ func (s *SessionService) activeSessions() *ent.SessionQuery {
 }
 
 // Start creates a new recording session
-func (s *SessionService) Start(ctx context.Context, userID uuid.UUID) (*ent.Session, error) {
+func (s *SessionService) Start(ctx context.Context) (*ent.Session, error) {
 	sess, err := s.client.Session.
 		Create().
-		SetUserID(userID).
 		SetSessionStatus(session.SessionStatusRecording).
 		SetStartedAt(time.Now()).
 		Save(ctx)
@@ -62,8 +59,8 @@ func (s *SessionService) Start(ctx context.Context, userID uuid.UUID) (*ent.Sess
 }
 
 // Pause pauses a recording session
-func (s *SessionService) Pause(ctx context.Context, sessionID, userID uuid.UUID) (*ent.Session, error) {
-	sess, err := s.getOwnedSession(ctx, sessionID, userID)
+func (s *SessionService) Pause(ctx context.Context, sessionID uuid.UUID) (*ent.Session, error) {
+	sess, err := s.getSession(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +76,8 @@ func (s *SessionService) Pause(ctx context.Context, sessionID, userID uuid.UUID)
 }
 
 // Resume resumes a paused session
-func (s *SessionService) Resume(ctx context.Context, sessionID, userID uuid.UUID) (*ent.Session, error) {
-	sess, err := s.getOwnedSession(ctx, sessionID, userID)
+func (s *SessionService) Resume(ctx context.Context, sessionID uuid.UUID) (*ent.Session, error) {
+	sess, err := s.getSession(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +93,8 @@ func (s *SessionService) Resume(ctx context.Context, sessionID, userID uuid.UUID
 }
 
 // Stop stops a session and marks it for processing
-func (s *SessionService) Stop(ctx context.Context, sessionID, userID uuid.UUID) (*ent.Session, error) {
-	sess, err := s.getOwnedSession(ctx, sessionID, userID)
+func (s *SessionService) Stop(ctx context.Context, sessionID uuid.UUID) (*ent.Session, error) {
+	sess, err := s.getSession(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,16 +140,15 @@ func (s *SessionService) Stop(ctx context.Context, sessionID, userID uuid.UUID) 
 	return sess, nil
 }
 
-// Get retrieves a session by ID with ownership check
-func (s *SessionService) Get(ctx context.Context, sessionID, userID uuid.UUID) (*ent.Session, error) {
-	return s.getOwnedSession(ctx, sessionID, userID)
+// Get retrieves a session by ID
+func (s *SessionService) Get(ctx context.Context, sessionID uuid.UUID) (*ent.Session, error) {
+	return s.getSession(ctx, sessionID)
 }
 
 // GetWithDetails retrieves a session with all related data
-func (s *SessionService) GetWithDetails(ctx context.Context, sessionID, userID uuid.UUID) (*ent.Session, error) {
+func (s *SessionService) GetWithDetails(ctx context.Context, sessionID uuid.UUID) (*ent.Session, error) {
 	sess, err := s.activeSessions().
 		Where(session.IDEQ(sessionID)).
-		WithUser().
 		WithPageVisits(func(q *ent.PageVisitQuery) {
 			q.WithURL()
 		}).
@@ -167,17 +163,12 @@ func (s *SessionService) GetWithDetails(ctx context.Context, sessionID, userID u
 		return nil, err
 	}
 
-	if sess.Edges.User.ID != userID {
-		return nil, ErrSessionNotOwned
-	}
-
 	return sess, nil
 }
 
-// ListByUser retrieves all active sessions for a user
-func (s *SessionService) ListByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*ent.Session, error) {
+// List retrieves all active sessions
+func (s *SessionService) List(ctx context.Context, limit, offset int) ([]*ent.Session, error) {
 	return s.activeSessions().
-		Where(session.HasUserWith(user.IDEQ(userID))).
 		Order(ent.Desc(session.FieldCreatedAt)).
 		Limit(limit).
 		Offset(offset).
@@ -185,8 +176,8 @@ func (s *SessionService) ListByUser(ctx context.Context, userID uuid.UUID, limit
 }
 
 // Update updates session metadata (title, description)
-func (s *SessionService) Update(ctx context.Context, sessionID, userID uuid.UUID, title, description *string) (*ent.Session, error) {
-	sess, err := s.getOwnedSession(ctx, sessionID, userID)
+func (s *SessionService) Update(ctx context.Context, sessionID uuid.UUID, title, description *string) (*ent.Session, error) {
+	sess, err := s.getSession(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +195,8 @@ func (s *SessionService) Update(ctx context.Context, sessionID, userID uuid.UUID
 }
 
 // Delete soft-deletes a session by setting status to "deleted" and deleted_at timestamp.
-func (s *SessionService) Delete(ctx context.Context, sessionID, userID uuid.UUID) error {
-	sess, err := s.getOwnedSession(ctx, sessionID, userID)
+func (s *SessionService) Delete(ctx context.Context, sessionID uuid.UUID) error {
+	sess, err := s.getSession(ctx, sessionID)
 	if err != nil {
 		return err
 	}
@@ -219,11 +210,10 @@ func (s *SessionService) Delete(ctx context.Context, sessionID, userID uuid.UUID
 	return err
 }
 
-// getOwnedSession retrieves an active session and verifies ownership.
-func (s *SessionService) getOwnedSession(ctx context.Context, sessionID, userID uuid.UUID) (*ent.Session, error) {
+// getSession retrieves an active session by ID.
+func (s *SessionService) getSession(ctx context.Context, sessionID uuid.UUID) (*ent.Session, error) {
 	sess, err := s.activeSessions().
 		Where(session.IDEQ(sessionID)).
-		WithUser().
 		Only(ctx)
 
 	if err != nil {
@@ -231,10 +221,6 @@ func (s *SessionService) getOwnedSession(ctx context.Context, sessionID, userID 
 			return nil, ErrSessionNotFound
 		}
 		return nil, err
-	}
-
-	if sess.Edges.User.ID != userID {
-		return nil, ErrSessionNotOwned
 	}
 
 	return sess, nil

@@ -10,7 +10,6 @@ import (
 	"github.com/mindhit/api/ent"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 )
 
 // Mindmap service errors.
@@ -30,13 +29,10 @@ func NewMindmapService(client *ent.Client) *MindmapService {
 }
 
 // GetBySessionID retrieves a mindmap for a session.
-func (s *MindmapService) GetBySessionID(ctx context.Context, sessionID, userID uuid.UUID) (*ent.MindmapGraph, error) {
-	// First verify the session belongs to the user
+func (s *MindmapService) GetBySessionID(ctx context.Context, sessionID uuid.UUID) (*ent.MindmapGraph, error) {
+	// Verify the session exists
 	sess, err := s.client.Session.Query().
-		Where(
-			session.ID(sessionID),
-			session.HasUserWith(user.IDEQ(userID)),
-		).
+		Where(session.ID(sessionID)).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -97,13 +93,10 @@ func (s *MindmapService) SetCompleted(ctx context.Context, mindmapID uuid.UUID, 
 }
 
 // GetOrCreateForSession gets existing mindmap or creates a new pending one.
-func (s *MindmapService) GetOrCreateForSession(ctx context.Context, sessionID, userID uuid.UUID) (*ent.MindmapGraph, bool, error) {
-	// Verify session ownership
+func (s *MindmapService) GetOrCreateForSession(ctx context.Context, sessionID uuid.UUID) (*ent.MindmapGraph, bool, error) {
+	// Verify session exists
 	sess, err := s.client.Session.Query().
-		Where(
-			session.ID(sessionID),
-			session.HasUserWith(user.IDEQ(userID)),
-		).
+		Where(session.ID(sessionID)).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {

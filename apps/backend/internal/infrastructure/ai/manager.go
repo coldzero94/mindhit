@@ -24,7 +24,6 @@ type LogProvider interface {
 
 // LogRequest represents the data needed to create an AI log entry.
 type LogRequest struct {
-	UserID       *uuid.UUID
 	SessionID    *uuid.UUID
 	TaskType     TaskType
 	Request      ChatRequest
@@ -202,11 +201,6 @@ func (pm *ProviderManager) logRequest(
 		ErrorMessage: errMsg,
 	}
 
-	if userID, ok := req.Metadata["user_id"]; ok {
-		if uid, err := uuid.Parse(userID); err == nil {
-			logReq.UserID = &uid
-		}
-	}
 	if sessionID, ok := req.Metadata["session_id"]; ok {
 		if sid, err := uuid.Parse(sessionID); err == nil {
 			logReq.SessionID = &sid

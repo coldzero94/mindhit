@@ -17,8 +17,6 @@ import (
 	"github.com/mindhit/api/ent/pagevisit"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/tokenusage"
-	"github.com/mindhit/api/ent/user"
 )
 
 // SessionCreate is the builder for creating a Session entity.
@@ -168,17 +166,6 @@ func (_c *SessionCreate) SetNillableID(v *uuid.UUID) *SessionCreate {
 	return _c
 }
 
-// SetUserID sets the "user" edge to the User entity by ID.
-func (_c *SessionCreate) SetUserID(id uuid.UUID) *SessionCreate {
-	_c.mutation.SetUserID(id)
-	return _c
-}
-
-// SetUser sets the "user" edge to the User entity.
-func (_c *SessionCreate) SetUser(v *User) *SessionCreate {
-	return _c.SetUserID(v.ID)
-}
-
 // AddPageVisitIDs adds the "page_visits" edge to the PageVisit entity by IDs.
 func (_c *SessionCreate) AddPageVisitIDs(ids ...uuid.UUID) *SessionCreate {
 	_c.mutation.AddPageVisitIDs(ids...)
@@ -241,21 +228,6 @@ func (_c *SessionCreate) SetNillableMindmapID(id *uuid.UUID) *SessionCreate {
 // SetMindmap sets the "mindmap" edge to the MindmapGraph entity.
 func (_c *SessionCreate) SetMindmap(v *MindmapGraph) *SessionCreate {
 	return _c.SetMindmapID(v.ID)
-}
-
-// AddTokenUsageIDs adds the "token_usage" edge to the TokenUsage entity by IDs.
-func (_c *SessionCreate) AddTokenUsageIDs(ids ...uuid.UUID) *SessionCreate {
-	_c.mutation.AddTokenUsageIDs(ids...)
-	return _c
-}
-
-// AddTokenUsage adds the "token_usage" edges to the TokenUsage entity.
-func (_c *SessionCreate) AddTokenUsage(v ...*TokenUsage) *SessionCreate {
-	ids := make([]uuid.UUID, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddTokenUsageIDs(ids...)
 }
 
 // AddAiLogIDs adds the "ai_logs" edge to the AILog entity by IDs.
@@ -361,9 +333,6 @@ func (_c *SessionCreate) check() error {
 	if _, ok := _c.mutation.StartedAt(); !ok {
 		return &ValidationError{Name: "started_at", err: errors.New(`ent: missing required field "Session.started_at"`)}
 	}
-	if len(_c.mutation.UserIDs()) == 0 {
-		return &ValidationError{Name: "user", err: errors.New(`ent: missing required edge "Session.user"`)}
-	}
 	return nil
 }
 
@@ -435,23 +404,6 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 		_spec.SetField(session.FieldEndedAt, field.TypeTime, value)
 		_node.EndedAt = &value
 	}
-	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   session.UserTable,
-			Columns: []string{session.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.user_sessions = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	if nodes := _c.mutation.PageVisitsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -509,22 +461,6 @@ func (_c *SessionCreate) createSpec() (*Session, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mindmapgraph.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.TokenUsageIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   session.TokenUsageTable,
-			Columns: []string{session.TokenUsageColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(tokenusage.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

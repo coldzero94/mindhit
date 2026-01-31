@@ -1,8 +1,8 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { useAuthStore } from "@/stores/auth-store";
+import axios, { InternalAxiosRequestConfig } from "axios";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
 export const apiClient = axios.create({
   baseURL: `${API_BASE_URL}/v1`,
@@ -11,29 +11,23 @@ export const apiClient = axios.create({
   },
 });
 
-// Request interceptor - 토큰 추가
+// Request interceptor - API key authentication
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (API_KEY) {
+      config.headers.Authorization = `Bearer ${API_KEY}`;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - 에러 처리
+// Response interceptor - error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // 토큰 만료 시 로그아웃
-      useAuthStore.getState().logout();
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
-      }
-    }
+  (error) => {
+    // Log errors for debugging
+    console.error("API Error:", error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
 );

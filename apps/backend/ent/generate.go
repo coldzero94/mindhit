@@ -1,4 +1,4 @@
-// Package ent provides the database models and client for MindHit.
+// Package ent provides the Ent ORM schema generation entrypoint.
 package ent
 
 //go:generate go run -mod=mod entgo.io/ent/cmd/ent generate ./schema

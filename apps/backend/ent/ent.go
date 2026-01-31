@@ -17,15 +17,9 @@ import (
 	"github.com/mindhit/api/ent/highlight"
 	"github.com/mindhit/api/ent/mindmapgraph"
 	"github.com/mindhit/api/ent/pagevisit"
-	"github.com/mindhit/api/ent/passwordresettoken"
-	"github.com/mindhit/api/ent/plan"
 	"github.com/mindhit/api/ent/rawevent"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/subscription"
-	"github.com/mindhit/api/ent/tokenusage"
 	"github.com/mindhit/api/ent/url"
-	"github.com/mindhit/api/ent/user"
-	"github.com/mindhit/api/ent/usersettings"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -86,20 +80,14 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			aiconfig.Table:           aiconfig.ValidColumn,
-			ailog.Table:              ailog.ValidColumn,
-			highlight.Table:          highlight.ValidColumn,
-			mindmapgraph.Table:       mindmapgraph.ValidColumn,
-			pagevisit.Table:          pagevisit.ValidColumn,
-			passwordresettoken.Table: passwordresettoken.ValidColumn,
-			plan.Table:               plan.ValidColumn,
-			rawevent.Table:           rawevent.ValidColumn,
-			session.Table:            session.ValidColumn,
-			subscription.Table:       subscription.ValidColumn,
-			tokenusage.Table:         tokenusage.ValidColumn,
-			url.Table:                url.ValidColumn,
-			user.Table:               user.ValidColumn,
-			usersettings.Table:       usersettings.ValidColumn,
+			aiconfig.Table:     aiconfig.ValidColumn,
+			ailog.Table:        ailog.ValidColumn,
+			highlight.Table:    highlight.ValidColumn,
+			mindmapgraph.Table: mindmapgraph.ValidColumn,
+			pagevisit.Table:    pagevisit.ValidColumn,
+			rawevent.Table:     rawevent.ValidColumn,
+			session.Table:      session.ValidColumn,
+			url.Table:          url.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

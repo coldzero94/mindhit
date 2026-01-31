@@ -16,7 +16,6 @@ import (
 	"github.com/mindhit/api/internal/infrastructure/ai"
 	"github.com/mindhit/api/internal/infrastructure/metrics"
 	"github.com/mindhit/api/internal/infrastructure/queue"
-	"github.com/mindhit/api/internal/service"
 )
 
 const batchTagExtractionPrompt = `Analyze the following web pages and extract keywords and summaries for each.
@@ -24,15 +23,15 @@ const batchTagExtractionPrompt = `Analyze the following web pages and extract ke
 %s
 
 For each page, extract:
-1. 3-5 core keywords (Korean nouns)
-2. 1-2 sentence summary (Korean)
+1. 3-5 core keywords (nouns)
+2. 1-2 sentence summary
 
 Respond in JSON format with an array:
 [
   {
     "url_id": "<uuid from input>",
-    "keywords": ["키워드1", "키워드2", "키워드3"],
-    "summary": "페이지 요약"
+    "keywords": ["keyword1", "keyword2", "keyword3"],
+    "summary": "page summary"
   }
 ]`
 
@@ -70,28 +69,10 @@ func (h *handlers) HandleURLBatchTagExtraction(ctx context.Context, t *asynq.Tas
 		return nil
 	}
 
-	// Parse user and session IDs for usage tracking
-	var userID, sessionID uuid.UUID
-	if payload.UserID != "" {
-		userID, _ = uuid.Parse(payload.UserID)
-	}
+	// Parse session ID for metadata
+	var sessionID uuid.UUID
 	if payload.SessionID != "" {
 		sessionID, _ = uuid.Parse(payload.SessionID)
-	}
-
-	// Check usage limit before AI call
-	if h.usageService != nil && userID != uuid.Nil {
-		status, err := h.usageService.CheckLimit(ctx, userID)
-		if err != nil {
-			slog.Warn("failed to check usage limit", "error", err)
-		} else if !status.CanUseAI {
-			slog.Warn("user token limit exceeded, skipping batch tag extraction",
-				"user_id", userID,
-				"tokens_used", status.TokensUsed,
-				"token_limit", status.TokenLimit,
-			)
-			return fmt.Errorf("token limit exceeded: used %d/%d", status.TokensUsed, status.TokenLimit)
-		}
 	}
 
 	// Parse URL IDs
@@ -163,7 +144,6 @@ func (h *handlers) HandleURLBatchTagExtraction(ctx context.Context, t *asynq.Tas
 		},
 		Metadata: map[string]string{
 			"session_id": sessionID.String(),
-			"user_id":    userID.String(),
 			"batch_size": fmt.Sprintf("%d", len(urlsToProcess)),
 		},
 	}
@@ -171,19 +151,6 @@ func (h *handlers) HandleURLBatchTagExtraction(ctx context.Context, t *asynq.Tas
 	response, err := h.aiManager.Chat(ctx, ai.TaskTagExtraction, req)
 	if err != nil {
 		return fmt.Errorf("ai batch tag extraction: %w", err)
-	}
-
-	// Record token usage
-	if h.usageService != nil && userID != uuid.Nil {
-		if err := h.usageService.RecordUsage(ctx, service.UsageRecord{
-			UserID:    userID,
-			SessionID: sessionID,
-			Operation: "batch_tag_extraction",
-			Tokens:    response.TotalTokens,
-			AIModel:   response.Model,
-		}); err != nil {
-			slog.Error("failed to record batch tag extraction usage", "error", err)
-		}
 	}
 
 	// Parse response

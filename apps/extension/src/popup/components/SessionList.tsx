@@ -1,20 +1,7 @@
 import { useState, useEffect } from "react";
-import { useAuthStore } from "@/stores/auth-store";
 import { api } from "@/lib/api";
 import { WEB_APP_URL } from "@/lib/constants";
 import type { Session } from "@/types";
-
-/**
- * Build a web app URL with auth token for auto-login.
- */
-function buildWebAppUrl(path: string, token: string | null, user: { id: string; email: string } | null): string {
-  if (token && user) {
-    const userBase64 = btoa(JSON.stringify({ id: user.id, email: user.email }));
-    // Use callback URL to set auth, then redirect to target path
-    return `${WEB_APP_URL}/auth/extension-callback?token=${encodeURIComponent(token)}&user=${encodeURIComponent(userBase64)}&redirect=${encodeURIComponent(path)}`;
-  }
-  return `${WEB_APP_URL}${path}`;
-}
 
 interface SessionListProps {
   currentSessionId?: string;
@@ -22,19 +9,16 @@ interface SessionListProps {
 }
 
 export function SessionList({ currentSessionId, onClose }: SessionListProps) {
-  const { token, user } = useAuthStore();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSessions = async () => {
-      if (!token) return;
-
       try {
         setIsLoading(true);
         setError(null);
-        const response = await api.getSessions(token, 10);
+        const response = await api.getSessions(10);
         setSessions(response.sessions);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load sessions");
@@ -44,7 +28,7 @@ export function SessionList({ currentSessionId, onClose }: SessionListProps) {
     };
 
     fetchSessions();
-  }, [token]);
+  }, []);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -83,7 +67,7 @@ export function SessionList({ currentSessionId, onClose }: SessionListProps) {
   };
 
   const openSessionInWeb = (sessionId: string) => {
-    chrome.tabs.create({ url: buildWebAppUrl(`/sessions/${sessionId}`, token, user) });
+    chrome.tabs.create({ url: `${WEB_APP_URL}/sessions/${sessionId}` });
   };
 
   return (
@@ -146,7 +130,7 @@ export function SessionList({ currentSessionId, onClose }: SessionListProps) {
 
       {/* View All Button */}
       <button
-        onClick={() => chrome.tabs.create({ url: buildWebAppUrl("/sessions", token, user) })}
+        onClick={() => chrome.tabs.create({ url: `${WEB_APP_URL}/sessions` })}
         className="w-full py-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
       >
         View all in dashboard →

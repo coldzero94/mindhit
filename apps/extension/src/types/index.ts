@@ -47,11 +47,6 @@ export type BrowsingEvent =
   | HighlightEvent
   | ClickEvent;
 
-export interface User {
-  id: string;
-  email: string;
-}
-
 export interface Session {
   id: string;
   title: string | null;

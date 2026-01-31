@@ -98,9 +98,6 @@ func run() error {
 		}()
 	}
 
-	// Initialize usage service for token tracking
-	usageService := service.NewUsageService(client)
-
 	// Create queue client for enqueueing tasks from handlers
 	queueClient := queue.NewClient(cfg.RedisAddr)
 	defer func() {
@@ -116,7 +113,7 @@ func run() error {
 	})
 
 	// Register handlers
-	handler.RegisterHandlers(server, client, aiManager, usageService, queueClient)
+	handler.RegisterHandlers(server, client, aiManager, queueClient)
 
 	// Create scheduler for periodic tasks
 	scheduler, err := queue.NewScheduler(cfg.RedisAddr)

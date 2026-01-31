@@ -1,11 +1,10 @@
 import type { BrowsingEvent } from "@/types";
-import { getAuthToken } from "@/lib/auth-utils";
 import {
   API_BASE_URL,
+  API_KEY,
   EVENT_BATCH_SIZE,
   EVENT_FLUSH_INTERVAL,
   STORAGE_KEYS,
-  GOOGLE_CLIENT_ID,
 } from "@/lib/constants";
 
 const REQUEST_TIMEOUT = 30000; // 30 seconds
@@ -80,8 +79,6 @@ const VALID_MESSAGE_TYPES = [
   "EVENT",
   "GET_STATE",
   "INCREMENT_PAGE_COUNT",
-  "SAVE_AUTH",
-  "START_GOOGLE_AUTH",
 ] as const;
 
 // Message listener with sender verification
@@ -154,146 +151,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       updateBadge();
       updateSessionStore();
       break;
-
-    case "SAVE_AUTH":
-      // Handle auth storage in background (longer lifecycle than popup)
-      (async () => {
-        try {
-          const { authData } = message;
-          if (!authData) {
-            sendResponse({ success: false, error: "No auth data provided" });
-            return;
-          }
-
-          // Write to storage
-          await chrome.storage.local.set({ [STORAGE_KEYS.AUTH]: authData });
-
-          // Verify write
-          const verification = await chrome.storage.local.get(STORAGE_KEYS.AUTH);
-          if (!verification[STORAGE_KEYS.AUTH]) {
-            sendResponse({ success: false, error: "Storage write verification failed" });
-            return;
-          }
-
-          console.log("[MindHit] Auth saved successfully in background");
-          sendResponse({ success: true });
-        } catch (error) {
-          console.error("[MindHit] Failed to save auth in background:", error);
-          sendResponse({
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
-        }
-      })();
-      return true; // Keep channel open for async response
-
-    case "START_GOOGLE_AUTH":
-      // Handle ENTIRE OAuth flow in background (independent of popup lifecycle)
-      (async () => {
-        try {
-          console.log("[MindHit] Starting Google OAuth in background...");
-
-          // Build OAuth URL
-          const redirectUri = chrome.identity.getRedirectURL();
-          const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-          authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-          authUrl.searchParams.set("redirect_uri", redirectUri);
-          authUrl.searchParams.set("response_type", "code");
-          authUrl.searchParams.set("scope", "openid email profile");
-          authUrl.searchParams.set("access_type", "offline");
-          authUrl.searchParams.set("prompt", "consent");
-
-          // Launch OAuth flow
-          const responseUrl = await new Promise<string>((resolve, reject) => {
-            chrome.identity.launchWebAuthFlow(
-              {
-                url: authUrl.toString(),
-                interactive: true,
-              },
-              (response) => {
-                if (chrome.runtime.lastError) {
-                  reject(new Error(chrome.runtime.lastError.message));
-                } else if (response) {
-                  resolve(response);
-                } else {
-                  reject(new Error("No response from OAuth flow"));
-                }
-              }
-            );
-          });
-
-          console.log("[MindHit] OAuth flow completed, extracting code...");
-
-          // Extract authorization code
-          const url = new URL(responseUrl);
-          const code = url.searchParams.get("code");
-
-          if (!code) {
-            throw new Error("No authorization code received");
-          }
-
-          console.log("[MindHit] Exchanging code for tokens...");
-
-          // Exchange code for tokens via backend API
-          const tokenResponse = await fetch(`${API_BASE_URL}/auth/google/code`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code, redirect_uri: redirectUri }),
-          });
-
-          if (!tokenResponse.ok) {
-            const errorData = await tokenResponse.json().catch(() => ({}));
-            throw new Error(
-              (errorData as { error?: { message?: string } }).error?.message ||
-                "Token exchange failed"
-            );
-          }
-
-          const result = (await tokenResponse.json()) as {
-            user: { id: string; email: string; name?: string };
-            token: string;
-          };
-
-          console.log("[MindHit] Token exchange successful, saving auth...");
-
-          // Build Zustand persist format
-          const authData = JSON.stringify({
-            state: {
-              user: result.user,
-              token: result.token,
-              isAuthenticated: true,
-            },
-            version: 0,
-          });
-
-          // Save to storage
-          await chrome.storage.local.set({ [STORAGE_KEYS.AUTH]: authData });
-
-          // Verify write
-          const verification = await chrome.storage.local.get(STORAGE_KEYS.AUTH);
-          if (!verification[STORAGE_KEYS.AUTH]) {
-            throw new Error("Storage write verification failed");
-          }
-
-          console.log("[MindHit] Auth saved successfully in background!");
-          sendResponse({ success: true, user: result.user });
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
-          console.error("[MindHit] Google OAuth failed in background:", errorMessage);
-
-          // Don't send error for user cancellation
-          if (
-            errorMessage.includes("canceled") ||
-            errorMessage.includes("closed")
-          ) {
-            sendResponse({ success: false, canceled: true });
-          } else {
-            sendResponse({ success: false, error: errorMessage });
-          }
-        }
-      })();
-      return true; // Keep channel open for async response
   }
 
   return true;
@@ -352,6 +209,16 @@ async function fetchWithTimeout(
   }
 }
 
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  if (API_KEY) {
+    headers["Authorization"] = `Bearer ${API_KEY}`;
+  }
+  return headers;
+}
+
 async function flushEvents(): Promise<void> {
   if (state.events.length === 0 || !state.sessionId) return;
 
@@ -359,9 +226,8 @@ async function flushEvents(): Promise<void> {
   state.events = [];
 
   try {
-    const token = await getAuthToken();
-    if (!token) {
-      console.error("[MindHit] No auth token, cannot send events");
+    if (!API_KEY) {
+      console.error("[MindHit] No API key configured, cannot send events");
       return;
     }
 
@@ -369,10 +235,7 @@ async function flushEvents(): Promise<void> {
       `${API_BASE_URL}/sessions/${state.sessionId}/events`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           events: eventsToSend,
         }),
@@ -411,17 +274,13 @@ async function retryPendingEvents(): Promise<void> {
     const events = storage[key] as BrowsingEvent[];
     if (events && state.sessionId) {
       try {
-        const token = await getAuthToken();
-        if (!token) continue;
+        if (!API_KEY) continue;
 
         const response = await fetchWithTimeout(
           `${API_BASE_URL}/sessions/${state.sessionId}/events`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
               events,
             }),

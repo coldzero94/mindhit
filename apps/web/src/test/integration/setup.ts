@@ -1,13 +1,13 @@
 /**
- * Integration test setup - 실제 백엔드 API 호출
- * MSW를 사용하지 않고 실제 서버와 통신
+ * Integration test setup - Real backend API calls
+ * Communicates with actual server without using MSW
  */
 import axios from "axios";
 
-// Integration 테스트용 API 클라이언트 (Zustand store 의존성 없음)
+// API client for integration tests (no Zustand store dependency)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000";
 
-// Rate limiting 방지를 위한 딜레이
+// Delay to prevent rate limiting
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -19,14 +19,14 @@ export const testApiClient = axios.create({
   timeout: 10000,
 });
 
-// 테스트용 유니크 이메일 생성
+// Generate unique email for tests
 export function uniqueEmail(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}@test.local`;
 }
 
-// 테스트용 인증 헬퍼
+// Helper for creating test users with authentication
 export async function createTestUser(prefix: string = "integration") {
-  // Rate limiting 방지
+  // Prevent rate limiting
   await delay(200);
 
   const email = uniqueEmail(prefix);
@@ -62,7 +62,7 @@ export async function createTestUser(prefix: string = "integration") {
   }
 }
 
-// 인증된 API 클라이언트 생성
+// Create authenticated API client
 export function createAuthenticatedClient(token: string) {
   const client = axios.create({
     baseURL: `${API_BASE_URL}/v1`,
@@ -75,23 +75,23 @@ export function createAuthenticatedClient(token: string) {
   return client;
 }
 
-// 백엔드 서버 상태 확인
+// Check backend server health
 export async function checkServerHealth(): Promise<boolean> {
   try {
-    // health 엔드포인트가 없으면 간단한 요청으로 확인
+    // Check with a simple request if health endpoint is not available
     await testApiClient.get("/auth/me", {
-      validateStatus: () => true, // 어떤 상태 코드든 에러로 처리하지 않음
+      validateStatus: () => true, // Don't treat any status code as an error
     });
     return true;
   } catch (error) {
     if (axios.isAxiosError(error) && error.code === "ECONNREFUSED") {
       return false;
     }
-    return true; // 401 등 다른 에러는 서버가 실행 중인 것
+    return true; // Other errors (like 401) mean the server is running
   }
 }
 
-// 테스트 유저 삭제 (hard delete - 테스트 환경에서만 허용)
+// Delete test user (hard delete - only allowed in test environment)
 export async function deleteTestUser(token: string): Promise<void> {
   try {
     const authClient = createAuthenticatedClient(token);
@@ -99,16 +99,16 @@ export async function deleteTestUser(token: string): Promise<void> {
       params: { hard: true },
     });
   } catch (error) {
-    // 이미 삭제되었거나 토큰이 만료된 경우 무시
+    // Ignore if already deleted or token expired
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       return;
     }
-    // 다른 에러도 테스트 cleanup에서는 무시 (로그만 출력)
+    // Ignore other errors during test cleanup (just log)
     console.warn("Failed to delete test user:", error);
   }
 }
 
-// 테스트에서 생성된 유저들을 추적하고 정리하기 위한 헬퍼
+// Helper to track and clean up users created during tests
 export class TestUserManager {
   private createdUsers: Array<{ token: string; email: string }> = [];
 

@@ -37,7 +37,7 @@ interface TextRevealProps {
  *
  * @example
  * <TextReveal
- *   text="브라우징을 인사이트로 변환하세요"
+ *   text="Transform browsing into insights"
  *   as="h1"
  *   className="text-5xl font-bold"
  * />

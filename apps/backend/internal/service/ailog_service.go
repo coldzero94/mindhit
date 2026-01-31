@@ -23,7 +23,6 @@ func NewAILogService(client *ent.Client) *AILogService {
 
 // AILogRequest represents the data needed to create an AI log entry.
 type AILogRequest struct {
-	UserID       *uuid.UUID
 	SessionID    *uuid.UUID
 	TaskType     ai.TaskType
 	Request      ai.ChatRequest
@@ -77,9 +76,6 @@ func (s *AILogService) Log(ctx context.Context, req AILogRequest) (*ent.AILog, e
 		SetLatencyMs(latencyMs).
 		SetStatus(status)
 
-	if req.UserID != nil {
-		builder.SetUserID(*req.UserID)
-	}
 	if req.SessionID != nil {
 		builder.SetSessionID(*req.SessionID)
 	}
@@ -143,11 +139,9 @@ type UsageStats struct {
 	RequestCount int `json:"request_count"`
 }
 
-// GetUsageStats returns token usage statistics for a user.
-func (s *AILogService) GetUsageStats(ctx context.Context, userID uuid.UUID) (*UsageStats, error) {
-	logs, err := s.client.AILog.Query().
-		Where(ailog.UserIDEQ(userID)).
-		All(ctx)
+// GetUsageStats returns aggregated token usage statistics.
+func (s *AILogService) GetUsageStats(ctx context.Context) (*UsageStats, error) {
+	logs, err := s.client.AILog.Query().All(ctx)
 	if err != nil {
 		return nil, err
 	}

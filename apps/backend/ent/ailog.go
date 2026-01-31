@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 )
 
 // AILog is the model entity for the AILog schema.
@@ -21,8 +20,6 @@ type AILog struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID *uuid.UUID `json:"user_id,omitempty"`
 	// SessionID holds the value of the "session_id" field.
 	SessionID *uuid.UUID `json:"session_id,omitempty"`
 	// tag_extraction, mindmap, general
@@ -69,24 +66,11 @@ type AILog struct {
 
 // AILogEdges holds the relations/edges for other nodes in the graph.
 type AILogEdges struct {
-	// User holds the value of the user edge.
-	User *User `json:"user,omitempty"`
 	// Session holds the value of the session edge.
 	Session *Session `json:"session,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
-}
-
-// UserOrErr returns the User value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e AILogEdges) UserOrErr() (*User, error) {
-	if e.User != nil {
-		return e.User, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: user.Label}
-	}
-	return nil, &NotLoadedError{edge: "user"}
+	loadedTypes [1]bool
 }
 
 // SessionOrErr returns the Session value or an error if the edge
@@ -94,7 +78,7 @@ func (e AILogEdges) UserOrErr() (*User, error) {
 func (e AILogEdges) SessionOrErr() (*Session, error) {
 	if e.Session != nil {
 		return e.Session, nil
-	} else if e.loadedTypes[1] {
+	} else if e.loadedTypes[0] {
 		return nil, &NotFoundError{label: session.Label}
 	}
 	return nil, &NotLoadedError{edge: "session"}
@@ -105,7 +89,7 @@ func (*AILog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ailog.FieldUserID, ailog.FieldSessionID:
+		case ailog.FieldSessionID:
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		case ailog.FieldMetadata:
 			values[i] = new([]byte)
@@ -137,13 +121,6 @@ func (_m *AILog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				_m.ID = *value
-			}
-		case ailog.FieldUserID:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				_m.UserID = new(uuid.UUID)
-				*_m.UserID = *value.S.(*uuid.UUID)
 			}
 		case ailog.FieldSessionID:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -275,11 +252,6 @@ func (_m *AILog) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryUser queries the "user" edge of the AILog entity.
-func (_m *AILog) QueryUser() *UserQuery {
-	return NewAILogClient(_m.config).QueryUser(_m)
-}
-
 // QuerySession queries the "session" edge of the AILog entity.
 func (_m *AILog) QuerySession() *SessionQuery {
 	return NewAILogClient(_m.config).QuerySession(_m)
@@ -308,11 +280,6 @@ func (_m *AILog) String() string {
 	var builder strings.Builder
 	builder.WriteString("AILog(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	if v := _m.UserID; v != nil {
-		builder.WriteString("user_id=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
 	if v := _m.SessionID; v != nil {
 		builder.WriteString("session_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))

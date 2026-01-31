@@ -31,13 +31,13 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-status-error">세션을 불러오는데 실패했습니다.</p>
+        <p className="text-status-error">Failed to load sessions.</p>
         <Button
           variant="outline"
           className="mt-4"
           onClick={() => window.location.reload()}
         >
-          다시 시도
+          Retry
         </Button>
       </div>
     );
@@ -61,9 +61,9 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
             />
           </svg>
         </div>
-        <p className="text-muted-foreground text-lg">아직 녹화된 세션이 없습니다.</p>
+        <p className="text-muted-foreground text-lg">No recorded sessions yet.</p>
         <p className="text-sm text-muted-foreground/70 mt-2">
-          Chrome Extension을 사용하여 첫 번째 세션을 녹화해보세요.
+          Use the Chrome Extension to record your first session.
         </p>
       </div>
     );
@@ -93,16 +93,16 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
             onClick={() => onPageChange(page - 1)}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            이전
+            Previous
           </Button>
-          <span className="px-4 text-sm text-muted-foreground">페이지 {page}</span>
+          <span className="px-4 text-sm text-muted-foreground">Page {page}</span>
           <Button
             variant="outline"
             size="sm"
             disabled={!hasMore}
             onClick={() => onPageChange(page + 1)}
           >
-            다음
+            Next
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>

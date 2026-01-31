@@ -21,29 +21,11 @@ type MindmapGraph func(*sql.Selector)
 // PageVisit is the predicate function for pagevisit builders.
 type PageVisit func(*sql.Selector)
 
-// PasswordResetToken is the predicate function for passwordresettoken builders.
-type PasswordResetToken func(*sql.Selector)
-
-// Plan is the predicate function for plan builders.
-type Plan func(*sql.Selector)
-
 // RawEvent is the predicate function for rawevent builders.
 type RawEvent func(*sql.Selector)
 
 // Session is the predicate function for session builders.
 type Session func(*sql.Selector)
 
-// Subscription is the predicate function for subscription builders.
-type Subscription func(*sql.Selector)
-
-// TokenUsage is the predicate function for tokenusage builders.
-type TokenUsage func(*sql.Selector)
-
 // URL is the predicate function for url builders.
 type URL func(*sql.Selector)
-
-// User is the predicate function for user builders.
-type User func(*sql.Selector)
-
-// UserSettings is the predicate function for usersettings builders.
-type UserSettings func(*sql.Selector)

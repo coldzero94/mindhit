@@ -24,9 +24,6 @@ func (AILog) Fields() []ent.Field {
 			Default(uuid.New),
 
 		// Relations (optional)
-		field.UUID("user_id", uuid.UUID{}).
-			Optional().
-			Nillable(),
 		field.UUID("session_id", uuid.UUID{}).
 			Optional().
 			Nillable(),
@@ -97,7 +94,6 @@ func (AILog) Fields() []ent.Field {
 // Indexes of the AILog.
 func (AILog) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("user_id", "created_at"),
 		index.Fields("session_id"),
 		index.Fields("task_type", "created_at"),
 		index.Fields("provider", "model", "created_at"),
@@ -108,11 +104,6 @@ func (AILog) Indexes() []ent.Index {
 // Edges of the AILog.
 func (AILog) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("user", User.Type).
-			Ref("ai_logs").
-			Field("user_id").
-			Unique().
-			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.From("session", Session.Type).
 			Ref("ai_logs").
 			Field("session_id").

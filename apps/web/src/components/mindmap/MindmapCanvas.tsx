@@ -105,7 +105,7 @@ export function MindmapCanvas({ children, className }: MindmapCanvasProps) {
               ? 'bg-blue-500/80 text-white'
               : 'bg-gray-900/80 text-gray-400 hover:text-gray-200'
           }`}
-          title={freeRotation ? '자유 회전 ON' : '자유 회전 OFF'}
+          title={freeRotation ? 'Free Rotation ON' : 'Free Rotation OFF'}
         >
           <Move3d className="w-4 h-4" />
         </button>
@@ -113,7 +113,7 @@ export function MindmapCanvas({ children, className }: MindmapCanvasProps) {
         <button
           onClick={handleReset}
           className="p-2 rounded-lg bg-gray-900/80 text-gray-400 hover:text-gray-200 backdrop-blur transition-colors"
-          title="뷰 초기화"
+          title="Reset View"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -122,17 +122,17 @@ export function MindmapCanvas({ children, className }: MindmapCanvasProps) {
       {/* Help tooltip - bottom left */}
       <div className="absolute bottom-4 left-4 z-10 text-xs text-gray-400 bg-gray-900/80 px-3 py-2 rounded-lg backdrop-blur">
         <div className="space-y-0.5">
-          <div><span className="text-gray-300">드래그</span>: 이동</div>
-          <div><span className="text-gray-300">스크롤</span>: 확대/축소</div>
-          <div><span className="text-gray-300">우클릭</span>: 회전{!freeRotation && <span className="text-gray-500"> (제한)</span>}</div>
-          <div><span className="text-gray-300">노드 클릭</span>: 상세정보</div>
+          <div><span className="text-gray-300">Drag</span>: Pan</div>
+          <div><span className="text-gray-300">Scroll</span>: Zoom</div>
+          <div><span className="text-gray-300">Right-click</span>: Rotate{!freeRotation && <span className="text-gray-500"> (limited)</span>}</div>
+          <div><span className="text-gray-300">Click node</span>: Details</div>
         </div>
       </div>
 
       {/* Free rotation indicator */}
       {freeRotation && (
         <div className="absolute bottom-4 right-4 z-10 text-xs text-blue-400 bg-gray-900/80 px-2 py-1 rounded backdrop-blur">
-          자유 회전 모드
+          Free Rotation Mode
         </div>
       )}
 

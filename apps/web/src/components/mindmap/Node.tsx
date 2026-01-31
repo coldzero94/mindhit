@@ -39,7 +39,7 @@ export function Node({ node, isSelected, isHovered, onClick, onHover }: NodeProp
     ? [node.position.x, node.position.y, node.position.z]
     : [0, 0, 0];
 
-  // 노드 타입별 크기 계산
+  // Calculate node size based on type
   const getNodeSize = (): number => {
     const baseSize = node.size || 10;
     switch (node.type) {

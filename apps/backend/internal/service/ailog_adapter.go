@@ -19,7 +19,6 @@ func NewAILogAdapter(service *AILogService) *AILogAdapter {
 // Log implements ai.LogProvider interface.
 func (a *AILogAdapter) Log(ctx context.Context, req ai.LogRequest) error {
 	_, err := a.service.Log(ctx, AILogRequest{
-		UserID:       req.UserID,
 		SessionID:    req.SessionID,
 		TaskType:     req.TaskType,
 		Request:      req.Request,

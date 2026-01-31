@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 )
 
 // AILogCreate is the builder for creating a AILog entity.
@@ -21,20 +20,6 @@ type AILogCreate struct {
 	config
 	mutation *AILogMutation
 	hooks    []Hook
-}
-
-// SetUserID sets the "user_id" field.
-func (_c *AILogCreate) SetUserID(v uuid.UUID) *AILogCreate {
-	_c.mutation.SetUserID(v)
-	return _c
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (_c *AILogCreate) SetNillableUserID(v *uuid.UUID) *AILogCreate {
-	if v != nil {
-		_c.SetUserID(*v)
-	}
-	return _c
 }
 
 // SetSessionID sets the "session_id" field.
@@ -285,11 +270,6 @@ func (_c *AILogCreate) SetNillableID(v *uuid.UUID) *AILogCreate {
 	return _c
 }
 
-// SetUser sets the "user" edge to the User entity.
-func (_c *AILogCreate) SetUser(v *User) *AILogCreate {
-	return _c.SetUserID(v.ID)
-}
-
 // SetSession sets the "session" edge to the Session entity.
 func (_c *AILogCreate) SetSession(v *Session) *AILogCreate {
 	return _c.SetSessionID(v.ID)
@@ -529,23 +509,6 @@ func (_c *AILogCreate) createSpec() (*AILog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(ailog.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
-	}
-	if nodes := _c.mutation.UserIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   ailog.UserTable,
-			Columns: []string{ailog.UserColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.UserID = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.SessionIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

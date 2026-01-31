@@ -7,7 +7,7 @@ Each conversation should reference this file to understand the current project s
 
 ## Project Overview
 
-**MindHit** is a service that collects user browsing history and generates AI-powered mindmaps.
+**MindHit** is a self-hosted application that collects browsing sessions via a Chrome Extension and generates AI-powered mindmaps, helping users understand and recall their research patterns.
 
 ### Monorepo Structure
 
@@ -34,9 +34,20 @@ mindhit/
 ├── docs/
 │   └── development/
 │       └── phases/       # Phase-based development guides
-├── infra/                # IaC (Terraform, Kubernetes)
+├── infra/                # Infrastructure configs (see note below)
+│   ├── docker/           # Monitoring stack (Prometheus, Grafana, Loki)
+│   ├── kind/             # Local Kubernetes cluster config
+│   ├── helm/             # Kubernetes Helm charts
+│   └── ...
 └── CLAUDE.md             # This file
 ```
+
+**Note on `infra/` folder:**
+
+- **Self-hosting users**: Use the **root `docker-compose.yml`** (PostgreSQL + Redis only)
+- `infra/docker/`: Advanced monitoring stack (Prometheus, Grafana, Loki) - optional
+- `infra/kind/`, `infra/helm/`: Kubernetes deployments for advanced users
+- Most users don't need these - they're for internal development/production deployments
 
 ### Tech Stack
 
@@ -96,8 +107,8 @@ This is a monorepo. Documentation should be **split by scope**:
 | Frontend | `/apps/web/CLAUDE.md` | `/apps/web/README.md` | English |
 | Extension | `/apps/extension/CLAUDE.md` | `/apps/extension/README.md` | English |
 | Shared | `/packages/shared/CLAUDE.md` | `/packages/shared/README.md` | English |
-| Development phases | - | `/docs/development/phases/` | Korean |
-| API specs | - | `/docs/api/` | English (OpenAPI) |
+| Documentation | - | `/docs/` | English |
+| API specs | - | OpenAPI YAML | English |
 
 ### CLAUDE.md Files (Per App)
 
@@ -129,10 +140,10 @@ When making changes to an app, update its CLAUDE.md if:
 
 ### Writing Guidelines
 
-- **CLAUDE.md files**: Always in English (all of them)
-- **Phase documents**: Korean (for the development team)
+- **All documentation**: English (for global open source community)
 - **Code comments**: English
 - **Commit messages**: English
+- **UI text**: English
 
 ---
 
@@ -145,8 +156,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 0 | ✅ Done | 3-Stage Dev Environment |
 | Phase 1 | ✅ Done | Project Initialization |
 | Phase 1.5 | ✅ Done | API Spec Standardization |
-| Phase 2 | ✅ Done | Authentication System |
-| Phase 2.1 | ✅ Done | Google OAuth (GIS-based) |
+| Phase 2 | ✅ Done | API Key Authentication (Self-hosted) |
 | Phase 3 | ✅ Done | Session Management API |
 | Phase 4 | ✅ Done | Event Collection API |
 | Phase 5 | ✅ Done | Monitoring & Infra (Basic) |
@@ -154,7 +164,7 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 7 | ✅ Done | Next.js Web App |
 | Phase 8 | ✅ Done | Chrome Extension |
 | Phase 8.1 | ✅ Done | Extension UX Enhancement |
-| Phase 9 | ✅ Done | Plan & Usage System |
+| Phase 9 | ⛔ Removed | Plan & Usage System (not needed for self-hosted) |
 | Phase 10 | ✅ Done | AI Provider Infrastructure |
 | Phase 10.1 | ✅ Done | AI Settings & Logging |
 | Phase 10.2 | ✅ Done | Mindmap Generation |
@@ -165,8 +175,8 @@ When making changes to an app, update its CLAUDE.md if:
 | Phase 11.5 | ✅ Done | Animation & Interaction |
 | Phase 12 | ✅ Done | Production Monitoring |
 | Phase 13 | ⬜ Pending | Deployment & Operations |
-| Phase 14.1 | ✅ Done | Subscription Management UI |
-| Phase 14 | ⬜ Pending | Stripe Billing Integration |
+| Phase 14.1 | ⛔ Removed | Subscription Management UI (not needed for self-hosted) |
+| Phase 14 | ⛔ Removed | Stripe Billing Integration (not needed for self-hosted) |
 
 > Detailed phase docs: `docs/development/phases/`
 
@@ -177,7 +187,8 @@ Record phase completions here (newest first):
 - [YYYY-MM-DD] Phase X.X completed: Brief description
 -->
 
-- [2026-01-30] Phase 14.1 completed: Subscription Management UI - /pricing page with plan comparison, PlanCard/PlanComparisonTable components, plan change/cancel/reactivate APIs (TypeSpec + Go backend), useChangePlan/useCancelSubscription/useReactivateSubscription hooks, login state handling (non-logged users redirected to login on plan selection)
+- [2026-01-31] Open Source Conversion: Converted from multi-user SaaS to single-user self-hosted tool. Removed Google OAuth, JWT auth, user accounts, subscriptions, and billing. Implemented API Key authentication (Bearer token). Updated all documentation and UI to English for global community. Apache 2.0 license applied.
+- [2026-01-30] AI Optimization: Groq Provider integration (OpenAI-compatible API), token usage recording fix for tag extraction, mindmap prompt optimization (removed URL/Duration), batch tag extraction handler (5 URLs per batch), default AI config changed to Groq (llama-3.3-70b-versatile for mindmap, llama-3.1-8b-instant for tag extraction), session processing handler now enqueues AI tasks (batch tag extraction + mindmap generation with 30s delay), MindmapController enqueues generation task on API call
 - [2026-01-30] AI Optimization: Groq Provider integration (OpenAI-compatible API), token usage recording fix for tag extraction, mindmap prompt optimization (removed URL/Duration), batch tag extraction handler (5 URLs per batch), default AI config changed to Groq (llama-3.3-70b-versatile for mindmap, llama-3.1-8b-instant for tag extraction), session processing handler now enqueues AI tasks (batch tag extraction + mindmap generation with 30s delay), MindmapController enqueues generation task on API call
 - [2026-01-02] Phase 12 completed: Production Monitoring - Business metrics (sessions, events, auth, worker, AI), Grafana dashboards (api-overview, business-metrics, ai-worker, infrastructure), Loki log aggregation, Alertmanager with alerts.yml
 - [2026-01-02] Phase 11.5 completed: Animation & Interaction - BigBangAnimation, ParticleField, NebulaEffect, PostProcessing, CameraController, AutoRotateCamera, useMindmapInteraction hook, Galaxy integration with seeded random for React 19 compatibility
@@ -237,18 +248,17 @@ This ensures other Claude Code sessions have accurate project context.
 
 ---
 
-## Test Credentials
+## Authentication
 
-For development/testing environments only:
+This is a **single-user self-hosted** application. Authentication uses a simple **API Key**:
 
-| Field | Value |
-|-------|-------|
-| Email | `test@mindhit.dev` |
-| Password | `test1234!` |
-| Access Token | `$TEST_ACCESS_TOKEN` env variable |
+| Variable | Description |
+|----------|-------------|
+| `API_SECRET_KEY` | Backend API key (set in `.env`) |
+| `NEXT_PUBLIC_API_KEY` | Frontend API key (same value) |
+| `VITE_API_KEY` | Extension API key (same value) |
 
-> Note: Test user is created via seed script. The User ID is assigned from the database.
-> See: `docs/development/phases/phase-2-auth.md`
+All API requests must include `Authorization: Bearer <API_KEY>` header.
 
 ---
 
@@ -263,11 +273,12 @@ moonx backend:test        # Run tests
 moonx backend:generate    # Generate Ent + OpenAPI
 moonx backend:migrate     # Apply migrations
 moonx backend:migrate-diff # Generate migration
-moonx backend:seed        # Run all seeds (test user, etc.)
+moonx backend:seed        # Run all seeds (AI configs, test mindmaps)
 
 # Direct seed commands (from apps/backend/)
-go run ./scripts/seed.go test-user  # Create/update test user only
-go run ./scripts/seed.go all        # Run all seeds
+go run ./scripts/seed.go ai-configs  # Seed AI provider configs
+go run ./scripts/seed.go mindmaps    # Seed test mindmaps
+go run ./scripts/seed.go all         # Run all seeds
 ```
 
 ### Frontend (apps/web)
@@ -422,13 +433,13 @@ _No known issues._
 
 | Table | Description | Phase |
 |-------|-------------|-------|
-| `users` | User accounts | Phase 2 |
 | `sessions` | Browsing sessions | Phase 3 |
 | `events` | Page visit events | Phase 4 |
-| `plans` | Subscription plans | Phase 9 |
-| `subscriptions` | User subscriptions | Phase 9 |
-| `token_usages` | AI token tracking | Phase 9 |
+| `urls` | URL content for AI analysis | Phase 6 |
+| `ai_configs` | AI provider configuration | Phase 10 |
+| `ai_logs` | AI request/response logs | Phase 10 |
 | `mindmaps` | Generated mindmaps | Phase 10 |
+| `mindmap_graphs` | Mindmap node/edge data | Phase 10 |
 
 ### API Versioning
 
@@ -437,9 +448,9 @@ _No known issues._
 
 ### Authentication Flow
 
-- JWT-based (Access Token 15min + Refresh Token 7days)
-- Access Token: API authentication
-- Refresh Token: Token renewal only
+- **API Key based** (single-user self-hosted)
+- All requests require `Authorization: Bearer <API_SECRET_KEY>` header
+- No user accounts, sessions, or tokens - just a static API key
 
 ### Error Handling
 

@@ -18,46 +18,31 @@ import (
 )
 
 // TestEventFlow_CollectAndQuery tests event collection and querying:
-// 1. User creates a session
-// 2. User sends batch events
-// 3. User queries events
-// 4. User gets event stats
+// 1. Create a session
+// 2. Send batch events
+// 3. Query events
+// 4. Get event stats
 func TestEventFlow_CollectAndQuery(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
 	// Setup services
-	authService := service.NewAuthService(client)
-	jwtService := service.NewJWTService("test-secret")
 	sessionService := service.NewSessionService(client, nil)
 	urlService := service.NewURLService(client)
 	eventService := service.NewEventService(client, urlService)
 
-	authController := controller.NewAuthController(authService, jwtService)
-	sessionController := controller.NewSessionController(sessionService, jwtService)
-	eventController := controller.NewEventController(eventService, sessionService, jwtService)
+	sessionController := controller.NewSessionController(sessionService)
+	eventController := controller.NewEventController(eventService, sessionService)
 
 	ctx := context.Background()
+	authHeader := getAuthHeader()
 
-	// Setup user and session
-	var accessToken string
+	// Setup: Create session
 	var sessionID string
 
-	t.Run("Setup: Create user and session", func(t *testing.T) {
-		email := uniqueEmail("event_flow")
-		signupReq := generated.RoutesSignupRequestObject{
-			Body: &generated.RoutesSignupJSONRequestBody{
-				Email:    email,
-				Password: "password123!",
-			},
-		}
-		resp, err := authController.RoutesSignup(ctx, signupReq)
-		require.NoError(t, err)
-		signupResp := resp.(generated.RoutesSignup201JSONResponse)
-		accessToken = "Bearer " + signupResp.Token
-
+	t.Run("Setup: Create session", func(t *testing.T) {
 		startReq := generated.RoutesStartRequestObject{
-			Params: generated.RoutesStartParams{Authorization: accessToken},
+			Params: generated.RoutesStartParams{Authorization: authHeader},
 		}
 		startResp, err := sessionController.RoutesStart(ctx, startReq)
 		require.NoError(t, err)
@@ -97,7 +82,7 @@ func TestEventFlow_CollectAndQuery(t *testing.T) {
 
 		req := generated.RoutesBatchEventsRequestObject{
 			Id:     sessionID,
-			Params: generated.RoutesBatchEventsParams{Authorization: accessToken},
+			Params: generated.RoutesBatchEventsParams{Authorization: authHeader},
 			Body: &generated.RoutesBatchEventsJSONRequestBody{
 				Events: events,
 			},
@@ -116,7 +101,7 @@ func TestEventFlow_CollectAndQuery(t *testing.T) {
 	t.Run("Step 2: List events", func(t *testing.T) {
 		req := generated.RoutesListEventsRequestObject{
 			Id:     sessionID,
-			Params: generated.RoutesListEventsParams{Authorization: accessToken},
+			Params: generated.RoutesListEventsParams{Authorization: authHeader},
 		}
 
 		resp, err := eventController.RoutesListEvents(ctx, req)
@@ -139,7 +124,7 @@ func TestEventFlow_CollectAndQuery(t *testing.T) {
 	t.Run("Step 3: Get event stats", func(t *testing.T) {
 		req := generated.RoutesGetEventStatsRequestObject{
 			Id:     sessionID,
-			Params: generated.RoutesGetEventStatsParams{Authorization: accessToken},
+			Params: generated.RoutesGetEventStatsParams{Authorization: authHeader},
 		}
 
 		resp, err := eventController.RoutesGetEventStats(ctx, req)
@@ -157,7 +142,7 @@ func TestEventFlow_CollectAndQuery(t *testing.T) {
 		req := generated.RoutesListEventsRequestObject{
 			Id: sessionID,
 			Params: generated.RoutesListEventsParams{
-				Authorization: accessToken,
+				Authorization: authHeader,
 				Type:          &eventType,
 			},
 		}
@@ -179,32 +164,19 @@ func TestEventFlow_EmptyBatch(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
-	authService := service.NewAuthService(client)
-	jwtService := service.NewJWTService("test-secret")
 	sessionService := service.NewSessionService(client, nil)
 	urlService := service.NewURLService(client)
 	eventService := service.NewEventService(client, urlService)
 
-	authController := controller.NewAuthController(authService, jwtService)
-	sessionController := controller.NewSessionController(sessionService, jwtService)
-	eventController := controller.NewEventController(eventService, sessionService, jwtService)
+	sessionController := controller.NewSessionController(sessionService)
+	eventController := controller.NewEventController(eventService, sessionService)
 
 	ctx := context.Background()
+	authHeader := getAuthHeader()
 
 	// Setup
-	email := uniqueEmail("empty_batch")
-	signupReq := generated.RoutesSignupRequestObject{
-		Body: &generated.RoutesSignupJSONRequestBody{
-			Email:    email,
-			Password: "password123!",
-		},
-	}
-	resp, _ := authController.RoutesSignup(ctx, signupReq)
-	signupResp := resp.(generated.RoutesSignup201JSONResponse)
-	accessToken := "Bearer " + signupResp.Token
-
 	startReq := generated.RoutesStartRequestObject{
-		Params: generated.RoutesStartParams{Authorization: accessToken},
+		Params: generated.RoutesStartParams{Authorization: authHeader},
 	}
 	startResp, _ := sessionController.RoutesStart(ctx, startReq)
 	sessionID := startResp.(generated.RoutesStart201JSONResponse).Session.Id
@@ -213,7 +185,7 @@ func TestEventFlow_EmptyBatch(t *testing.T) {
 	t.Run("Empty batch returns 200 with zero processed", func(t *testing.T) {
 		req := generated.RoutesBatchEventsRequestObject{
 			Id:     sessionID,
-			Params: generated.RoutesBatchEventsParams{Authorization: accessToken},
+			Params: generated.RoutesBatchEventsParams{Authorization: authHeader},
 			Body: &generated.RoutesBatchEventsJSONRequestBody{
 				Events: []generated.EventsEventData{},
 			},
@@ -233,28 +205,14 @@ func TestEventFlow_InvalidSession(t *testing.T) {
 	client := testutil.SetupTestDB(t)
 	defer testutil.CleanupTestDB(t, client)
 
-	authService := service.NewAuthService(client)
-	jwtService := service.NewJWTService("test-secret")
 	sessionService := service.NewSessionService(client, nil)
 	urlService := service.NewURLService(client)
 	eventService := service.NewEventService(client, urlService)
 
-	authController := controller.NewAuthController(authService, jwtService)
-	eventController := controller.NewEventController(eventService, sessionService, jwtService)
+	eventController := controller.NewEventController(eventService, sessionService)
 
 	ctx := context.Background()
-
-	// Setup user
-	email := uniqueEmail("invalid_session")
-	signupReq := generated.RoutesSignupRequestObject{
-		Body: &generated.RoutesSignupJSONRequestBody{
-			Email:    email,
-			Password: "password123!",
-		},
-	}
-	resp, _ := authController.RoutesSignup(ctx, signupReq)
-	signupResp := resp.(generated.RoutesSignup201JSONResponse)
-	accessToken := "Bearer " + signupResp.Token
+	authHeader := getAuthHeader()
 
 	// Try to send events to non-existent session
 	t.Run("Events to invalid session returns 404", func(t *testing.T) {
@@ -264,7 +222,7 @@ func TestEventFlow_InvalidSession(t *testing.T) {
 
 		req := generated.RoutesBatchEventsRequestObject{
 			Id:     fakeSessionID,
-			Params: generated.RoutesBatchEventsParams{Authorization: accessToken},
+			Params: generated.RoutesBatchEventsParams{Authorization: authHeader},
 			Body: &generated.RoutesBatchEventsJSONRequestBody{
 				Events: []generated.EventsEventData{
 					{

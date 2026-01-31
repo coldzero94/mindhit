@@ -15,7 +15,6 @@ import (
 	"github.com/mindhit/api/ent/ailog"
 	"github.com/mindhit/api/ent/predicate"
 	"github.com/mindhit/api/ent/session"
-	"github.com/mindhit/api/ent/user"
 )
 
 // AILogQuery is the builder for querying AILog entities.
@@ -25,7 +24,6 @@ type AILogQuery struct {
 	order       []ailog.OrderOption
 	inters      []Interceptor
 	predicates  []predicate.AILog
-	withUser    *UserQuery
 	withSession *SessionQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -61,28 +59,6 @@ func (_q *AILogQuery) Unique(unique bool) *AILogQuery {
 func (_q *AILogQuery) Order(o ...ailog.OrderOption) *AILogQuery {
 	_q.order = append(_q.order, o...)
 	return _q
-}
-
-// QueryUser chains the current query on the "user" edge.
-func (_q *AILogQuery) QueryUser() *UserQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(ailog.Table, ailog.FieldID, selector),
-			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, ailog.UserTable, ailog.UserColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // QuerySession chains the current query on the "session" edge.
@@ -299,23 +275,11 @@ func (_q *AILogQuery) Clone() *AILogQuery {
 		order:       append([]ailog.OrderOption{}, _q.order...),
 		inters:      append([]Interceptor{}, _q.inters...),
 		predicates:  append([]predicate.AILog{}, _q.predicates...),
-		withUser:    _q.withUser.Clone(),
 		withSession: _q.withSession.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
-}
-
-// WithUser tells the query-builder to eager-load the nodes that are connected to
-// the "user" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *AILogQuery) WithUser(opts ...func(*UserQuery)) *AILogQuery {
-	query := (&UserClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withUser = query
-	return _q
 }
 
 // WithSession tells the query-builder to eager-load the nodes that are connected to
@@ -335,12 +299,12 @@ func (_q *AILogQuery) WithSession(opts ...func(*SessionQuery)) *AILogQuery {
 // Example:
 //
 //	var v []struct {
-//		UserID uuid.UUID `json:"user_id,omitempty"`
+//		SessionID uuid.UUID `json:"session_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.AILog.Query().
-//		GroupBy(ailog.FieldUserID).
+//		GroupBy(ailog.FieldSessionID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *AILogQuery) GroupBy(field string, fields ...string) *AILogGroupBy {
@@ -358,11 +322,11 @@ func (_q *AILogQuery) GroupBy(field string, fields ...string) *AILogGroupBy {
 // Example:
 //
 //	var v []struct {
-//		UserID uuid.UUID `json:"user_id,omitempty"`
+//		SessionID uuid.UUID `json:"session_id,omitempty"`
 //	}
 //
 //	client.AILog.Query().
-//		Select(ailog.FieldUserID).
+//		Select(ailog.FieldSessionID).
 //		Scan(ctx, &v)
 func (_q *AILogQuery) Select(fields ...string) *AILogSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -407,8 +371,7 @@ func (_q *AILogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AILog,
 	var (
 		nodes       = []*AILog{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
-			_q.withUser != nil,
+		loadedTypes = [1]bool{
 			_q.withSession != nil,
 		}
 	)
@@ -430,12 +393,6 @@ func (_q *AILogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AILog,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withUser; query != nil {
-		if err := _q.loadUser(ctx, query, nodes, nil,
-			func(n *AILog, e *User) { n.Edges.User = e }); err != nil {
-			return nil, err
-		}
-	}
 	if query := _q.withSession; query != nil {
 		if err := _q.loadSession(ctx, query, nodes, nil,
 			func(n *AILog, e *Session) { n.Edges.Session = e }); err != nil {
@@ -445,38 +402,6 @@ func (_q *AILogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AILog,
 	return nodes, nil
 }
 
-func (_q *AILogQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*AILog, init func(*AILog), assign func(*AILog, *User)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*AILog)
-	for i := range nodes {
-		if nodes[i].UserID == nil {
-			continue
-		}
-		fk := *nodes[i].UserID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(user.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "user_id" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
-}
 func (_q *AILogQuery) loadSession(ctx context.Context, query *SessionQuery, nodes []*AILog, init func(*AILog), assign func(*AILog, *Session)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*AILog)
@@ -534,9 +459,6 @@ func (_q *AILogQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != ailog.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
-		}
-		if _q.withUser != nil {
-			_spec.Node.AddColumnOnce(ailog.FieldUserID)
 		}
 		if _q.withSession != nil {
 			_spec.Node.AddColumnOnce(ailog.FieldSessionID)

@@ -69,30 +69,6 @@ func (f PageVisitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PageVisitMutation", m)
 }
 
-// The PasswordResetTokenFunc type is an adapter to allow the use of ordinary
-// function as PasswordResetToken mutator.
-type PasswordResetTokenFunc func(context.Context, *ent.PasswordResetTokenMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f PasswordResetTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.PasswordResetTokenMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PasswordResetTokenMutation", m)
-}
-
-// The PlanFunc type is an adapter to allow the use of ordinary
-// function as Plan mutator.
-type PlanFunc func(context.Context, *ent.PlanMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f PlanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.PlanMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PlanMutation", m)
-}
-
 // The RawEventFunc type is an adapter to allow the use of ordinary
 // function as RawEvent mutator.
 type RawEventFunc func(context.Context, *ent.RawEventMutation) (ent.Value, error)
@@ -117,30 +93,6 @@ func (f SessionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, err
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SessionMutation", m)
 }
 
-// The SubscriptionFunc type is an adapter to allow the use of ordinary
-// function as Subscription mutator.
-type SubscriptionFunc func(context.Context, *ent.SubscriptionMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f SubscriptionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.SubscriptionMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SubscriptionMutation", m)
-}
-
-// The TokenUsageFunc type is an adapter to allow the use of ordinary
-// function as TokenUsage mutator.
-type TokenUsageFunc func(context.Context, *ent.TokenUsageMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f TokenUsageFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.TokenUsageMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TokenUsageMutation", m)
-}
-
 // The URLFunc type is an adapter to allow the use of ordinary
 // function as URL mutator.
 type URLFunc func(context.Context, *ent.URLMutation) (ent.Value, error)
@@ -151,30 +103,6 @@ func (f URLFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.URLMutation", m)
-}
-
-// The UserFunc type is an adapter to allow the use of ordinary
-// function as User mutator.
-type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.UserMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMutation", m)
-}
-
-// The UserSettingsFunc type is an adapter to allow the use of ordinary
-// function as UserSettings mutator.
-type UserSettingsFunc func(context.Context, *ent.UserSettingsMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f UserSettingsFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.UserSettingsMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserSettingsMutation", m)
 }
 
 // Condition is a hook condition function.

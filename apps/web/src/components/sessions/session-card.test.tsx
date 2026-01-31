@@ -36,11 +36,11 @@ describe("SessionCard", () => {
     expect(screen.getByText("My Test Session")).toBeInTheDocument();
   });
 
-  it("renders '제목 없음' when title is undefined", () => {
+  it("renders 'Untitled' when title is undefined", () => {
     const session = createMockSession({ title: undefined });
     render(<SessionCard session={session} />);
 
-    expect(screen.getByText("제목 없음")).toBeInTheDocument();
+    expect(screen.getByText("Untitled")).toBeInTheDocument();
   });
 
   it("renders session description when provided", () => {
@@ -66,11 +66,11 @@ describe("SessionCard", () => {
   });
 
   it.each([
-    ["recording", "녹화 중"],
-    ["paused", "일시정지"],
-    ["processing", "처리 중"],
-    ["completed", "완료"],
-    ["failed", "실패"],
+    ["recording", "Recording"],
+    ["paused", "Paused"],
+    ["processing", "Processing"],
+    ["completed", "Completed"],
+    ["failed", "Failed"],
   ] as const)("renders correct badge for %s status", (status, label) => {
     const session = createMockSession({ session_status: status });
     render(<SessionCard session={session} />);
@@ -88,8 +88,8 @@ describe("SessionCard", () => {
     });
     render(<SessionCard session={session} />);
 
-    // Should show "약 1시간 전" or similar
-    expect(screen.getByText(/전$/)).toBeInTheDocument();
+    // Should show "about 1 hour ago" or similar
+    expect(screen.getByText(/ago$/)).toBeInTheDocument();
 
     vi.useRealTimers();
   });

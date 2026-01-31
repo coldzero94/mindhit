@@ -10,13 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 
-	"github.com/mindhit/api/ent"
-	"github.com/mindhit/api/ent/pagevisit"
-	"github.com/mindhit/api/ent/url"
 	"github.com/mindhit/api/internal/infrastructure/ai"
 	"github.com/mindhit/api/internal/infrastructure/metrics"
 	"github.com/mindhit/api/internal/infrastructure/queue"
-	"github.com/mindhit/api/internal/service"
 )
 
 const tagExtractionPrompt = `Analyze the web page and extract the following:
@@ -30,8 +26,8 @@ Page content:
 
 Respond in JSON format:
 {
-  "keywords": ["키워드1", "키워드2", "키워드3"],
-  "summary": "페이지 요약"
+  "keywords": ["keyword1", "keyword2", "keyword3"],
+  "summary": "Page summary"
 }`
 
 // TagResult represents the AI response for tag extraction.
@@ -107,11 +103,6 @@ func (h *handlers) HandleURLTagExtraction(ctx context.Context, t *asynq.Task) er
 		return fmt.Errorf("parse ai response: %w", err)
 	}
 
-	// Record token usage - find user via URL -> PageVisit -> Session -> User
-	if h.usageService != nil {
-		h.recordTagExtractionUsage(ctx, urlID, response)
-	}
-
 	// Update URL with keywords and summary
 	_, err = h.client.URL.UpdateOneID(urlID).
 		SetKeywords(result.Keywords).
@@ -138,39 +129,4 @@ func truncateContent(content string, maxLen int) string {
 		return content
 	}
 	return content[:maxLen] + "..."
-}
-
-// recordTagExtractionUsage finds the user who visited this URL and records token usage.
-func (h *handlers) recordTagExtractionUsage(ctx context.Context, urlID uuid.UUID, response *ai.ChatResponse) {
-	// Find a PageVisit that references this URL to get session/user info
-	pv, err := h.client.PageVisit.
-		Query().
-		Where(pagevisit.HasURLWith(url.IDEQ(urlID))).
-		WithSession(func(q *ent.SessionQuery) {
-			q.WithUser()
-		}).
-		First(ctx)
-
-	if err != nil {
-		slog.Debug("could not find pagevisit for url, skipping usage recording", "url_id", urlID, "error", err)
-		return
-	}
-
-	if pv.Edges.Session == nil || pv.Edges.Session.Edges.User == nil {
-		slog.Debug("pagevisit has no session or user, skipping usage recording", "url_id", urlID)
-		return
-	}
-
-	userID := pv.Edges.Session.Edges.User.ID
-	sessionID := pv.Edges.Session.ID
-
-	if err := h.usageService.RecordUsage(ctx, service.UsageRecord{
-		UserID:    userID,
-		SessionID: sessionID,
-		Operation: "tag_extraction",
-		Tokens:    response.TotalTokens,
-		AIModel:   response.Model,
-	}); err != nil {
-		slog.Error("failed to record tag extraction usage", "error", err)
-	}
 }

@@ -46,7 +46,7 @@ test.describe("Dashboard (Authenticated)", () => {
     // This test would require auth setup
     await page.goto("/sessions");
 
-    await expect(page.getByRole("heading", { name: "내 세션" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "My Sessions" })).toBeVisible();
   });
 
   test.skip("should display session detail page", async ({ page }) => {
@@ -56,10 +56,10 @@ test.describe("Dashboard (Authenticated)", () => {
     await page.goto("/sessions/test-session-id");
 
     // Should show session detail elements
-    await expect(page.getByText("방문한 페이지")).toBeVisible();
-    await expect(page.getByText("하이라이트")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "이벤트" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "마인드맵" })).toBeVisible();
+    await expect(page.getByText("Visited Pages")).toBeVisible();
+    await expect(page.getByText("Highlights")).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Events" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Mindmap" })).toBeVisible();
   });
 
   test.skip("should navigate between tabs in session detail", async ({
@@ -68,10 +68,10 @@ test.describe("Dashboard (Authenticated)", () => {
     await page.goto("/sessions/test-session-id");
 
     // Click on mindmap tab
-    await page.getByRole("tab", { name: "마인드맵" }).click();
+    await page.getByRole("tab", { name: "Mindmap" }).click();
 
     // Verify mindmap tab is active
-    await expect(page.getByRole("tab", { name: "마인드맵" })).toHaveAttribute(
+    await expect(page.getByRole("tab", { name: "Mindmap" })).toHaveAttribute(
       "aria-selected",
       "true"
     );
@@ -81,25 +81,25 @@ test.describe("Dashboard (Authenticated)", () => {
     await page.goto("/sessions/test-session-id");
 
     // Click delete button
-    await page.getByRole("button", { name: /delete|삭제/i }).click();
+    await page.getByRole("button", { name: /delete/i }).click();
 
     // Should show confirmation dialog
-    await expect(page.getByText("세션을 삭제하시겠습니까?")).toBeVisible();
-    await expect(page.getByRole("button", { name: "취소" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "삭제" })).toBeVisible();
+    await expect(page.getByText("Are you sure you want to delete this session?")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete" })).toBeVisible();
   });
 
   test.skip("should cancel delete when clicking cancel", async ({ page }) => {
     await page.goto("/sessions/test-session-id");
 
     // Click delete button
-    await page.getByRole("button", { name: /delete|삭제/i }).click();
+    await page.getByRole("button", { name: /delete/i }).click();
 
     // Click cancel
-    await page.getByRole("button", { name: "취소" }).click();
+    await page.getByRole("button", { name: "Cancel" }).click();
 
     // Dialog should close
-    await expect(page.getByText("세션을 삭제하시겠습니까?")).not.toBeVisible();
+    await expect(page.getByText("Are you sure you want to delete this session?")).not.toBeVisible();
   });
 });
 

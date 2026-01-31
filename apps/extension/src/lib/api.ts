@@ -1,10 +1,5 @@
-import type { User, Session, BrowsingEvent } from "@/types";
-import { API_BASE_URL } from "@/lib/constants";
-
-interface AuthResponse {
-  user: User;
-  token: string;
-}
+import type { Session, BrowsingEvent } from "@/types";
+import { API_BASE_URL, API_KEY } from "@/lib/constants";
 
 interface SessionResponse {
   session: Session;
@@ -15,6 +10,16 @@ interface SessionListResponse {
   total: number;
 }
 
+function getAuthHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+  if (API_KEY) {
+    headers["Authorization"] = `Bearer ${API_KEY}`;
+  }
+  return headers;
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -22,7 +27,7 @@ async function request<T>(
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...getAuthHeaders(),
       ...options.headers,
     },
   });
@@ -39,105 +44,59 @@ async function request<T>(
 }
 
 export const api = {
-  // Auth
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    return request<AuthResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-  },
-
-  googleAuth: async (credential: string): Promise<AuthResponse> => {
-    return request<AuthResponse>("/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ credential }),
-    });
-  },
-
-  googleAuthCode: async (
-    code: string,
-    redirectUri: string
-  ): Promise<AuthResponse> => {
-    return request<AuthResponse>("/auth/google/code", {
-      method: "POST",
-      body: JSON.stringify({ code, redirect_uri: redirectUri }),
-    });
-  },
-
   // Sessions
-  startSession: async (token: string): Promise<SessionResponse> => {
+  startSession: async (): Promise<SessionResponse> => {
     return request<SessionResponse>("/sessions/start", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
     });
   },
 
-  pauseSession: async (
-    token: string,
-    sessionId: string
-  ): Promise<SessionResponse> => {
+  pauseSession: async (sessionId: string): Promise<SessionResponse> => {
     return request<SessionResponse>(`/sessions/${sessionId}/pause`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
     });
   },
 
-  resumeSession: async (
-    token: string,
-    sessionId: string
-  ): Promise<SessionResponse> => {
+  resumeSession: async (sessionId: string): Promise<SessionResponse> => {
     return request<SessionResponse>(`/sessions/${sessionId}/resume`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
     });
   },
 
-  stopSession: async (
-    token: string,
-    sessionId: string
-  ): Promise<SessionResponse> => {
+  stopSession: async (sessionId: string): Promise<SessionResponse> => {
     return request<SessionResponse>(`/sessions/${sessionId}/stop`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
     });
   },
 
   // Events
   sendEvents: async (
-    token: string,
     sessionId: string,
     events: BrowsingEvent[]
   ): Promise<void> => {
-    await request("/events/batch", {
+    await request(`/sessions/${sessionId}/events`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ session_id: sessionId, events }),
+      body: JSON.stringify({ events }),
     });
   },
 
   // Session List
-  getSessions: async (
-    token: string,
-    limit: number = 5
-  ): Promise<SessionListResponse> => {
+  getSessions: async (limit: number = 5): Promise<SessionListResponse> => {
     return request<SessionListResponse>(
       `/sessions?limit=${limit}&sort=started_at:desc`,
       {
         method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
       }
     );
   },
 
   // Update Session (for title change)
   updateSession: async (
-    token: string,
     sessionId: string,
     data: { title?: string; description?: string }
   ): Promise<SessionResponse> => {
     return request<SessionResponse>(`/sessions/${sessionId}`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
     });
   },

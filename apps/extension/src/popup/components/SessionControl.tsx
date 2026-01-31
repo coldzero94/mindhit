@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useSessionStore } from "@/stores/session-store";
-import { useAuthStore } from "@/stores/auth-store";
 import { api } from "@/lib/api";
 import { SessionTitleInput } from "./SessionTitleInput";
 
@@ -18,18 +17,16 @@ export function SessionControl() {
     resumeSession,
     stopSession,
   } = useSessionStore();
-  const { token } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ErrorState | null>(null);
 
   const clearError = () => setError(null);
 
   const handleStart = async () => {
-    if (!token) return;
     setIsLoading(true);
     clearError();
     try {
-      const response = await api.startSession(token);
+      const response = await api.startSession();
       startSession(response.session.id);
 
       // Notify Background about session start
@@ -55,12 +52,10 @@ export function SessionControl() {
     chrome.runtime.sendMessage({ type: "SESSION_PAUSED" });
 
     // Sync with server (best effort)
-    if (token) {
-      try {
-        await api.pauseSession(token, sessionId);
-      } catch (err) {
-        console.warn("Failed to sync session pause with server:", err);
-      }
+    try {
+      await api.pauseSession(sessionId);
+    } catch (err) {
+      console.warn("Failed to sync session pause with server:", err);
     }
 
     setIsLoading(false);
@@ -76,12 +71,10 @@ export function SessionControl() {
     chrome.runtime.sendMessage({ type: "SESSION_RESUMED" });
 
     // Sync with server (best effort)
-    if (token) {
-      try {
-        await api.resumeSession(token, sessionId);
-      } catch (err) {
-        console.warn("Failed to sync session resume with server:", err);
-      }
+    try {
+      await api.resumeSession(sessionId);
+    } catch (err) {
+      console.warn("Failed to sync session resume with server:", err);
     }
 
     setIsLoading(false);
@@ -98,13 +91,11 @@ export function SessionControl() {
     chrome.runtime.sendMessage({ type: "SESSION_STOPPED" });
 
     // Try to sync with server (best effort)
-    if (token) {
-      try {
-        await api.stopSession(token, sessionId);
-      } catch (err) {
-        // Log error but don't block - session is already stopped locally
-        console.warn("Failed to sync session stop with server:", err);
-      }
+    try {
+      await api.stopSession(sessionId);
+    } catch (err) {
+      // Log error but don't block - session is already stopped locally
+      console.warn("Failed to sync session stop with server:", err);
     }
 
     setIsLoading(false);

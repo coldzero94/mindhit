@@ -4,16 +4,16 @@ export const mockMindmapData: MindmapData = {
   nodes: [
     {
       id: 'core',
-      label: '브라우징 세션',
+      label: 'Browsing Session',
       type: 'core',
       size: 50,
       color: '#F59E0B',
       position: { x: 0, y: 0, z: 0 },
-      data: { description: '2024년 12월 31일 세션' },
+      data: { description: 'December 31, 2024 Session' },
     },
     {
       id: 'topic-1',
-      label: '개발',
+      label: 'Development',
       type: 'topic',
       size: 35,
       color: '#3B82F6',
@@ -22,7 +22,7 @@ export const mockMindmapData: MindmapData = {
     },
     {
       id: 'topic-2',
-      label: '디자인',
+      label: 'Design',
       type: 'topic',
       size: 30,
       color: '#10B981',
@@ -31,7 +31,7 @@ export const mockMindmapData: MindmapData = {
     },
     {
       id: 'topic-3',
-      label: '뉴스',
+      label: 'News',
       type: 'topic',
       size: 25,
       color: '#EF4444',
@@ -67,7 +67,7 @@ export const mockMindmapData: MindmapData = {
     },
     {
       id: 'page-1',
-      label: 'React 공식 문서',
+      label: 'React Official Docs',
       type: 'page',
       size: 12,
       color: '#93C5FD',

@@ -16,24 +16,24 @@ export function SolutionSection() {
   const features = [
     {
       icon: Zap,
-      title: "자동 수집",
-      description: "Chrome Extension이 자동으로 브라우징 추적",
+      title: "Auto Collection",
+      description: "Chrome Extension automatically tracks browsing",
       color: "text-yellow-500",
       bgColor: "bg-yellow-500/10",
       delay: 0,
     },
     {
       icon: Brain,
-      title: "AI 분석",
-      description: "키워드 추출 및 관계 그래프 생성",
+      title: "AI Analysis",
+      description: "Keyword extraction and relationship graph generation",
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
       delay: 0.2,
     },
     {
       icon: Box,
-      title: "3D 시각화",
-      description: "아름다운 인터랙티브 마인드맵으로 표현",
+      title: "3D Visualization",
+      description: "Beautiful interactive mindmap representation",
       color: "text-blue-500",
       bgColor: "bg-blue-500/10",
       delay: 0.4,
@@ -46,7 +46,7 @@ export function SolutionSection() {
         <div className="flex flex-col items-center justify-center min-h-screen py-20">
           {/* Headline */}
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center text-foreground mb-16 sm:mb-20">
-            MindHit가 해결합니다
+            MindHit Solves This
           </h2>
 
           {/* Three Features with Icons */}

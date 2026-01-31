@@ -501,29 +501,6 @@ func EndedAtNotNil() predicate.Session {
 	return predicate.Session(sql.FieldNotNull(FieldEndedAt))
 }
 
-// HasUser applies the HasEdge predicate on the "user" edge.
-func HasUser() predicate.Session {
-	return predicate.Session(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
-func HasUserWith(preds ...predicate.User) predicate.Session {
-	return predicate.Session(func(s *sql.Selector) {
-		step := newUserStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasPageVisits applies the HasEdge predicate on the "page_visits" edge.
 func HasPageVisits() predicate.Session {
 	return predicate.Session(func(s *sql.Selector) {
@@ -608,29 +585,6 @@ func HasMindmap() predicate.Session {
 func HasMindmapWith(preds ...predicate.MindmapGraph) predicate.Session {
 	return predicate.Session(func(s *sql.Selector) {
 		step := newMindmapStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasTokenUsage applies the HasEdge predicate on the "token_usage" edge.
-func HasTokenUsage() predicate.Session {
-	return predicate.Session(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, TokenUsageTable, TokenUsageColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasTokenUsageWith applies the HasEdge predicate on the "token_usage" edge with a given conditions (other predicates).
-func HasTokenUsageWith(preds ...predicate.TokenUsage) predicate.Session {
-	return predicate.Session(func(s *sql.Selector) {
-		step := newTokenUsageStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

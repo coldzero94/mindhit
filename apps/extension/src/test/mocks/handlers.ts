@@ -2,22 +2,13 @@ import { http, HttpResponse } from "msw";
 
 const API_URL = "http://localhost:9000/v1";
 
-// Helper to validate auth token
-function getToken(request: Request): string | null {
+// Helper to validate API key
+function hasValidApiKey(request: Request): boolean {
   const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-  const token = authHeader.slice(7); // Remove "Bearer "
-  return token || null;
+  return authHeader?.startsWith("Bearer ") ?? false;
 }
 
 // Mock data
-export const mockUser = {
-  id: "user-1",
-  email: "test@example.com",
-  created_at: "2025-01-01T00:00:00Z",
-  updated_at: "2025-01-01T00:00:00Z",
-};
-
 export const mockSession = {
   id: "session-1",
   title: "Test Session",
@@ -52,26 +43,9 @@ export const mockSessions = [
 ];
 
 export const handlers = [
-  // Auth - Login
-  http.post(`${API_URL}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as { email: string; password: string };
-
-    if (body.password === "wrongpassword") {
-      return HttpResponse.json(
-        { error: { message: "Invalid credentials", code: "INVALID_CREDENTIALS" } },
-        { status: 401 }
-      );
-    }
-
-    return HttpResponse.json({
-      user: { ...mockUser, email: body.email },
-      token: "mock-access-token",
-    });
-  }),
-
   // Sessions - List
   http.get(`${API_URL}/sessions`, ({ request }) => {
-    if (!getToken(request)) {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
@@ -89,7 +63,7 @@ export const handlers = [
 
   // Sessions - Update (title)
   http.patch(`${API_URL}/sessions/:id`, async ({ params, request }) => {
-    if (!getToken(request)) {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
@@ -118,7 +92,7 @@ export const handlers = [
 
   // Sessions - Start
   http.post(`${API_URL}/sessions/start`, ({ request }) => {
-    if (!getToken(request)) {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
@@ -136,7 +110,7 @@ export const handlers = [
 
   // Sessions - Pause
   http.patch(`${API_URL}/sessions/:id/pause`, ({ params, request }) => {
-    if (!getToken(request)) {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
@@ -158,7 +132,7 @@ export const handlers = [
 
   // Sessions - Resume
   http.patch(`${API_URL}/sessions/:id/resume`, ({ params, request }) => {
-    if (!getToken(request)) {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
@@ -180,7 +154,7 @@ export const handlers = [
 
   // Sessions - Stop
   http.post(`${API_URL}/sessions/:id/stop`, ({ params, request }) => {
-    if (!getToken(request)) {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
@@ -205,21 +179,26 @@ export const handlers = [
     });
   }),
 
-  // Events - Batch
-  http.post(`${API_URL}/events/batch`, async ({ request }) => {
-    if (!getToken(request)) {
+  // Events - Send
+  http.post(`${API_URL}/sessions/:id/events`, async ({ params, request }) => {
+    if (!hasValidApiKey(request)) {
       return HttpResponse.json(
         { error: { message: "Unauthorized", code: "UNAUTHORIZED" } },
         { status: 401 }
       );
     }
 
-    const body = (await request.json()) as {
-      session_id: string;
-      events: unknown[];
-    };
+    const { id } = params;
+    if (id === "not-found") {
+      return HttpResponse.json(
+        { error: { message: "Session not found", code: "NOT_FOUND" } },
+        { status: 404 }
+      );
+    }
 
-    if (!body.session_id || !body.events) {
+    const body = (await request.json()) as { events: unknown[] };
+
+    if (!body.events) {
       return HttpResponse.json(
         { error: { message: "Invalid request body", code: "BAD_REQUEST" } },
         { status: 400 }
