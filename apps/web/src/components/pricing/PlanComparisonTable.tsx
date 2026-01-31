@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { SubscriptionPlan } from "@/api/generated/types.gen";
 
 interface PlanComparisonTableProps {
@@ -84,21 +85,22 @@ export function PlanComparisonTable({
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="text-left py-4 px-4 border-b border-gray-200 bg-gray-50 text-gray-600 font-medium">
+            <th className="text-left py-4 px-4 border-b border-border bg-muted text-muted-foreground font-medium">
               기능
             </th>
             {sortedPlans.map((plan) => (
               <th
                 key={plan.id}
-                className={`py-4 px-4 border-b border-gray-200 text-center font-semibold ${
+                className={cn(
+                  "py-4 px-4 border-b border-border text-center font-semibold",
                   currentPlanId === plan.id
-                    ? "bg-blue-50 text-blue-700"
-                    : "bg-gray-50 text-gray-900"
-                }`}
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-foreground"
+                )}
               >
                 {plan.name}
                 {currentPlanId === plan.id && (
-                  <span className="block text-xs font-normal text-blue-600 mt-1">
+                  <span className="block text-xs font-normal text-primary mt-1">
                     현재 플랜
                   </span>
                 )}
@@ -110,9 +112,9 @@ export function PlanComparisonTable({
           {features.map((feature, index) => (
             <tr
               key={feature.name}
-              className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+              className={index % 2 === 0 ? "bg-card" : "bg-muted/50"}
             >
-              <td className="py-3 px-4 border-b border-gray-100 text-gray-700">
+              <td className="py-3 px-4 border-b border-border/50 text-muted-foreground">
                 {feature.name}
               </td>
               {sortedPlans.map((plan) => {
@@ -120,18 +122,19 @@ export function PlanComparisonTable({
                 return (
                   <td
                     key={plan.id}
-                    className={`py-3 px-4 border-b border-gray-100 text-center ${
-                      currentPlanId === plan.id ? "bg-blue-50/50" : ""
-                    }`}
+                    className={cn(
+                      "py-3 px-4 border-b border-border/50 text-center",
+                      currentPlanId === plan.id && "bg-primary/5"
+                    )}
                   >
                     {feature.isBoolean ? (
                       value ? (
-                        <Check className="w-5 h-5 text-green-500 mx-auto" />
+                        <Check className="w-5 h-5 text-status-success mx-auto" />
                       ) : (
-                        <X className="w-5 h-5 text-gray-300 mx-auto" />
+                        <X className="w-5 h-5 text-muted-foreground/50 mx-auto" />
                       )
                     ) : (
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-foreground font-medium">
                         {value as string}
                       </span>
                     )}

@@ -30,7 +30,7 @@ export function SubscriptionCard() {
 
   if (isLoading) {
     return (
-      <div className="p-6 bg-white rounded-xl border border-gray-200">
+      <div className="p-6 bg-card rounded-xl border border-border">
         <div className="flex items-center gap-3 mb-6">
           <Skeleton className="w-12 h-12 rounded-xl" />
           <div>
@@ -72,28 +72,28 @@ export function SubscriptionCard() {
   };
 
   const statusLabels: Record<string, { label: string; color: string }> = {
-    active: { label: "활성", color: "bg-green-100 text-green-700" },
-    canceled: { label: "취소됨", color: "bg-red-100 text-red-700" },
-    past_due: { label: "연체", color: "bg-yellow-100 text-yellow-700" },
+    active: { label: "활성", color: "bg-status-success-bg text-status-success-text" },
+    canceled: { label: "취소됨", color: "bg-status-error-bg text-status-error-text" },
+    past_due: { label: "연체", color: "bg-status-warning-bg text-status-warning-text" },
   };
 
   const status = cancelAtPeriodEnd
-    ? { label: "취소 예정", color: "bg-amber-100 text-amber-700" }
+    ? { label: "취소 예정", color: "bg-status-warning-bg text-status-warning-text" }
     : statusLabels[subscription.status] || statusLabels.active;
 
   return (
-    <div className="p-6 bg-white rounded-xl border border-gray-200">
+    <div className="p-6 bg-card rounded-xl border border-border">
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
           <div
-            className={`p-3 rounded-xl ${isFree ? "bg-gray-100" : "bg-gradient-to-br from-yellow-400 to-orange-500"}`}
+            className={`p-3 rounded-xl ${isFree ? "bg-muted" : "bg-gradient-to-br from-chart-1 to-chart-2"}`}
           >
             <Crown
-              className={`w-6 h-6 ${isFree ? "text-gray-600" : "text-white"}`}
+              className={`w-6 h-6 ${isFree ? "text-muted-foreground" : "text-white"}`}
             />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-foreground">
               {plan?.name || "Free"} 플랜
             </h3>
             <span
@@ -120,16 +120,16 @@ export function SubscriptionCard() {
 
       {/* Cancel at period end warning */}
       {cancelAtPeriodEnd && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="mb-4 p-3 bg-status-warning-bg border border-status-warning/30 rounded-lg flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-status-warning flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-amber-800">
+            <p className="text-sm text-status-warning-text">
               현재 기간 종료 후 Free 플랜으로 전환됩니다.
             </p>
             <Button
               variant="link"
               size="sm"
-              className="p-0 h-auto text-amber-700 hover:text-amber-900"
+              className="p-0 h-auto text-status-warning-text hover:text-status-warning"
               onClick={handleReactivate}
               disabled={reactivateSubscription.isPending}
             >
@@ -147,25 +147,25 @@ export function SubscriptionCard() {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="w-4 h-4" />
           <span>시작일: {formatDate(subscription.current_period_start)}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Calendar className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="w-4 h-4" />
           <span>종료일: {formatDate(subscription.current_period_end)}</span>
         </div>
       </div>
 
       {plan && (
-        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+        <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
             월 {plan.token_limit?.toLocaleString() || "무제한"} 토큰 제공
           </p>
           {isPro && !cancelAtPeriodEnd && (
             <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                <Button variant="ghost" size="sm" className="text-status-error hover:text-status-error hover:bg-status-error-bg">
                   구독 취소
                 </Button>
               </AlertDialogTrigger>
@@ -184,7 +184,7 @@ export function SubscriptionCard() {
                   <AlertDialogAction
                     onClick={handleCancel}
                     disabled={cancelSubscription.isPending}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-status-error hover:bg-status-error/90"
                   >
                     {cancelSubscription.isPending ? (
                       <>

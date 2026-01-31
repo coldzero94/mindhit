@@ -66,11 +66,11 @@ export function SessionCard({ session }: SessionCardProps) {
         </CardHeader>
         <CardContent>
           {session.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
               {session.description}
             </p>
           )}
-          <p className="text-sm text-gray-500">{timeAgo}</p>
+          <p className="text-sm text-muted-foreground/70">{timeAgo}</p>
         </CardContent>
       </Card>
     </Link>

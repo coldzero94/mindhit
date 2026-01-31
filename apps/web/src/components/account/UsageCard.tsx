@@ -10,7 +10,7 @@ export function UsageCard() {
 
   if (isLoading) {
     return (
-      <div className="p-6 bg-white rounded-xl border border-gray-200">
+      <div className="p-6 bg-card rounded-xl border border-border">
         <div className="flex items-center gap-3 mb-4">
           <Skeleton className="w-12 h-12 rounded-xl" />
           <div>
@@ -38,30 +38,30 @@ export function UsageCard() {
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl border border-gray-200">
+    <div className="p-6 bg-card rounded-xl border border-border">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className={`p-3 rounded-xl ${isNearLimit ? "bg-yellow-100" : "bg-blue-100"}`}
+            className={`p-3 rounded-xl ${isNearLimit ? "bg-status-warning-bg" : "bg-status-info-bg"}`}
           >
             <Zap
-              className={`w-6 h-6 ${isNearLimit ? "text-yellow-600" : "text-blue-600"}`}
+              className={`w-6 h-6 ${isNearLimit ? "text-status-warning" : "text-status-info"}`}
             />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">토큰 사용량</h3>
-            <p className="text-sm text-gray-500">이번 달</p>
+            <h3 className="text-lg font-semibold text-foreground">토큰 사용량</h3>
+            <p className="text-sm text-muted-foreground">이번 달</p>
           </div>
         </div>
 
         {isNearLimit && !isOverLimit && (
-          <div className="flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+          <div className="flex items-center gap-1 px-3 py-1 bg-status-warning-bg text-status-warning-text rounded-full text-sm">
             <AlertTriangle className="w-4 h-4" />
             <span>80% 도달</span>
           </div>
         )}
         {isOverLimit && (
-          <div className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
+          <div className="flex items-center gap-1 px-3 py-1 bg-status-error-bg text-status-error-text rounded-full text-sm">
             <AlertTriangle className="w-4 h-4" />
             <span>한도 초과</span>
           </div>
@@ -70,10 +70,10 @@ export function UsageCard() {
 
       <div className="space-y-3">
         <div className="flex items-end justify-between">
-          <span className="text-3xl font-bold text-gray-900">
+          <span className="text-3xl font-bold text-foreground">
             {formatNumber(usage.tokens_used)}
           </span>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             / {usage.is_unlimited ? "무제한" : formatNumber(usage.token_limit)}{" "}
             토큰
           </span>
@@ -81,7 +81,7 @@ export function UsageCard() {
 
         {!usage.is_unlimited && <Progress value={percentage} />}
 
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-muted-foreground/70">
           {usage.is_unlimited
             ? "무제한 사용 중"
             : `${percentage.toFixed(1)}% 사용 중`}

@@ -98,7 +98,7 @@ export function LoginForm() {
               onChange={handleChange}
             />
             {errors.email && (
-              <p className="text-sm text-red-500">{errors.email}</p>
+              <p className="text-sm text-status-error">{errors.email}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -111,7 +111,7 @@ export function LoginForm() {
               onChange={handleChange}
             />
             {errors.password && (
-              <p className="text-sm text-red-500">{errors.password}</p>
+              <p className="text-sm text-status-error">{errors.password}</p>
             )}
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
@@ -120,10 +120,10 @@ export function LoginForm() {
 
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-gray-500">또는</span>
+              <span className="bg-card px-2 text-muted-foreground">또는</span>
             </div>
           </div>
 

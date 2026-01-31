@@ -1,9 +1,11 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useSessions } from "@/lib/hooks/use-sessions";
 import { SessionCard } from "./session-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StaggerChildren, staggerItem } from "@/components/ui/animations";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface SessionListProps {
@@ -29,7 +31,7 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">세션을 불러오는데 실패했습니다.</p>
+        <p className="text-status-error">세션을 불러오는데 실패했습니다.</p>
         <Button
           variant="outline"
           className="mt-4"
@@ -44,7 +46,7 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
   if (!data?.sessions.length) {
     return (
       <div className="text-center py-12">
-        <div className="text-gray-400 mb-4">
+        <div className="text-muted-foreground/50 mb-4">
           <svg
             className="mx-auto h-12 w-12"
             fill="none"
@@ -59,8 +61,8 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
             />
           </svg>
         </div>
-        <p className="text-gray-500 text-lg">아직 녹화된 세션이 없습니다.</p>
-        <p className="text-sm text-gray-400 mt-2">
+        <p className="text-muted-foreground text-lg">아직 녹화된 세션이 없습니다.</p>
+        <p className="text-sm text-muted-foreground/70 mt-2">
           Chrome Extension을 사용하여 첫 번째 세션을 녹화해보세요.
         </p>
       </div>
@@ -73,11 +75,13 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <StaggerChildren className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {data.sessions.map((session) => (
-          <SessionCard key={session.id} session={session} />
+          <motion.div key={session.id} variants={staggerItem}>
+            <SessionCard session={session} />
+          </motion.div>
         ))}
-      </div>
+      </StaggerChildren>
 
       {/* Pagination */}
       {(hasPrev || hasMore) && (
@@ -91,7 +95,7 @@ export function SessionList({ page, onPageChange, perPage = 12 }: SessionListPro
             <ChevronLeft className="h-4 w-4 mr-1" />
             이전
           </Button>
-          <span className="px-4 text-sm text-gray-600">페이지 {page}</span>
+          <span className="px-4 text-sm text-muted-foreground">페이지 {page}</span>
           <Button
             variant="outline"
             size="sm"

@@ -65,21 +65,21 @@ describe("SubscriptionCard", () => {
 
       await waitFor(() => {
         const badge = screen.getByText("활성");
-        expect(badge).toHaveClass("bg-green-100", "text-green-700");
+        expect(badge).toHaveClass("bg-status-success-bg", "text-status-success-text");
       });
     });
   });
 
   describe("plan icon", () => {
-    it("should show gray icon for free plan", async () => {
+    it("should show muted icon for free plan", async () => {
       render(<SubscriptionCard />);
 
       await waitFor(() => {
         expect(screen.getByText(/Free 플랜/)).toBeInTheDocument();
       });
 
-      // Free plan should have gray background
-      const iconContainer = document.querySelector(".bg-gray-100");
+      // Free plan should have muted background
+      const iconContainer = document.querySelector(".bg-muted");
       expect(iconContainer).toBeInTheDocument();
     });
   });

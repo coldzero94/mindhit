@@ -44,6 +44,24 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  /* Semantic Status Colors */
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-error: var(--status-error);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-error-text: var(--status-error-text);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-text: var(--status-info-text);
+
+  /* Card Highlight */
+  --color-card-highlight-border: var(--card-highlight-border);
+  --color-card-highlight-bg: var(--card-highlight-bg);
 }
 
 :root {
@@ -54,72 +72,113 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Primary: Cosmic Blue (blue-600 tone) */
+  --primary: oklch(0.55 0.2 260);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.97 0.01 260);
+  --secondary-foreground: oklch(0.35 0.15 260);
+  --muted: oklch(0.97 0.005 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.95 0.02 260);
+  --accent-foreground: oklch(0.35 0.15 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --border: oklch(0.9 0.02 260);
+  --input: oklch(0.9 0.02 260);
+  --ring: oklch(0.55 0.2 260);
+  /* Chart colors - cosmic palette */
+  --chart-1: oklch(0.55 0.2 260);   /* primary blue */
+  --chart-2: oklch(0.65 0.22 280);  /* purple */
+  --chart-3: oklch(0.6 0.18 230);   /* cyan-blue */
+  --chart-4: oklch(0.7 0.15 200);   /* teal */
+  --chart-5: oklch(0.75 0.2 300);   /* violet */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.55 0.2 260);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.95 0.02 260);
+  --sidebar-accent-foreground: oklch(0.35 0.15 260);
+  --sidebar-border: oklch(0.9 0.02 260);
+  --sidebar-ring: oklch(0.55 0.2 260);
 
-  /* Landing page brand colors - single color theme */
-  --brand-primary: var(--primary); /* oklch(0.205 0 0) - dark */
-  --brand-primary-light: oklch(0.85 0 0); /* lighter tone */
-  --brand-primary-lighter: oklch(0.95 0 0); /* even lighter */
-  --brand-primary-dark: oklch(0.15 0 0); /* darker tone */
-  --brand-accent: var(--chart-1); /* oklch(0.646 0.222 41.116) - orange for highlights */
+  /* Landing page brand colors - Cosmic Blue theme */
+  --brand-primary: var(--primary);
+  --brand-primary-light: oklch(0.7 0.15 260);
+  --brand-primary-lighter: oklch(0.85 0.08 260);
+  --brand-primary-dark: oklch(0.4 0.2 260);
+  --brand-accent: oklch(0.65 0.22 280); /* purple accent for highlights */
+
+  /* === App-wide Semantic Status Colors === */
+  --status-success: oklch(0.72 0.19 142); /* green */
+  --status-success-bg: oklch(0.72 0.19 142 / 0.1);
+  --status-success-text: oklch(0.45 0.15 142);
+  --status-warning: oklch(0.75 0.18 85); /* amber/yellow */
+  --status-warning-bg: oklch(0.75 0.18 85 / 0.1);
+  --status-warning-text: oklch(0.5 0.15 85);
+  --status-error: oklch(0.63 0.26 29); /* red */
+  --status-error-bg: oklch(0.63 0.26 29 / 0.1);
+  --status-error-text: oklch(0.45 0.2 29);
+  --status-info: oklch(0.62 0.19 250); /* blue */
+  --status-info-bg: oklch(0.62 0.19 250 / 0.1);
+  --status-info-text: oklch(0.45 0.15 250);
+
+  /* Card Highlight Styles - Blue theme */
+  --card-highlight-border: var(--primary);
+  --card-highlight-bg: oklch(0.55 0.2 260 / 0.08);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Deep space background */
+  --background: oklch(0.12 0.02 260);
+  --foreground: oklch(0.95 0.02 260);
+  --card: oklch(0.18 0.03 260);
+  --card-foreground: oklch(0.95 0.02 260);
+  --popover: oklch(0.18 0.03 260);
+  --popover-foreground: oklch(0.95 0.02 260);
+  /* Primary: Bright cosmic blue */
+  --primary: oklch(0.7 0.18 260);
+  --primary-foreground: oklch(0.12 0.02 260);
+  --secondary: oklch(0.25 0.04 260);
+  --secondary-foreground: oklch(0.9 0.05 260);
+  --muted: oklch(0.25 0.04 260);
+  --muted-foreground: oklch(0.65 0.05 260);
+  --accent: oklch(0.25 0.04 260);
+  --accent-foreground: oklch(0.9 0.05 260);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(0.35 0.05 260);
+  --input: oklch(0.3 0.04 260);
+  --ring: oklch(0.7 0.18 260);
+  /* Chart colors - cosmic palette (dark) */
+  --chart-1: oklch(0.7 0.18 260);   /* bright blue */
+  --chart-2: oklch(0.72 0.2 280);   /* purple */
+  --chart-3: oklch(0.68 0.16 230);  /* cyan */
+  --chart-4: oklch(0.75 0.12 200);  /* teal */
+  --chart-5: oklch(0.78 0.18 300);  /* violet */
+  --sidebar: oklch(0.15 0.03 260);
+  --sidebar-foreground: oklch(0.95 0.02 260);
+  --sidebar-primary: oklch(0.7 0.18 260);
+  --sidebar-primary-foreground: oklch(0.12 0.02 260);
+  --sidebar-accent: oklch(0.25 0.04 260);
+  --sidebar-accent-foreground: oklch(0.9 0.05 260);
+  --sidebar-border: oklch(0.35 0.05 260);
+  --sidebar-ring: oklch(0.7 0.18 260);
+
+  /* === Dark mode semantic status colors === */
+  --status-success: oklch(0.72 0.19 142);
+  --status-success-bg: oklch(0.72 0.19 142 / 0.15);
+  --status-success-text: oklch(0.8 0.15 142);
+  --status-warning: oklch(0.75 0.18 85);
+  --status-warning-bg: oklch(0.75 0.18 85 / 0.15);
+  --status-warning-text: oklch(0.85 0.15 85);
+  --status-error: oklch(0.63 0.26 29);
+  --status-error-bg: oklch(0.63 0.26 29 / 0.15);
+  --status-error-text: oklch(0.8 0.2 29);
+  --status-info: oklch(0.7 0.18 260);
+  --status-info-bg: oklch(0.7 0.18 260 / 0.15);
+  --status-info-text: oklch(0.85 0.12 260);
+
+  /* Card Highlight Styles (dark) - Blue glow */
+  --card-highlight-border: oklch(0.7 0.18 260);
+  --card-highlight-bg: oklch(0.7 0.18 260 / 0.1);
 }
 
 @layer base {
@@ -137,31 +196,77 @@
     will-change: transform, opacity;
   }
 
-  /* Landing page section backgrounds (single color theme with tonal variations) */
+  /* Landing page section backgrounds - Cosmic Blue theme */
   .section-light {
     background-color: oklch(1 0 0); /* pure white */
   }
 
   .section-lighter {
-    background-color: oklch(0.98 0 0); /* off-white */
+    background-color: oklch(0.98 0.005 260); /* slight blue tint */
   }
 
   .section-gray {
-    background-color: oklch(0.95 0 0); /* light gray */
+    background-color: oklch(0.95 0.01 260); /* light blue-gray */
   }
 
   .section-dark {
-    background-color: oklch(0.205 0 0); /* dark (brand primary) */
-    color: oklch(1 0 0); /* white text */
+    background-color: oklch(0.12 0.02 260); /* deep space blue */
+    color: oklch(0.95 0.02 260); /* light text */
   }
 
-  /* Gradient overlay for depth */
+  /* === Cosmic Space Gradients === */
   .gradient-overlay {
     background: linear-gradient(
       to bottom,
       oklch(1 0 0 / 0),
-      oklch(0.95 0 0 / 0.5)
+      oklch(0.95 0.01 260 / 0.5)
     );
+  }
+
+  /* Cosmic gradient - blue to purple */
+  .bg-cosmic-gradient {
+    background: linear-gradient(
+      135deg,
+      oklch(0.55 0.2 260) 0%,
+      oklch(0.5 0.22 280) 50%,
+      oklch(0.45 0.2 300) 100%
+    );
+  }
+
+  /* Space background with stars feel */
+  .bg-space {
+    background: linear-gradient(
+      180deg,
+      oklch(0.08 0.02 260) 0%,
+      oklch(0.15 0.04 270) 50%,
+      oklch(0.12 0.03 280) 100%
+    );
+  }
+
+  /* Nebula glow effect */
+  .glow-blue {
+    box-shadow: 0 0 20px oklch(0.55 0.2 260 / 0.3),
+                0 0 40px oklch(0.55 0.2 260 / 0.2),
+                0 0 60px oklch(0.55 0.2 260 / 0.1);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 20px oklch(0.5 0.22 280 / 0.3),
+                0 0 40px oklch(0.5 0.22 280 / 0.2),
+                0 0 60px oklch(0.5 0.22 280 / 0.1);
+  }
+
+  /* Cosmic text gradient */
+  .text-cosmic {
+    background: linear-gradient(
+      90deg,
+      oklch(0.7 0.18 260) 0%,
+      oklch(0.72 0.2 280) 50%,
+      oklch(0.75 0.18 300) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   /* Brand accent highlight */
@@ -171,5 +276,32 @@
 
   .bg-brand-accent {
     background-color: var(--brand-accent);
+  }
+
+  /* === Semantic Status Badge Classes === */
+  .badge-success {
+    background-color: var(--status-success-bg);
+    color: var(--status-success-text);
+  }
+
+  .badge-warning {
+    background-color: var(--status-warning-bg);
+    color: var(--status-warning-text);
+  }
+
+  .badge-error {
+    background-color: var(--status-error-bg);
+    color: var(--status-error-text);
+  }
+
+  .badge-info {
+    background-color: var(--status-info-bg);
+    color: var(--status-info-text);
+  }
+
+  /* Card highlight variant */
+  .card-highlighted {
+    border-color: var(--card-highlight-border);
+    background-color: var(--card-highlight-bg);
   }
 }

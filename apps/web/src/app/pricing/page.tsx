@@ -63,13 +63,13 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-muted to-background">
       <div className="max-w-6xl mx-auto px-4 py-8 sm:py-16">
         {/* Header */}
         <div className="mb-8">
           <Link
             href={isAuthenticated ? "/sessions" : "/"}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
+            className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {isAuthenticated ? "대시보드로 돌아가기" : "홈으로 돌아가기"}
@@ -77,14 +77,14 @@ export default function PricingPage() {
         </div>
 
         <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             당신의 브라우징을 마인드맵으로
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600">
+          <p className="text-lg sm:text-xl text-muted-foreground">
             필요에 맞는 플랜을 선택하세요
           </p>
           {isAuthenticated && currentPlanId && (
-            <p className="mt-4 text-sm text-blue-600">
+            <p className="mt-4 text-sm text-primary">
               현재{" "}
               <span className="font-semibold">
                 {plans.find((p) => p.id === currentPlanId)?.name || currentPlanId}
@@ -97,7 +97,7 @@ export default function PricingPage() {
         {/* Loading */}
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
@@ -108,7 +108,7 @@ export default function PricingPage() {
                   const order = ["free", "pro", "enterprise"];
                   return order.indexOf(a.id) - order.indexOf(b.id);
                 })
-                .map((plan) => (
+                .map((plan, index) => (
                   <PlanCard
                     key={plan.id}
                     plan={plan}
@@ -116,13 +116,14 @@ export default function PricingPage() {
                     isLoggedIn={isAuthenticated}
                     highlighted={plan.id === "pro"}
                     onSelect={handleSelectPlan}
+                    index={index}
                   />
                 ))}
             </div>
 
             {/* Comparison Table */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
+            <div className="bg-card rounded-2xl border border-border p-6 sm:p-8">
+              <h2 className="text-xl font-bold text-foreground mb-6 text-center">
                 기능 비교
               </h2>
               <PlanComparisonTable
@@ -134,12 +135,12 @@ export default function PricingPage() {
         )}
 
         {/* FAQ or Additional Info */}
-        <div className="mt-16 text-center text-gray-600">
+        <div className="mt-16 text-center text-muted-foreground">
           <p>
             질문이 있으신가요?{" "}
             <a
               href="mailto:support@mindhit.dev"
-              className="text-blue-600 hover:underline"
+              className="text-primary hover:underline"
             >
               support@mindhit.dev
             </a>

@@ -51,11 +51,11 @@ describe("UsageCard", () => {
       });
     });
 
-    it("should show blue icon for normal usage", async () => {
+    it("should show info icon for normal usage", async () => {
       render(<UsageCard />);
 
       await waitFor(() => {
-        const iconContainer = document.querySelector(".bg-blue-100");
+        const iconContainer = document.querySelector(".bg-status-info-bg");
         expect(iconContainer).toBeInTheDocument();
       });
     });
@@ -92,11 +92,11 @@ describe("UsageCard", () => {
       });
     });
 
-    it("should show yellow icon for high usage", async () => {
+    it("should show warning icon for high usage", async () => {
       render(<UsageCard />);
 
       await waitFor(() => {
-        const iconContainer = document.querySelector(".bg-yellow-100");
+        const iconContainer = document.querySelector(".bg-status-warning-bg");
         expect(iconContainer).toBeInTheDocument();
       });
     });
@@ -122,12 +122,12 @@ describe("UsageCard", () => {
       });
     });
 
-    it("should show red badge styling", async () => {
+    it("should show error badge styling", async () => {
       render(<UsageCard />);
 
       await waitFor(() => {
         const badge = screen.getByText("한도 초과").closest("div");
-        expect(badge).toHaveClass("bg-red-100", "text-red-700");
+        expect(badge).toHaveClass("bg-status-error-bg", "text-status-error-text");
       });
     });
   });

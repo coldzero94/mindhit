@@ -3,6 +3,21 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, beforeAll, afterAll, vi } from "vitest";
 import { server } from "./mocks/server";
 
+// Mock window.matchMedia for prefers-reduced-motion hook
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // Setup MSW - warn instead of error to avoid breaking tests for unhandled requests
 beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
 afterEach(() => {
