@@ -5,6 +5,11 @@ linters:
     - misspell
     - gocritic
     - revive
+  settings:
+    staticcheck:
+      # QF* (quickfix) checks are editor-oriented style suggestions that the
+      # previous golangci-lint v1 setup did not run; keep CI behavior stable.
+      checks: ["all", "-QF*"]
   exclusions:
     rules:
       - path: ent/schema/
