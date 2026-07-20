@@ -24,7 +24,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: apps/backend/go.mod
           cache-dependency-path: apps/backend/go.sum
 
       - name: Install oapi-codegen
@@ -52,11 +52,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: apps/backend/go.mod
           cache-dependency-path: apps/backend/go.sum
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
           version: latest
           working-directory: apps/backend
@@ -88,7 +88,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version-file: apps/backend/go.mod
           cache-dependency-path: apps/backend/go.sum
 
       - name: Run tests

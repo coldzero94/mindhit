@@ -30,11 +30,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: ESLint
-        run: moon run extension:lint
+        run: pnpm exec moon run extension:lint
 
   typecheck:
     runs-on: ubuntu-latest
@@ -52,11 +49,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: TypeScript type check
-        run: moon run extension:typecheck
+        run: pnpm exec moon run extension:typecheck
 
   build:
     runs-on: ubuntu-latest
@@ -87,11 +81,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: Build
-        run: moon run extension:build
+        run: pnpm exec moon run extension:build
         env:
           VITE_API_URL: http://localhost:9000/v1
 
@@ -111,9 +102,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: Test
-        run: moon run extension:test
+        run: pnpm exec moon run extension:test
         continue-on-error: true

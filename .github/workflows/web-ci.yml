@@ -58,11 +58,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: ESLint
-        run: moon run web:lint
+        run: pnpm exec moon run web:lint
 
   typecheck:
     runs-on: ubuntu-latest
@@ -80,11 +77,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: TypeScript type check
-        run: moon run web:typecheck
+        run: pnpm exec moon run web:typecheck
 
   build:
     runs-on: ubuntu-latest
@@ -116,11 +110,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: Build
-        run: moon run web:build
+        run: pnpm exec moon run web:build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:9000
 
@@ -141,9 +132,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Install moon
-        run: pnpm add -g @moonrepo/cli
-
       - name: Test
-        run: moon run web:test
+        run: pnpm exec moon run web:test
         continue-on-error: true
