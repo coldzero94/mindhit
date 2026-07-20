@@ -25,16 +25,16 @@
     "@vitejs/plugin-react": "^5.1.2",
     "eslint": "^9",
     "globals": "^16.5.0",
-    "happy-dom": "^20.0.11",
+    "happy-dom": "^20.8.9",
     "msw": "^2.12.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.1",
-    "vite": "^7.3.0",
-    "vitest": "^4.0.16"
+    "vite": "^7.3.5",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
     "autoprefixer": "^10.4.23",
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.10",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "tailwindcss": "^4",
